@@ -143,7 +143,6 @@ graph TB
   Proxy --> AN
   Proxy --> OA
   GW --> GPU
-  Proxy --> RC
   OC -->|minted token| RES
   RC -->|mint/proxy/sync| RES
 
@@ -178,6 +177,7 @@ flowchart LR
   end
   subgraph Ext[External Services]
     L[Anthropic/OpenAI]
+    GPU[GPU Pool - vLLM]
     S3[S3/GCS/DB/SP]
   end
 
@@ -185,7 +185,7 @@ flowchart LR
   A -->|prompts+responses| G
   A -->|resource IO| R
   P -->|prompts+responses| L
-  G -->|prompts+responses| V
+  G -->|prompts+responses| GPU
   R -->|minted creds| S3
   P -.metadata only.-> C
   G -.metadata only.-> C
@@ -215,8 +215,9 @@ Organization(id, name, idp_config)
               └── Team(id, group_id, name)
                     └── Workstream(id, team_id, name)
 
-User(id, org_id, email, role[])
+User(id, org_id, email)
 Role(id, scope_type, scope_id, name, permissions[])
+UserRole(user_id, role_id)   # many-to-many junction; preserves referential integrity
 Agent(id, owner_user_id, workstream_id, type, status, sub_account_id, created_at)
 SubAccount(id, user_id, agent_id, api_key_hash, allowed_models[], quotas_json)
 DelegateKey(id, tenant_id, provider, key_ref, rotated_at, expires_at)
@@ -284,6 +285,7 @@ erDiagram
   Team ||--o{ Workstream : has
   Workstream ||--o{ Agent : spawns
   User ||--o{ Agent : owns
+  User }o--o{ Role : has
   Agent ||--|| SubAccount : has
   SubAccount }o--o{ Model : allowed
   Organization ||--o{ Resource : owns
@@ -310,6 +312,7 @@ erDiagram
 **Policy Engine**
 - Two policy domains, one resolver:
   - *LLM routing*: allowed models per scope, auto-downgrade rules, spend caps.
+    - **Auto-downgrade contract**: whenever `auto_downgrade_to` fires, the response surfaces the actually-served model in the `model` field (per OpenAI/Anthropic convention); silent semantic drift is forbidden.
   - *Access grants*: tiered inheritance, deny-overrides, classification gates.
 - **Cross-link**: classification tag on a resource restricts which LLM may receive that resource's content (e.g. `confidential` content cannot be sent to closed external models).
 
@@ -328,7 +331,7 @@ erDiagram
 **Closed-Proxy** (Hono, OpenAI + Anthropic wire-compatible)
 - Validates sub-account credential → fetches rotating delegate key from tenant vault → routes to provider.
 - Reads response `usage` block for exact metering; **prompt bodies never persisted**.
-- Enforces quota locally (fail-closed if control plane unreachable).
+- Enforces quota locally. Quota/routing decisions **fail-closed** if the control plane is unreachable (agent blocked); metering **event emission** fails-open (best-effort buffer + retry, never blocks the call). See §13 Open Item 3.
 
 **Open-Gateway** (vLLM + TS shim, OpenAI-compat)
 - Hosts GLM-5.2, DeepSeek, Kimi K3.
@@ -340,7 +343,7 @@ erDiagram
 - Receives metadata events from plugins that report directly rather than going through the proxy.
 
 **Resource Connectors** (per-type strategy)
-- **S3 connector** — *mint strategy*: STS AssumeRole, IAM policy templated from grant actions + tags.
+- **S3 connector** — *mint strategy*: STS AssumeRoleWithWebIdentity (federated OIDC), IAM policy templated from grant actions + tags.
 - **GCS connector** — *mint strategy*: Workload Identity + scoped OAuth / signed URLs.
 - **DB connector** — *proxy strategy*: holds master conn string in tenant vault, per-call policy + query audit. Postgres, MySQL, Snowflake.
 - **SharePoint/OneDrive connector** — *mint+sync hybrid*: Graph API scoped tokens via ARM-OIDC-issuer; reconcile site/doc permissions as sync grants.
@@ -367,7 +370,7 @@ erDiagram
 **Inheritance chain**: Org default → Dept → Group → Team → Workstream → Agent.
 - Each level can **narrow** (deny) within its authority.
 - Per-resource explicit grants refine defaults.
-- **Higher-level deny always wins**, even against a lower-level explicit allow.
+- **Higher-level deny always wins**, even against a lower-level explicit allow. "Higher" = closer to the Org root (most authoritative); Workstream/Agent are the lowest authority.
 
 ### 6.2 Enforcement strategies (type-driven)
 
@@ -384,12 +387,12 @@ flowchart TB
   SP[SharePoint/OneDrive] --> M
   SP --> S
   INT[Internal Systems] --> P
-  Files[Files laptop-local] -.out of scope.-> ARM
+  Files[Files laptop-local]
 ```
 
 | Resource type | Strategy | Mechanism |
 |---|---|---|
-| S3 | mint | STS AssumeRole with templated IAM policy |
+| S3 | mint | STS AssumeRoleWithWebIdentity (OIDC federation) + templated inline IAM policy |
 | GCS | mint | Workload Identity + scoped OAuth |
 | DB (Postgres/MySQL/Snowflake) | proxy | ARM data-plane brokers every query |
 | SharePoint / OneDrive | mint + sync | Graph API scoped tokens + permission sync |
@@ -460,7 +463,7 @@ sequenceDiagram
   A->>DP: request S3 read on bucket X
   DP->>PE: resolve(agent_id, resource=s3:X, action=read)
   PE-->>DP: ALLOW (with constraints: prefix=/{team}/)
-  DP->>STS: AssumeRole(agent_identity=ARM-OIDC-token, policy=template(actions+tags))
+  DP->>STS: AssumeRoleWithWebIdentity(ARM-OIDC-token, role_arn, policy=template(actions+tags))
   STS-->>DP: scoped short-lived token (15min)
   DP-->>A: scoped token
   A->>S3: GET object (with scoped token)
@@ -531,7 +534,7 @@ sequenceDiagram
 
 ### 1.3 — Resource Access: Cloud-Native Connectors
 - Permission engine: RBAC + ABAC, inheritance, deny-overrides, JIT approval skeleton, audit emit.
-- **S3 connector** (mint strategy): STS AssumeRole with IAM policy templated from grants + tags.
+- **S3 connector** (mint strategy): STS AssumeRoleWithWebIdentity (OIDC federation) with IAM policy templated from grants + tags.
 - **GCS connector** (mint strategy): Workload Identity + scoped OAuth / signed URLs.
 - Resource catalog UI; grant authoring with tiered delegation; deny-overrides preview.
 - Real Okta/Entra federation integration test (live IdP verification).
@@ -588,7 +591,7 @@ gantt
 ## 11. Cross-cutting Invariants
 
 1. **Prompt bodies + resource content never leave the tenant VPC.** Control plane is metadata + audit only.
-2. **One canonical join key per agent**: `sub_account_id` (LLM side) and `agent_id` (access side) — same agent identity serves both metering and access.
+2. **One agent identity, two stable IDs**: `sub_account_id` (LLM/metering side) and `agent_id` (access side) are linked 1:1 on the same agent. Analytics joins use `agent_id`, which is present in both event tables.
 3. **Higher-level deny always wins** in grant resolution; rules table per principal×resource type documented in `docs/permission-rules.md`.
 4. **Short-lived credentials everywhere** credentials are issued (mint strategy) — guaranteed fast revocation.
 5. **Hybrid IdP story**: ARM-issued OIDC tokens for federated resources; sealed tenant vault for legacy secrets.
@@ -609,6 +612,9 @@ gantt
 | Cross-tenant resource leakage | Security incident | Partition aggregations by `tenant_id`; mandatory tenant filter on all queries |
 | Phase 1 size has grown ~2× | Timeline pressure | Sub-release as 1.0–1.4; revisit splitting 1.4 to Phase 2 if needed |
 | Prompt privacy backslide | InfoSec block | Default no-content retention; DLP hook points reserved in 1.4, shipped in Phase 2 |
+| Master provider-key compromise | Unlimited cross-tenant spend, impersonation | HSM/KMS-wrapped master keys, tight rotation, per-tenant spend anomaly alerts, blast-radius containment |
+| GCS signed-URL bearer-token leak | Unauthorized object access until TTL | Short TTL, scope-by-prefix, issuance logged to `access_audit_event` |
+| Bypass-agent live enforcement gap | Quota caps applied only after the fact (billing reconciliation) | Phase 1: require bypass paths to opt into provider-side delegate-key spend caps; default-block bypass by policy where unsupported |
 
 ---
 
@@ -653,8 +659,9 @@ arm/
   docs/
     architecture.md
     data-model.md
-    phase1-spec.md        # ← this document
+    arm-spec.md           # ← this document
     permission-rules.md   # inheritance/deny-override rules table
+    open-decisions.md     # review-derived decisions to lock (D1/D2/D5)
     figures/              # rendered architecture diagrams (mermaid + PNG)
 ```
 
