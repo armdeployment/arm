@@ -1,8 +1,9 @@
 # ARM — Agent Resource Management Platform
-## Specification v0.1
+## Specification v0.2
 
 ### Document Status
-- **Drafted**: 2026-07-26
+- **Drafted**: 2026-07-26 (v0.1)
+- **v0.2** (2026-07-26): review patches applied (diagram fixes, UserRole junction, AssumeRoleWithWebIdentity, risk rows); scope-owned (auto-spawned) agents + priority tiers + stakeholder governance (§4, §6.6, §8.5); engineering guardrails as code (§14) adopted from worldmonitor review; agent-onboarding CLI + `/.well-known/arm-agent` discovery (§8.1, §5.2); repo layout expanded (§15)
 - **Scope**: Full Phase 1 (1.0–1.4) including LLM metering, dashboards, agent-IdP, and resource access connectors (S3, GCS, DB, SharePoint/OneDrive).
 - **Decisions locked**:
   - Deployment: hybrid (SaaS control plane, on-prem data plane per tenant VPC).
@@ -362,6 +363,7 @@ erDiagram
 **Plugin-Ingest** (fallback path)
 - OAuth issuer + webhook for agent-native plugins (opencode hooks, claude code MCP, copilot extensions).
 - Receives metadata events from plugins that report directly rather than going through the proxy.
+- Serves machine-readable agent discovery (`/.well-known/arm-agent`) so supported agents can self-configure against the tenant data plane.
 
 **Resource Connectors** (per-type strategy)
 - **S3 connector** — *mint strategy*: STS AssumeRoleWithWebIdentity (federated OIDC), IAM policy templated from grant actions + tags.
@@ -471,10 +473,12 @@ flowchart TB
 ```
 1. Engineer ──SSO──▶ ARM Control Plane
 2. Engineer creates Agent; ARM issues {sub_account_id, scoped delegate key}
-3. ARM returns copy-paste config snippet (env vars / plugin config)
-4. Engineer configures opencode/claude code/copilot/Pi with:
+3. Engineer runs `arm agent init` — the CLI detects the agent type (opencode / claude code /
+   copilot / Pi), writes the config, and verifies a metered round-trip
+   (copy-paste snippet remains as fallback):
      base_url = tenant data-plane proxy URL
      api_key  = sub-account credential
+4. Where supported, agents self-configure via data-plane discovery (`/.well-known/arm-agent`)
 5. Agent runs. Outbound LLM call ──▶ Data-Plane Proxy/Gateway
 6. Data plane authenticates, applies quota, routes, emits metadata event
 7. Meter-Agent ──mTLS──▶ Control Plane ──▶ ClickHouse ledger
@@ -559,6 +563,7 @@ sequenceDiagram
 
 ### 1.0 — Foundation
 - Monorepo (pnpm + Turborepo); strict TS, ESLint, Prettier.
+- Repo governance from day one: `AGENTS.md`, `docs/CONCEPTS.md`, Makefile (pinned tool versions), tiered pre-push gate, CI skeleton (typecheck + guardrails + contract freshness), executable guardrails for §11 invariants per §14.1 — each mutation-proofed.
 - Postgres schema: org tree, users/roles, agents (user-owned **and scope-owned**, with priority tiers + stakeholders), sub-accounts, models, budgets (with priority reservations), LLM policy, **resources, grants, classifications, connectors, access audit**.
 - ClickHouse schemas: `token_usage_event`, `access_audit_event`.
 - Auth: OIDC SSO + RBAC + **ARM-as-OIDC-issuer**.
@@ -576,6 +581,7 @@ sequenceDiagram
 - meter-agent consolidation → control plane over mTLS.
 - **Packaging**: Dockerfiles + `docker-compose.yml` + **Helm chart** (`arm-data-plane` with subcharts) + **Terraform module** (customer VPC: IAM role + Secret Manager + EKS/ECS targeting Helm).
 - `arm data-plane install` CLI: register tenant → pull delegate key → render chart → apply.
+- `arm agent init` onboarding CLI: detects agent type (opencode / claude code / copilot / Pi), writes config, verifies a metered round-trip.
 
 ### 1.3 — Resource Access: Cloud-Native Connectors
 - Permission engine: RBAC + ABAC, inheritance, deny-overrides, JIT approval skeleton, audit emit.
@@ -678,10 +684,50 @@ gantt
 
 ---
 
-## 14. Repository Layout (target)
+## 14. Engineering Guardrails & Repo Governance
+
+The invariants in §11 are enforced as **executable guardrails**, not prose. Every invariant maps to at least one automated check, and every security-critical check must pass a **mutation proof** (deliberately break the protected behavior, observe the check go red, restore byte-identically). A guard that cannot fail is worse than no guard — it supplies false confidence.
+
+### 14.1 Invariants-as-code
+
+| Invariant / rule | Guardrail (lands 1.0–1.3) |
+|---|---|
+| §11.1 prompt bodies never leave tenant VPC | `guardrails/no-content-egress`: event zod schemas carry no content fields (schema test); data-plane egress allowlist lint (control-plane write endpoints accept the metadata schema only); proxy bundle test asserting request bodies are never persisted/logged |
+| §11.3 higher-level deny always wins | Property-based tests on the policy resolver: randomized scope trees with deny injection, assert deny-wins on every path |
+| §11.6 + D1 tenant isolation | `guardrails/tenant-isolation`: every non-global Drizzle table must declare `tenant_id` (schema lint); tRPC tenant-scope middleware tested with cross-tenant fixtures |
+| §11.7 accountable stakeholder | DB constraint `stakeholder_user_id NOT NULL` + API validation test |
+| Event-shape stability (§4.2) | zod contract tests on `packages/proto` event schemas; CI freshness check on generated types |
+| LLM trust boundary (dashboard) | `guardrails/safe-render`: no unescaped rendering of agent/resource/model string fields in the web app (XSS via LLM-adjacent strings) |
+| Master-key custody (§12) | `guardrails/no-secret-dumps`: blocks `.env` dumps and hardcoded provider-key patterns; pre-push secret scan |
+| Policy-cache freshness (D5) | Data plane reports `policy_version` + `last_refresh` on every pull; control-plane health surface flags caches stale beyond SLA (seed-metadata freshness pattern) |
+| Dependency security | `pnpm audit` gate with **baselined advisories** — each entry carries written justification; stale entries fail the gate |
+
+### 14.2 Guard quality standards
+
+- **Mutation proof** is the acceptance test for every security guardrail: break the thing it protects, watch it go red, restore. The obligation applies recursively to guards that protect other guards.
+- **Vacuous guards fail the build**: a check asserting a negative ("no violations found") must fail loudly when its input set is empty — a lint that scans zero files is red, not green.
+- **Third-party rot split**: guardrails distinguish actor-fixable failures (hard fail) from external outages (loud warn + annotated skip, with an opt-in strict mode); an unannounced skip is indistinguishable from a pass and is forbidden.
+
+### 14.3 Repo hygiene & workflow
+
+- **`AGENTS.md`** at the repo root is the entry point for humans and AI agents: repo map, run commands, architecture rules, patterns, guardrails, shipping rules.
+- **`docs/CONCEPTS.md`** is the shared domain vocabulary; new named concepts are added when introduced.
+- **Docs ownership rule**: when architecture, data model, API surface, or invariants change, `docs/arm-spec.md` (and derived docs) update in the **same PR**.
+- **`docs/solutions/`** logs dated decision/solution records with frontmatter (`title`, `date`, `status`, `supersedes`); `docs/open-decisions.md` tracks pending decisions.
+- **Pre-push gate (tiered)**: state-dependent checks always run (secret scan, branch hygiene); tree-dependent checks run diff-scoped (typecheck, guardrails, contract freshness). CI remains the full-suite authority.
+- **Dependency direction** (enforced by `guardrails/boundaries`): `packages/proto` → `packages/config` → `packages/{db,clickhouse,policy,billing,auth}` → `packages/trpc` → `apps/*`. Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`.
+- **CI workflow discipline**: the workflow table in `AGENTS.md` is kept in sync with `.github/workflows/*` by a CI check.
+- **Merge authority is explicit and non-delegable**: agents never merge without an explicit instruction in the current conversation.
+
+---
+
+## 15. Repository Layout (target)
 
 ```
 arm/
+  AGENTS.md              # entry point for humans + AI agents (repo map, rules, guardrails)
+  Makefile               # common tasks; pinned tool versions
+  .github/workflows/     # CI: typecheck, guardrails, contract freshness, security audit
   apps/
     control-plane/
       web/            # Next.js dashboards
@@ -690,9 +736,10 @@ arm/
     data-plane/
       proxy/          # Hono OpenAI+Anthropic-compat router
       open-gateway/   # vLLM shim (OpenAI-compat)
-      plugin-ingest/  # OAuth issuer + plugin webhook
+      plugin-ingest/  # OAuth issuer + plugin webhook + agent discovery
       meter-agent/    # event consolidator → control plane
       connectors/     # s3, gcs, db, sharepoint packages
+    cli/              # arm CLI: data-plane install + `arm agent init` onboarding
   packages/
     db/               # Drizzle schema + migrations (Postgres)
     clickhouse/       # ClickHouse schema + migrations
@@ -702,6 +749,10 @@ arm/
     policy/           # LLM + access policy resolver
     proto/            # event schemas (zod) shared across services
     config/           # env, validation, secrets
+  scripts/
+    guardrails/       # executable invariant checks (boundaries, egress, tenant isolation, ...)
+  tests/              # unit/integration suites
+  e2e/                # Playwright (control-plane web)
   infra/
     terraform/        # control-plane cloud + tenant data-plane module
     helm/             # arm-data-plane chart + subcharts
@@ -713,9 +764,11 @@ arm/
     arm-spec.md           # ← this document
     permission-rules.md   # inheritance/deny-override rules table
     open-decisions.md     # review-derived decisions to lock (D1/D2/D5)
+    CONCEPTS.md           # shared domain vocabulary
+    solutions/            # dated decision/solution records (frontmatter: title/date/status)
     figures/              # rendered architecture diagrams (mermaid + PNG)
 ```
 
 ---
 
-*End of spec v0.1. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. A follow-up `docs/permission-rules.md` will document the tiered-delegation rules table once 1.3 schema is finalized.*
+*End of spec v0.2. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*

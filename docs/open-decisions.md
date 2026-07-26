@@ -14,6 +14,8 @@ Captured from the v0.1 spec review (`docs/arm-spec.md`). These are design-level 
 
 Either way: **`tenant_id` must propagate to every multi-tenant table** (org tree, users, agents, sub-accounts, grants, roles, budgets, LLM policies, connectors). Recommend a Repo-level lint: every Drizzle table that is not global/system must have a non-null `tenant_id` column and every query must filter on it ( enforcement via a tRPC middleware-scoped `where`).
 
+**Update (2026-07-26):** the enforcement mechanism is now planned regardless of which option is chosen — `guardrails/tenant-isolation` schema lint + tRPC tenant-scope middleware with cross-tenant fixtures (spec §14.1), mutation-proofed per §14.2.
+
 **Decision needed by:** start of 1.0 schema work.
 **Owner:** architecture + InfoSec.
 
@@ -56,6 +58,8 @@ So **where does the gate fire in Phase 1?** Without content inspection, nothing 
 **Decision needed by:** end of 1.2 (so the 1.3 permission engine can build against it).
 **Owner:** architecture + InfoSec.
 
+**Update (2026-07-26):** freshness monitoring is now planned either way — the data plane reports `policy_version` + `last_refresh` on every pull, and a control-plane health surface flags caches stale beyond SLA (spec §14.1, adopted from worldmonitor's seed-metadata freshness pattern). What remains open is the invalidation contract + SLA numbers themselves.
+
 ---
 
 ## Already-addressed in v0.1 review (recorded for traceability)
@@ -75,7 +79,26 @@ These were flagged in review and resolved by spec patches + risk-row additions; 
 | `AssumeRole` with OIDC token | Corrected to `AssumeRoleWithWebIdentity` (3 sites) |
 | `auto_downgrade_to` silent drift | Auto-downgrade contract: response surfaces served model |
 | "One canonical join key" wording | Invariant 2 reworded; both event tables already carry `agent_id` |
-| Repo filename mismatch | §14 now references `arm-spec.md` |
+| Repo filename mismatch | repo-layout section references `arm-spec.md` |
 | "Higher-level" ambiguous | §6.1 defines higher = closer to Org root |
 
 These do **not** need sign-off; they're recorded only for history.
+
+---
+
+## Adopted engineering practices (worldmonitor review, 2026-07-26)
+
+Reviewed `github.com/koala73/worldmonitor` (mature production TS monorepo) and adopted the following practices into spec §14/§15, `AGENTS.md`, and `docs/CONCEPTS.md`:
+
+| Practice (theirs) | ARM adoption |
+|---|---|
+| Architecture rules enforced as executable lints (`lint-boundaries`, api-contract, safe-html, rate-limit, secret-dump checks) | §14.1 invariants-as-code table: every §11 invariant maps to a guardrail script/test (`scripts/guardrails/`) |
+| "Vacuous Guard" / "Mutation Proof" testing philosophy | §14.2 guard quality standards: mutation proof required for every security guardrail; empty input = red |
+| Third-Party Rot split + Baselined Advisories with written justification | §14.1 dependency-security gate; §14.2 failure-split rule |
+| Seed-meta freshness monitoring + health endpoints | §14.1 policy-cache freshness row (data plane reports `policy_version` + `last_refresh`; health surface flags stale caches) — input to D5 |
+| `AGENTS.md` repo entry point + `CONCEPTS.md` shared vocabulary | `AGENTS.md` (root) + `docs/CONCEPTS.md` created |
+| ARCHITECTURE.md ownership rule ("doc updates in the same PR") | §14.3 Spec Travel Rule |
+| `docs/solutions/` dated decision records with frontmatter | §14.3 + `docs/solutions/` in target layout (§15) |
+| Tiered pre-push gate (state-dependent vs tree-dependent, diff-scoped) | §14.3 pre-push gate (1.0 deliverable) |
+| CLI + machine-readable agent discovery (llms.txt, `.well-known`) | §8.1 `arm agent init` onboarding CLI; §5.2 `/.well-known/arm-agent` discovery; `apps/cli` in §15 layout |
+| CI workflow table kept in sync by a CI check; merge authority explicit | `AGENTS.md` CI table + working agreements |
