@@ -16,19 +16,21 @@
 
 ## 1. Overview
 
-ARM is an HR-style platform for AI agents — a centralized plane for **identity, metering, routing, budgeting, policy enforcement, and resource-access control** of every LLM agent an organization spawns. An agent is treated as a "digital employee": it has an identity, a manager (team/workstream), a salary (token cost), a budget, an assigned tool (LLM model), and scoped permissions to organizational resources.
+ARM is an HR-style platform for AI agents — a centralized plane for **identity, metering, routing, budgeting, policy enforcement, and resource-access control** of every LLM agent an organization spawns. An agent is treated as a "digital employee": it has an identity, a manager (a human **stakeholder** plus its team/workstream), a salary (token cost), a budget, an assigned tool (LLM model), a priority tier, and scoped permissions to organizational resources.
 
 ### 1.1 Problem statements addressed
 1. Management cannot see how many agents are spawned per department/group/team/workstream, what LLMs they use, or what they cost.
 2. Management cannot steer spend from expensive closed models (Claude, GPT) to cheaper self-hosted open models (GLM-5.2, DeepSeek, Kimi K3).
 3. Engineers/marketers/sales/CS have no clean way to authenticate local coding agents (opencode, claude code, copilot, Pi) against org policy and quota.
 4. Agents have no scoped access to organizational data sources (DBs, SharePoint, GCS, S3, OneDrive, internal systems) — either no access (useless) or over-broad standing access (security incident).
+5. Agents are not all equal: business-critical agents (hot-issue resolvers, incident response) must take precedence over background agents (UX optimization, upgrades) when budget/quota is constrained — and automatically-spawned agents (running on behalf of a dept/team/workstream) need an accountable human, not anonymous automation.
 
 ### 1.2 Goals
 - Single source of truth for **agent identity**, **LLM spend**, and **resource access** across the org tree.
 - Live, exact metering with real-time enforcement, not lagging monthly bills.
 - Privacy-by-design: prompt bodies and resource content never leave the tenant VPC.
 - Cost-transparency tooling that drives migration to self-hosted open models where economics warrant.
+- Priority-aware enforcement with accountability: scope-owned agents (auto-spawned at dept/team/workstream level) and user-owned agents share one identity/quota model; every agent has exactly one human stakeholder; critical agents preempt background agents under budget pressure.
 
 ### 1.3 Non-goals (Phase 1)
 - ML-driven anomaly detection and forecasting (Phase 5).
@@ -44,8 +46,8 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 | Persona | Surface | Key workflows |
 |---|---|---|
 | **Org admin** | Control plane web | Configure org tree, IdP federation, master provider keys, global policy defaults. |
-| **Department manager** | Control plane web | View dept spend, set dept budgets/model allowlists, receive switch recommendations, approve elevated access. |
-| **Team lead** | Control plane web | Allocate per-agent quotas, request/grant resource access within team subtree. |
+| **Department manager** | Control plane web | View dept spend, set dept budgets/model allowlists, approve critical-tier designation, act as stakeholder for dept-owned agents, receive switch recommendations, approve elevated access. |
+| **Team lead** | Control plane web | Allocate per-agent quotas, spawn/manage team-owned agents (as stakeholder), set agent priorities, request/grant resource access within team subtree. |
 | **Engineer / Marketer / Sales / CS** | Control plane web + local agent | SSO login, register agent, copy config snippet, view personal spend/quota, request JIT data access. |
 | **InfoSec / Compliance** | Control plane web (read + audit) | Inspect access audit, deny-overrides, classification gates, prompt-content retention posture. |
 
@@ -218,8 +220,17 @@ Organization(id, name, idp_config)
 User(id, org_id, email)
 Role(id, scope_type, scope_id, name, permissions[])
 UserRole(user_id, role_id)   # many-to-many junction; preserves referential integrity
-Agent(id, owner_user_id, workstream_id, type, status, sub_account_id, created_at)
-SubAccount(id, user_id, agent_id, api_key_hash, allowed_models[], quotas_json)
+# owner_user_id NULL for scope-owned (auto-spawned) agents; stakeholder_user_id is ALWAYS set —
+# every agent has exactly one accountable human (receives alerts, first-line JIT contact,
+# accountable for spend + access). scope_type/scope_id points at any org-tree node;
+# project_tag is a cross-cutting reporting dimension, NOT a tree level.
+Agent(id, owner_user_id NULL, stakeholder_user_id NOT NULL,
+      scope_type ENUM('org','department','group','team','workstream'), scope_id,
+      project_tag NULL, type, status,
+      priority_tier ENUM('critical','standard','background') DEFAULT 'standard',
+      spawned_by ENUM('user','automation','template'),
+      sub_account_id, created_at)
+SubAccount(id, user_id NULL, agent_id, api_key_hash, allowed_models[], quotas_json)
 DelegateKey(id, tenant_id, provider, key_ref, rotated_at, expires_at)
 
 Model(id, provider, name, kind ENUM('closed','self_hosted'),
@@ -227,9 +238,11 @@ Model(id, provider, name, kind ENUM('closed','self_hosted'),
       context_window, hosted_endpoint?)
 
 # LLM policy
-Budget(scope_type, scope_id, period, usd_cap, model_allocations_json)
+Budget(scope_type, scope_id, period, usd_cap, model_allocations_json,
+       priority_reservations_json)   # e.g. {"critical_reserve_pct": 20, "background_floor_pct": 5}
 LLMPolicy(scope_type, scope_id, allowed_models[], auto_downgrade_to,
-          per_agent_day_cap, approval_required_for[])
+          per_agent_day_cap, approval_required_for[],
+          per_priority_caps_json)     # e.g. {"background": {"day_cap_usd": 50, "models": ["self_hosted/*"]}}
 
 # Resource access
 Resource(id, type ENUM('db','sharepoint','gcs','s3','onedrive','files','internal'),
@@ -254,6 +267,7 @@ CREATE TABLE token_usage_event (
   tenant_id       String,
   sub_account_id  String,
   agent_id        String,
+  priority_tier   LowCardinality(String),
   model_id        String,
   input_tokens    UInt64,
   output_tokens   UInt64,
@@ -283,8 +297,11 @@ erDiagram
   Department ||--o{ Group : has
   Group ||--o{ Team : has
   Team ||--o{ Workstream : has
+  Department ||--o{ Agent : spawns
+  Team ||--o{ Agent : spawns
   Workstream ||--o{ Agent : spawns
   User ||--o{ Agent : owns
+  User ||--o{ Agent : stakeholder_of
   User }o--o{ Role : has
   Agent ||--|| SubAccount : has
   SubAccount }o--o{ Model : allowed
@@ -297,6 +314,8 @@ erDiagram
   Organization ||--o{ Budget : has
   Organization ||--o{ LLMPolicy : has
 ```
+
+**Agent ownership & accountability**: user-owned agents have `owner_user_id` set; scope-owned agents (auto-spawned by automation/templates at any tree level) have `owner_user_id NULL` and `scope_type/scope_id` pointing at their node. **Every agent — user-owned or scope-owned — has a non-null `stakeholder_user_id`**: one accountable human. `project_tag` models cross-team initiatives as a reporting dimension and optional ABAC attribute — it is **not** an inheritance level.
 
 ---
 
@@ -314,6 +333,7 @@ erDiagram
   - *LLM routing*: allowed models per scope, auto-downgrade rules, spend caps.
     - **Auto-downgrade contract**: whenever `auto_downgrade_to` fires, the response surfaces the actually-served model in the `model` field (per OpenAI/Anthropic convention); silent semantic drift is forbidden.
   - *Access grants*: tiered inheritance, deny-overrides, classification gates.
+- **Priority-aware budget enforcement** (tiers `critical` > `standard` > `background`): on budget pressure the resolver degrades lower tiers first — `background` agents are (1) auto-downgraded to open models, (2) throttled, (3) queued/blocked; `standard` throttles only after `critical_reserve` is exhausted; `critical` draws on the reserve until hard cap. Tier assignment and stakeholder governance in §6.6.
 - **Cross-link**: classification tag on a resource restricts which LLM may receive that resource's content (e.g. `confidential` content cannot be sent to closed external models).
 
 **Savings Estimator**
@@ -322,8 +342,8 @@ erDiagram
 - Drafts "switch" reminders to dept managers with $ delta + migration effort estimate + one-click policy change.
 
 **Dashboards** (Next.js)
-- Org-tree explorer with agent counts, active vs idle, model mix.
-- Cost rollups (per node, model, user), trend, 30-day forecast, budget burndown.
+- Org-tree explorer with agent counts (user-owned vs scope-owned), active vs idle, model mix, priority-tier mix.
+- Cost rollups (per node, model, user, priority tier), trend, 30-day forecast, budget burndown.
 - Resource-access audit views rolled into the same surface.
 
 ### 5.2 Data Plane
@@ -332,6 +352,7 @@ erDiagram
 - Validates sub-account credential → fetches rotating delegate key from tenant vault → routes to provider.
 - Reads response `usage` block for exact metering; **prompt bodies never persisted**.
 - Enforces quota locally. Quota/routing decisions **fail-closed** if the control plane is unreachable (agent blocked); metering **event emission** fails-open (best-effort buffer + retry, never blocks the call). See §13 Open Item 3.
+- Enforces quota **priority-aware**: applies the tier ladder from §5.1 — `background` → downgrade → throttle → queue (`429 + Retry-After`); `standard` → throttle; `critical` → reserve draw. Hard cap still fails closed for all tiers; every tier action alerts the agent's stakeholder.
 
 **Open-Gateway** (vLLM + TS shim, OpenAI-compat)
 - Hosts GLM-5.2, DeepSeek, Kimi K3.
@@ -405,13 +426,22 @@ flowchart TB
 - **Secrets vault where not**: legacy DBs, internal systems — ARM stores sealed creds in tenant vault; access-logged per call.
 
 ### 6.4 Approval workflow (JIT)
-- Agent owner requests elevated access; request routed to scope-appropriate approver (team lead / dept manager).
+- Agent owner requests elevated access; request routed to scope-appropriate approver (team lead / dept manager). For scope-owned agents the **stakeholder** is the requester-of-record and first-line contact.
 - Approver grants short-TTL permission (15–60 min) via minted credential or proxy session.
 - All decisions logged to `access_audit_event`.
 
 ### 6.5 DLP & cross-domain gates
 - Classification tag on a resource **gates LLM model routing** — confidential+ content cannot be sent to closed external models. This is the single bidirectional link between the LLM-policy and access-policy domains.
 - Phase 2 reserves hook points for content-pattern DLP at the proxy; Phase 1 ships metadata-only audit by default.
+
+### 6.6 Agent priority, tier & stakeholder governance
+
+- **Stakeholder (accountability)**: every agent — user-owned or scope-owned — has exactly one human `stakeholder_user_id`. The stakeholder is accountable for the agent's spend, access, and behavior; receives budget/security alerts; and is the first-line contact for JIT approvals (§6.4). For user-owned agents the stakeholder defaults to the owner. For scope-owned agents the stakeholder is assigned at spawn time (default: the scope admin or the automation-template author). Stakeholder departure triggers re-attestation — transfer to another human or retire the agent (§12).
+- **Tiers**: `critical` (incident/hot-issue resolvers, revenue-path), `standard` (default), `background` (UX optimization, upgrades, experiments).
+- **Assignment is policy, not self-declared**: user-owned agents default to `standard`. `critical` designation requires approval by the scope admin (team lead for team scope, dept manager for dept+ scope) and is logged to `access_audit_event`. `background` may be self-assigned or set by automation.
+- **Scope-owned agents** (auto-spawned by automation/templates) get their tier from the spawning template; template authoring is restricted to scope admins.
+- **Clearance inheritance**: scope-owned agents inherit `classification_clearance` from their scope node, capped at the scope's clearance — a background agent spawned by a team cannot exceed the team's clearance.
+- **Starvation guard**: each scope may reserve a minimum floor for `background` (e.g. nightly windows) so permanent budget pressure doesn't starve optimization work entirely; monitored via a starvation metric in dashboards.
 
 ---
 
@@ -508,13 +538,28 @@ sequenceDiagram
   C->>C: write ClickHouse + update dashboards
 ```
 
+### 8.5 Scope-owned agent lifecycle & priority preemption
+
+```
+1. Automation (or team lead) registers an Agent at a scope node — e.g. hot-issue resolver at
+   Team T (critical), UX optimizer at Dept D (background) — and assigns a stakeholder
+   (default: scope admin / template author)
+2. ARM issues {sub_account_id, delegate key}; owner_user_id NULL, stakeholder_user_id set
+3. Agent runs on schedule/triggers via the same data-plane paths as user agents (§8.1 steps 5–8)
+4. Dept budget hits 80%: Policy Engine orders background tier to auto-downgrade to open models
+5. Budget hits 95%: background throttled/queued (429 + Retry-After); standard throttled
+   after critical_reserve exhausted
+6. Critical agents (hot-issue resolvers) continue on reserve until hard cap; stakeholder
+   alerted at each tier action; every tier change emits audit + dashboard events
+```
+
 ---
 
 ## 9. Phase Plan
 
 ### 1.0 — Foundation
 - Monorepo (pnpm + Turborepo); strict TS, ESLint, Prettier.
-- Postgres schema: org tree, users/roles, agents, sub-accounts, models, budgets, LLM policy, **resources, grants, classifications, connectors, access audit**.
+- Postgres schema: org tree, users/roles, agents (user-owned **and scope-owned**, with priority tiers + stakeholders), sub-accounts, models, budgets (with priority reservations), LLM policy, **resources, grants, classifications, connectors, access audit**.
 - ClickHouse schemas: `token_usage_event`, `access_audit_event`.
 - Auth: OIDC SSO + RBAC + **ARM-as-OIDC-issuer**.
 - tRPC routers for all CRUD/query surfaces.
@@ -523,10 +568,10 @@ sequenceDiagram
 - Anthropic + OpenAI admin-API connectors (Resolution D backstop).
 - Delegate-key minting + per-tenant attribution.
 - Workers: daily usage pull, reconciliation, drift alerts.
-- Dashboards: org-tree explorer, cost rollups, savings estimator, hosting-cost model, alerts, model-mix.
+- Dashboards: org-tree explorer, cost rollups (incl. per-priority-tier + per-stakeholder), savings estimator, hosting-cost model, alerts, model-mix.
 
 ### 1.2 — Closed-Proxy + Open-Gateway Data Plane
-- Hono closed-proxy (OpenAI/Anthropic wire), delegate-key rotation, local quota, metadata-only metering.
+- Hono closed-proxy (OpenAI/Anthropic wire), delegate-key rotation, local quota, **priority-aware budget enforcement (tier ladder)**, metadata-only metering.
 - vLLM open-gateway (GLM-5.2 / DeepSeek / Kimi K3) + OpenAI-compat shim + native metering.
 - meter-agent consolidation → control plane over mTLS.
 - **Packaging**: Dockerfiles + `docker-compose.yml` + **Helm chart** (`arm-data-plane` with subcharts) + **Terraform module** (customer VPC: IAM role + Secret Manager + EKS/ECS targeting Helm).
@@ -596,6 +641,8 @@ gantt
 4. **Short-lived credentials everywhere** credentials are issued (mint strategy) — guaranteed fast revocation.
 5. **Hybrid IdP story**: ARM-issued OIDC tokens for federated resources; sealed tenant vault for legacy secrets.
 6. **ClickHouse partitioning by `(tenant_id, toYYYYMM(ts))` from day 1** — non-negotiable for multi-tenant scale.
+7. **Every agent has exactly one accountable human stakeholder** (`stakeholder_user_id`, non-null) — no anonymous automation, including auto-spawned scope-owned agents.
+8. **Priority is policy, not self-declared**: elevated tiers require scope-admin approval and are audited; the enforcement ladder (downgrade → throttle → queue) is uniform across proxy/gateway paths.
 
 ---
 
@@ -615,6 +662,9 @@ gantt
 | Master provider-key compromise | Unlimited cross-tenant spend, impersonation | HSM/KMS-wrapped master keys, tight rotation, per-tenant spend anomaly alerts, blast-radius containment |
 | GCS signed-URL bearer-token leak | Unauthorized object access until TTL | Short TTL, scope-by-prefix, issuance logged to `access_audit_event` |
 | Bypass-agent live enforcement gap | Quota caps applied only after the fact (billing reconciliation) | Phase 1: require bypass paths to opt into provider-side delegate-key spend caps; default-block bypass by policy where unsupported |
+| Priority-tier abuse (self-marked critical) | Budget bypass, critical-tier crowding | Tier assignment is policy (§6.6); `critical` requires scope-admin approval; tier changes audited |
+| Background-tier starvation under chronic budget pressure | Optimization/upgrade work never runs | Minimum floor / scheduled windows per scope; starvation metric in dashboards |
+| Orphaned scope-owned agents (scope deleted/reorged, stakeholder departs) | Zombie spend, dangling access, no accountable human | Cascade-disable on scope delete; stakeholder re-attestation on departure (transfer or retire); TTL for automation-spawned agents |
 
 ---
 
@@ -624,6 +674,7 @@ gantt
 2. **Enterprise procurement model**: does ARM resell provider credits (regulated in some jx) or pass through customer's own master keys? Default: ARM brokers; revisit before 1.2 GA.
 3. **Fail-open vs fail-closed policy** when control plane unreachable: default fail-closed for access (safer), fail-open for LLM metering (don't block work). Needs sign-off from InfoSec.
 4. **Scope of "files" resource** — laptop-local files are out of ARM scope; only classification tag crossover applies. Confirm with InfoSec.
+5. **Critical-tier budget-exhaustion behavior**: draw on `critical_reserve` + alert (default) vs hard cap even for critical agents. Needs InfoSec + finance sign-off.
 
 ---
 

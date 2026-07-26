@@ -1,0 +1,8 @@
+.DS_Store
+# scratch/local files
+test-glm5.py
+__pycache__/
+*.pyc
+node_modules/
+.env
+.env.*
