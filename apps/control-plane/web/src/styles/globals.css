@@ -1,30 +1,61 @@
 @import "tailwindcss";
 
 /*
- * ARM design system — dark admin theme.
- * Spec §5.3: Tailwind + shadcn/ui aesthetic. CSS custom properties for theming.
+ * ARM Design System — premium white-and-blue management theme.
+ * Inspired by Linear, Vercel, and Stripe dashboards.
+ * Light, spacious, with crisp blue accents and subtle depth.
  */
 
 :root {
-  --bg-base: #0a0a0b;
-  --bg-surface: #131316;
-  --bg-elevated: #1a1a1f;
-  --border: #27272a;
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent: #3b82f6;
-  --accent-soft: rgba(59, 130, 246, 0.15);
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --critical: #f43f5e;
-  --standard: #3b82f6;
-  --background: #22c55e;
+  /* Surfaces */
+  --bg-app: #f8fafc;           /* app background — slate-50 */
+  --bg-surface: #ffffff;       /* card background — white */
+  --bg-elevated: #f1f5f9;      /* hover/active — slate-100 */
+  --bg-sidebar: #ffffff;
+
+  /* Borders */
+  --border: #e2e8f0;           /* slate-200 */
+  --border-strong: #cbd5e1;    /* slate-300 */
+
+  /* Text */
+  --text-primary: #0f172a;     /* slate-900 */
+  --text-secondary: #475569;   /* slate-600 */
+  --text-muted: #94a3b8;       /* slate-400 */
+
+  /* Brand — blue */
+  --accent: #2563eb;           /* blue-600 */
+  --accent-hover: #1d4ed8;     /* blue-700 */
+  --accent-soft: #eff6ff;      /* blue-50 */
+  --accent-border: #bfdbfe;    /* blue-200 */
+
+  /* Semantic */
+  --success: #16a34a;          /* green-600 */
+  --success-soft: #f0fdf4;     /* green-50 */
+  --warning: #d97706;          /* amber-600 */
+  --warning-soft: #fffbeb;     /* amber-50 */
+  --danger: #dc2626;           /* red-600 */
+  --danger-soft: #fef2f2;      /* red-50 */
+
+  /* Tier colors */
+  --tier-critical: #e11d48;    /* rose-600 */
+  --tier-standard: #2563eb;    /* blue-600 */
+  --tier-background: #64748b;  /* slate-500 */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
 }
 
 body {
-  background-color: var(--bg-base);
+  background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Custom scrollbar — subtle, matches theme */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

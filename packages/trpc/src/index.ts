@@ -94,9 +94,9 @@ const FIXTURE_SUMMARY = {
   backgroundFloorPct: 5,
   pendingApprovals: 2,
   tierBreakdown: [
-    { tier: "critical", count: 4, color: "#f43f5e" },
-    { tier: "standard", count: 31, color: "#3b82f6" },
-    { tier: "background", count: 12, color: "#22c55e" },
+    { tier: "critical", count: 4, color: "#e11d48" },
+    { tier: "standard", count: 31, color: "#2563eb" },
+    { tier: "background", count: 12, color: "#64748b" },
   ],
 };
 
