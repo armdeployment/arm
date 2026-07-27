@@ -13,7 +13,6 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { spendTrend, modelSpend, tierBreakdown } from "../lib/mock-data";
 
 const CHART_COLORS = {
   claude: "#a855f7",
@@ -21,12 +20,37 @@ const CHART_COLORS = {
   glm: "#22c55e",
 };
 
-export function SpendTrendChart() {
+export interface SpendTrendPoint {
+  date: string;
+  claude: number;
+  gpt: number;
+  glm: number;
+}
+
+export interface ModelSpendItem {
+  model: string;
+  provider: string;
+  spend: number;
+  kind: "closed" | "self_hosted";
+}
+
+export interface TierItem {
+  tier: string;
+  count: number;
+  color: string;
+}
+
+// ── Spend trend (area chart) ───────────────────────────────────────────────
+
+export function SpendTrendChart({ data }: { data: SpendTrendPoint[] }) {
   return (
-    <div className="rounded-xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+    <div
+      className="rounded-xl border p-5"
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+    >
       <h3 className="mb-4 text-sm font-semibold">Spend Trend (30 days)</h3>
       <ResponsiveContainer width="100%" height={260}>
-        <AreaChart data={spendTrend}>
+        <AreaChart data={data}>
           <defs>
             <linearGradient id="gClaude" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={CHART_COLORS.claude} stopOpacity={0.4} />
@@ -51,14 +75,36 @@ export function SpendTrendChart() {
               fontSize: "12px",
             }}
           />
-          <Area type="monotone" dataKey="claude" stroke={CHART_COLORS.claude} fill="url(#gClaude)" strokeWidth={2} />
-          <Area type="monotone" dataKey="gpt" stroke={CHART_COLORS.gpt} fill="url(#gGpt)" strokeWidth={2} />
-          <Area type="monotone" dataKey="glm" stroke={CHART_COLORS.glm} fill="url(#gGlm)" strokeWidth={2} />
+          <Area
+            type="monotone"
+            dataKey="claude"
+            stroke={CHART_COLORS.claude}
+            fill="url(#gClaude)"
+            strokeWidth={2}
+          />
+          <Area
+            type="monotone"
+            dataKey="gpt"
+            stroke={CHART_COLORS.gpt}
+            fill="url(#gGpt)"
+            strokeWidth={2}
+          />
+          <Area
+            type="monotone"
+            dataKey="glm"
+            stroke={CHART_COLORS.glm}
+            fill="url(#gGlm)"
+            strokeWidth={2}
+          />
         </AreaChart>
       </ResponsiveContainer>
       <div className="mt-3 flex gap-4 text-xs">
         {Object.entries(CHART_COLORS).map(([k, v]) => (
-          <span key={k} className="flex items-center gap-1.5 capitalize" style={{ color: "var(--text-secondary)" }}>
+          <span
+            key={k}
+            className="flex items-center gap-1.5 capitalize"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: v }} /> {k}
           </span>
         ))}
@@ -67,12 +113,17 @@ export function SpendTrendChart() {
   );
 }
 
-export function ModelSpendChart() {
+// ── Model spend (horizontal bar chart) ─────────────────────────────────────
+
+export function ModelSpendChart({ data }: { data: ModelSpendItem[] }) {
   return (
-    <div className="rounded-xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+    <div
+      className="rounded-xl border p-5"
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+    >
       <h3 className="mb-4 text-sm font-semibold">Spend by Model</h3>
       <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={modelSpend} layout="vertical" margin={{ left: 10 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
           <XAxis type="number" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} />
           <YAxis
             type="category"
@@ -92,7 +143,7 @@ export function ModelSpendChart() {
             }}
           />
           <Bar dataKey="spend" radius={[0, 4, 4, 0]}>
-            {modelSpend.map((entry, i) => (
+            {data.map((entry, i) => (
               <Cell key={i} fill={entry.kind === "self_hosted" ? "#22c55e" : "#3b82f6"} />
             ))}
           </Bar>
@@ -110,14 +161,19 @@ export function ModelSpendChart() {
   );
 }
 
-export function TierBreakdown() {
+// ── Tier breakdown (donut chart) ───────────────────────────────────────────
+
+export function TierBreakdownChart({ data }: { data: TierItem[] }) {
   return (
-    <div className="rounded-xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+    <div
+      className="rounded-xl border p-5"
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+    >
       <h3 className="mb-4 text-sm font-semibold">Agents by Priority Tier</h3>
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
-            data={tierBreakdown}
+            data={data}
             dataKey="count"
             nameKey="tier"
             cx="50%"
@@ -126,7 +182,7 @@ export function TierBreakdown() {
             outerRadius={80}
             paddingAngle={3}
           >
-            {tierBreakdown.map((entry, i) => (
+            {data.map((entry, i) => (
               <Cell key={i} fill={entry.color} />
             ))}
           </Pie>
@@ -141,8 +197,12 @@ export function TierBreakdown() {
         </PieChart>
       </ResponsiveContainer>
       <div className="flex justify-center gap-4 text-xs">
-        {tierBreakdown.map((t) => (
-          <span key={t.tier} className="flex items-center gap-1.5 capitalize" style={{ color: "var(--text-secondary)" }}>
+        {data.map((t) => (
+          <span
+            key={t.tier}
+            className="flex items-center gap-1.5 capitalize"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
             {t.tier} ({t.count})
           </span>

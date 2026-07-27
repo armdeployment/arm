@@ -21,7 +21,7 @@ export interface AgentRow {
   stakeholder: string;
   scope: string;
   monthlySpend: number;
-  status: "active" | "throttled" | "disabled";
+  status: string;
 }
 
 export interface ModelSpend {

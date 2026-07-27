@@ -7,6 +7,9 @@
  * Critical: the tenant middleware enforces Invariant §11.6 — every query
  * carries a mandatory tenant_id. No procedure can execute without a resolved
  * tenant context. This is the guardrail mandated by §14.1.
+ *
+ * FIXTURE DATA: routers return inline fixture data for the 1.0 scaffold.
+ * TODO(1.1): replace with real Postgres/ClickHouse queries.
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -16,9 +19,7 @@ import type { ARMClaims } from "@arm/auth";
 // ── Context ────────────────────────────────────────────────────────────────
 
 export interface ARMContext {
-  /** Resolved from the OIDC token at the request boundary. NULL = unauthenticated. */
   claims: ARMClaims | null;
-  /** Tenant ID extracted from claims. Procedures use this for mandatory filtering. */
   tenantId: string | null;
 }
 
@@ -36,18 +37,13 @@ const t = initTRPC.context<ARMContext>().create();
 
 // ── Middleware: tenant isolation (Invariant §11.6) ─────────────────────────
 
-/**
- * Every protected procedure passes through this middleware. It:
- *   1. Rejects unauthenticated requests.
- *   2. Stamps tenantId into the context for downstream DB queries.
- *   3. Guarantees no procedure can run without a tenant scope.
- */
 const tenantProcedure = t.procedure.use(async (opts) => {
   const { ctx } = opts;
   if (!ctx.claims || !ctx.tenantId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      message:
+        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
     });
   }
   return opts.next({
@@ -55,30 +51,69 @@ const tenantProcedure = t.procedure.use(async (opts) => {
   });
 });
 
-// ── Public procedure (health check, .well-known) ──────────────────────────
-
 const publicProcedure = t.procedure;
+
+// ── Fixture data (TODO: replace with real queries in 1.1) ──────────────────
+
+const FIXTURE_AGENTS = [
+  { id: "agt_05", name: "incident-triage", tier: "critical" as const, stakeholder: "s.chen", scope: "Team: SRE", monthlySpend: 1580, status: "active" },
+  { id: "agt_01", name: "hot-issue-resolver", tier: "critical" as const, stakeholder: "s.chen", scope: "Team: Payments", monthlySpend: 1240, status: "active" },
+  { id: "agt_02", name: "code-review-bot", tier: "standard" as const, stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 890, status: "active" },
+  { id: "agt_07", name: "test-gen", tier: "standard" as const, stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 430, status: "active" },
+  { id: "agt_03", name: "ux-optimizer", tier: "background" as const, stakeholder: "m.kim", scope: "Dept: Product", monthlySpend: 320, status: "throttled" },
+  { id: "agt_04", name: "doc-writer", tier: "standard" as const, stakeholder: "a.lee", scope: "Team: Docs", monthlySpend: 210, status: "active" },
+  { id: "agt_08", name: "data-pipeline-monitor", tier: "background" as const, stakeholder: "k.tan", scope: "Team: Data", monthlySpend: 180, status: "disabled" },
+  { id: "agt_06", name: "upgrade-bot", tier: "background" as const, stakeholder: "r.gupta", scope: "Group: Eng", monthlySpend: 95, status: "active" },
+];
+
+const FIXTURE_SPEND_TREND = [
+  { date: "Jul 01", claude: 420, gpt: 310, glm: 80 },
+  { date: "Jul 05", claude: 460, gpt: 340, glm: 95 },
+  { date: "Jul 10", claude: 510, gpt: 380, glm: 120 },
+  { date: "Jul 15", claude: 480, gpt: 350, glm: 160 },
+  { date: "Jul 20", claude: 440, gpt: 320, glm: 210 },
+  { date: "Jul 25", claude: 410, gpt: 290, glm: 260 },
+];
+
+const FIXTURE_MODEL_SPEND = [
+  { model: "Claude Sonnet 4.5", provider: "Anthropic", spend: 2720, kind: "closed" as const },
+  { model: "GPT-4o", provider: "OpenAI", spend: 1990, kind: "closed" as const },
+  { model: "GLM-5.2", provider: "Self-hosted", spend: 925, kind: "self_hosted" as const },
+  { model: "DeepSeek V3", provider: "Self-hosted", spend: 340, kind: "self_hosted" as const },
+];
+
+const FIXTURE_SUMMARY = {
+  totalMonthlySpend: 5975,
+  agentCount: 47,
+  proxiedTrafficPct: 84,
+  budgetUtilizationPct: 73,
+  criticalReservePct: 20,
+  backgroundFloorPct: 5,
+  pendingApprovals: 2,
+  tierBreakdown: [
+    { tier: "critical", count: 4, color: "#f43f5e" },
+    { tier: "standard", count: 31, color: "#3b82f6" },
+    { tier: "background", count: 12, color: "#22c55e" },
+  ],
+};
+
+const FIXTURE_ACCESS_REQUESTS = [
+  { id: "req_01", agentId: "incident-triage", resourceId: "s3://prod-logs/", status: "pending", action: "read", reason: "Debug SEV-1 incident #2847" },
+  { id: "req_02", agentId: "data-pipeline-monitor", resourceId: "db://analytics/transactions", status: "pending", action: "query", reason: "Weekly health check" },
+];
 
 // ── Routers ────────────────────────────────────────────────────────────────
 
-/** Agents router — CRUD for governed agent identities. */
 const agentsRouter = t.router({
   list: tenantProcedure
     .input(z.object({ status: z.enum(["active", "disabled", "all"]).default("active") }))
     .query(async (opts) => {
-      // TODO: real DB query with `eq(agents.tenantId, opts.ctx.tenantId)`
-      // For now returns a typed stub so the UI can wire up.
-      return {
-        tenantId: opts.ctx.tenantId!,
-        agents: [] as Array<{
-          id: string;
-          name: string;
-          tier: "critical" | "standard" | "background";
-          status: string;
-          stakeholder: string;
-          monthlySpend: number;
-        }>,
-      };
+      // TODO(1.1): SELECT * FROM agent WHERE tenant_id = $1
+      const agents =
+        opts.input.status === "all"
+          ? FIXTURE_AGENTS
+          : FIXTURE_AGENTS.filter((a) => a.status === opts.input.status);
+      return { tenantId: opts.ctx.tenantId!, agents };
     }),
 
   create: tenantProcedure
@@ -98,38 +133,24 @@ const agentsRouter = t.router({
     }),
 });
 
-/** Spend router — metering aggregates for dashboards. */
 const spendRouter = t.router({
   summary: tenantProcedure.query(async (opts) => {
-    // TODO: ClickHouse aggregate with tenant_id filter
-    return {
-      tenantId: opts.ctx.tenantId!,
-      totalMonthlySpend: 0,
-      proxiedTrafficPct: 0,
-      budgetUtilizationPct: 0,
-    };
+    // TODO(1.1): ClickHouse aggregate with tenant_id filter
+    return { tenantId: opts.ctx.tenantId!, ...FIXTURE_SUMMARY };
   }),
 
   byModel: tenantProcedure.query(async (opts) => {
-    return {
-      tenantId: opts.ctx.tenantId!,
-      models: [] as Array<{ model: string; spend: number; kind: string }>,
-    };
+    return { tenantId: opts.ctx.tenantId!, models: FIXTURE_MODEL_SPEND };
+  }),
+
+  trend: tenantProcedure.query(async (opts) => {
+    return { tenantId: opts.ctx.tenantId!, points: FIXTURE_SPEND_TREND };
   }),
 });
 
-/** Access router — JIT requests + audit log queries. */
 const accessRouter = t.router({
   pendingApprovals: tenantProcedure.query(async (opts) => {
-    return {
-      tenantId: opts.ctx.tenantId!,
-      requests: [] as Array<{
-        id: string;
-        agentId: string;
-        resourceId: string;
-        status: string;
-      }>,
-    };
+    return { tenantId: opts.ctx.tenantId!, requests: FIXTURE_ACCESS_REQUESTS };
   }),
 
   requestAccess: tenantProcedure
@@ -146,7 +167,6 @@ const accessRouter = t.router({
     }),
 });
 
-/** Health router — public (no auth needed). */
 const healthRouter = t.router({
   check: publicProcedure.query(() => ({
     status: "ok",

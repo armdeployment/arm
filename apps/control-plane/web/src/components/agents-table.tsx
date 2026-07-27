@@ -1,7 +1,12 @@
 "use client";
 
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { agents, type AgentRow } from "../lib/mock-data";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import type { AgentRow } from "../lib/mock-data";
 
 const columnHelper = createColumnHelper<AgentRow>();
 
@@ -32,7 +37,9 @@ const columns = [
   columnHelper.accessor("tier", {
     header: "Tier",
     cell: (info) => (
-      <span className={`rounded px-2 py-0.5 text-xs font-medium ${TIER_STYLES[info.getValue()]}`}>
+      <span
+        className={`rounded px-2 py-0.5 text-xs font-medium ${TIER_STYLES[info.getValue()]}`}
+      >
         {info.getValue()}
       </span>
     ),
@@ -47,7 +54,9 @@ const columns = [
   }),
   columnHelper.accessor("monthlySpend", {
     header: "Monthly $",
-    cell: (info) => <span className="font-mono font-medium">${info.getValue().toLocaleString()}</span>,
+    cell: (info) => (
+      <span className="font-mono font-medium">${info.getValue().toLocaleString()}</span>
+    ),
   }),
   columnHelper.accessor("status", {
     header: "Status",
@@ -60,7 +69,7 @@ const columns = [
   }),
 ];
 
-export function AgentsTable({ data = agents }: { data?: AgentRow[] }) {
+export function AgentsTable({ data }: { data: AgentRow[] }) {
   const table = useReactTable({
     data,
     columns,
@@ -68,7 +77,10 @@ export function AgentsTable({ data = agents }: { data?: AgentRow[] }) {
   });
 
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+    <div
+      className="overflow-hidden rounded-xl border"
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+    >
       <div className="border-b px-5 py-3" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold">Top Agents by Spend</h3>
       </div>
