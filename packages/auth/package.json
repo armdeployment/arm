@@ -14,6 +14,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@arm/config": "workspace:*"
+    "@arm/config": "workspace:*",
+    "jose": "6.2.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "4.1.10",
+    "@types/node": "26.1.1"
   }
 }

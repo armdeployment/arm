@@ -16,8 +16,14 @@
   "dependencies": {
     "@arm/proto": "workspace:*",
     "@arm/config": "workspace:*",
-    "@arm/policy": "workspace:*",
     "@arm/db": "workspace:*",
-    "@arm/auth": "workspace:*"
+    "@arm/policy": "workspace:*",
+    "@arm/auth": "workspace:*",
+    "@trpc/server": "11.18.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "4.1.10",
+    "@types/node": "26.1.1"
   }
 }
