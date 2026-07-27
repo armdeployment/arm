@@ -88,6 +88,16 @@ The data-plane-local copy of LLM/access policy used for per-call enforcement, so
 
 The two degradation modes when the control plane is unreachable. **Fail-closed** (quota/routing/access decisions): the agent is blocked — safer, and the default. **Fail-open** (metering event emission only): events are buffered and retried, never blocking the LLM call. The split is deliberate: losing metering data is recoverable via reconciliation; allowing unquota'd spend or unauthorized access is not. Sign-off: spec §13 Open Item 3. See also: Policy Cache.
 
+## Web UI & UX
+
+### Impact Preview
+
+The mandatory pre-confirmation summary for any mutation with spend/access impact (policy switch, budget change, tier change, grant, key rotation): affected agents/resources and the $ delta are shown before the confirm action enables. One-click actions on shared policy only feel safe when the blast radius is shown first — the full pattern is preview → confirm → audit event → reversible window where applicable. See also: Tier Ladder, Guardrail.
+
+### Deferred-Shell Panel
+
+The UI-stability rule for async dashboard content: a footprint-matched skeleton occupies a panel's exact grid slot from the first layout pass, and arriving content replaces the shell in place — grid geometry never changes when data lands (adopted from worldmonitor's layout-shift lessons). Panels also carry explicit loading/empty/error states and a stale-data badge when ledger freshness exceeds threshold. See also: Spec Travel Rule.
+
 ## Repo Governance
 
 ### Guardrail

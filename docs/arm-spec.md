@@ -1,10 +1,11 @@
 # ARM — Agent Resource Management Platform
-## Specification v0.3
+## Specification v0.4
 
 ### Document Status
 - **Drafted**: 2026-07-26 (v0.1)
 - **v0.2** (2026-07-26): review patches applied (diagram fixes, UserRole junction, AssumeRoleWithWebIdentity, risk rows); scope-owned (auto-spawned) agents + priority tiers + stakeholder governance (§4, §6.6, §8.5); engineering guardrails as code (§14) adopted from worldmonitor review; agent-onboarding CLI + `/.well-known/arm-agent` discovery (§8.1, §5.2); repo layout expanded (§15)
 - **v0.3** (2026-07-26): open decisions locked — D1-b (Tenant above Organization; dual delivery: SaaS + self-hosted enterprise, §3.4); D2-a (classification gate via context tagging at vend/return, §6.5); D5 (pull-based policy distribution with version watermark, push deferred to Phase 2+, §5.1)
+- **v0.4** (2026-07-26): frontend/UI plan — §5.3 Web UI (information architecture, role-scoped views, high-stakes action pattern, policy simulator, realtime via tRPC/SSE, deferred-shell stability, design system, onboarding UX, notification surfaces, a11y/testing stances); 1.0 gains web shell + wireframes; 1.3 gains policy simulator
 - **Scope**: Full Phase 1 (1.0–1.4) including LLM metering, dashboards, agent-IdP, and resource access connectors (S3, GCS, DB, SharePoint/OneDrive).
 - **Decisions locked**:
   - Deployment: hybrid (SaaS control plane, on-prem data plane per tenant VPC).
@@ -362,10 +363,7 @@ erDiagram
 - Internal price model: `GPU_class $/hr × hours × concurrency → $/M-tokens`.
 - Drafts "switch" reminders to dept managers with $ delta + migration effort estimate + one-click policy change.
 
-**Dashboards** (Next.js)
-- Org-tree explorer with agent counts (user-owned vs scope-owned), active vs idle, model mix, priority-tier mix.
-- Cost rollups (per node, model, user, priority tier), trend, 30-day forecast, budget burndown.
-- Resource-access audit views rolled into the same surface.
+**Dashboards** (Next.js) — feature inventory, information architecture, and UX plan live in §5.3.
 
 ### 5.2 Data Plane
 
@@ -399,6 +397,46 @@ erDiagram
 **Tenant Vault**
 - Sealed storage for secrets (legacy DB creds where OIDC not supported).
 - Short-lived delegate key cache.
+
+### 5.3 Web UI (Next.js)
+
+**Information architecture** — one shell, role-scoped views; URL-driven, SSR-first:
+
+```
+/                     → role home (engineer: my agents + my spend/quota; manager: subtree rollup;
+                        admin: org health; InfoSec: audit)
+/org                  → org-tree explorer (agent counts user- vs scope-owned, active vs idle,
+                        model mix, priority-tier mix)
+/cost                 → rollups per node/model/user/tier/stakeholder; trend; 30-day forecast;
+                        budget burndown
+/savings              → estimator, switch recommendations, one-click policy change
+/agents/:id           → agent detail (identity, stakeholder, tier, quota, spend, recent audit)
+/resources            → resource catalog (type, classification, connector, grants)
+/resources/:id/grants → grant authoring with tiered delegation + deny-override preview
+/audit                → access audit + metering ledger views (InfoSec surface)
+/approvals            → JIT inbox (approver) + my requests (requester)
+/settings             → org tree, IdP federation, master keys, budgets, LLM policy, tenants
+```
+
+**View model**: UI RBAC mirrors `Role.permissions[]`; routes guard server-side, never client-only. Each persona lands on a different home; InfoSec gets read + audit only.
+
+**High-stakes action pattern** — any mutation with spend/access impact (policy switch, budget change, tier change, grant, key rotation) follows: **impact preview** (affected agents/resources, $ delta) → explicit confirm → audit event → reversible window where applicable.
+
+**Policy simulator** (ships with 1.3): what-if evaluator — "would agent X get action A on resource R under current policy?" — reusing the same resolver as enforcement, rendering the decision path (which rank/rule decided). The deny-override preview is this simulator's first consumer.
+
+**Realtime**: tRPC subscriptions (SSE) for ledger-fed views (spend, quota burn, tier actions); 10–30 s polling fallback; everything else SSR + revalidate. Dashboards are read models over ClickHouse — the UI never blocks on ingest.
+
+**UI stability** (worldmonitor lesson): deferred-shell panels — footprint-matched skeletons reserve layout before async content lands, so the grid never shifts; explicit loading/empty/error states per panel; stale-data badges when ledger freshness exceeds threshold.
+
+**Design system** (pinned in 1.0 to avoid 1.1 churn): Tailwind + shadcn/ui + TanStack Table (audit grids) + Recharts (default charts; d3 for custom).
+
+**Onboarding UX**: guided setup checklist — org tree + IdP federation → master keys → first data-plane install (CLI handoff with verification) → first agent registration (web issues the credential, `arm agent init` writes the config).
+
+**Notification surfaces**: in-app notification center + outbound email/webhook for budget alerts, drift, tier actions (routed to stakeholders), and approval requests.
+
+**Stances**: desktop-first responsive; WCAG 2.1 AA target (enterprise procurement requirement); dark mode default for ops surfaces; i18n deferred (stated non-goal for Phase 1).
+
+**Frontend testing**: Playwright e2e on critical flows (SSO, agent registration, policy switch, approval); visual regression on dashboard shells; component tests on simulator/preview rendering.
 
 ---
 
@@ -588,6 +626,7 @@ sequenceDiagram
 - Repo governance from day one: `AGENTS.md`, `docs/CONCEPTS.md`, Makefile (pinned tool versions), tiered pre-push gate, CI skeleton (typecheck + guardrails + contract freshness), executable guardrails for §11 invariants per §14.1 — each mutation-proofed.
 - Postgres schema: org tree, users/roles, agents (user-owned **and scope-owned**, with priority tiers + stakeholders), sub-accounts, models, budgets (with priority reservations), LLM policy, **resources, grants, classifications, connectors, access audit**.
 - ClickHouse schemas: `token_usage_event`, `access_audit_event`.
+- Web shell: Next.js app with route guards (UI RBAC), design system pinned (§5.3), lo-fi wireframes for the §5.3 IA — design lead-time before 1.1.
 - Auth: OIDC SSO + RBAC + **ARM-as-OIDC-issuer**.
 - tRPC routers for all CRUD/query surfaces.
 
@@ -595,7 +634,7 @@ sequenceDiagram
 - Anthropic + OpenAI admin-API connectors (Resolution D backstop).
 - Delegate-key minting + per-tenant attribution.
 - Workers: daily usage pull, reconciliation, drift alerts.
-- Dashboards: org-tree explorer, cost rollups (incl. per-priority-tier + per-stakeholder), savings estimator, hosting-cost model, alerts, model-mix.
+- Dashboards per §5.3 IA: org-tree explorer, cost rollups (incl. per-priority-tier + per-stakeholder), savings estimator (one-click switch with impact preview), hosting-cost model, alerts + notification center, model-mix; realtime via tRPC/SSE.
 
 ### 1.2 — Closed-Proxy + Open-Gateway Data Plane
 - Hono closed-proxy (OpenAI/Anthropic wire), delegate-key rotation, local quota, **priority-aware budget enforcement (tier ladder)**, metadata-only metering.
@@ -609,14 +648,14 @@ sequenceDiagram
 - Permission engine: RBAC + ABAC, inheritance, deny-overrides, JIT approval skeleton, audit emit.
 - **S3 connector** (mint strategy): STS AssumeRoleWithWebIdentity (OIDC federation) with IAM policy templated from grants + tags.
 - **GCS connector** (mint strategy): Workload Identity + scoped OAuth / signed URLs.
-- Resource catalog UI; grant authoring with tiered delegation; deny-overrides preview.
+- Resource catalog UI; grant authoring with tiered delegation; deny-overrides preview; **policy simulator** (what-if evaluator reusing the enforcement resolver).
 - Real Okta/Entra federation integration test (live IdP verification).
 
 ### 1.4 — Resource Access: Data + Collaboration Connectors
 - **DB connector** (proxy strategy): master conn string in tenant vault, per-call policy + query audit. Postgres, MySQL, Snowflake.
 - **SharePoint/OneDrive connector** (mint+sync hybrid): Graph API via ARM-OIDC-issuer for scoped tokens; site/doc permission **sync grants** + **drift detection job from day one**.
-- Approval workflow for JIT requests; classification tag enforcement on LLM routing.
-- Access audit dashboards rolled into management surface.
+- Approval workflow for JIT requests (in-app approvals inbox + email/webhook outbound); classification tag enforcement on LLM routing.
+- Access audit dashboards rolled into the management surface (§5.3 `/audit`).
 
 ### 1.x Phase sequencing
 
@@ -650,6 +689,7 @@ gantt
 |---|---|---|
 | Monorepo | pnpm + Turborepo | Fast TS workspace, incremental builds |
 | Control-plane web | Next.js 15 (App Router) | Modern admin UI, SSR dashboards |
+| Web UI libs | Tailwind + shadcn/ui + TanStack Table + Recharts | Data-dense admin surfaces; pinned in 1.0 (§5.3) |
 | API | tRPC v11 | End-to-end TS types, no codegen |
 | OLTP | Postgres + Drizzle | Migration story, strong types |
 | Event store | ClickHouse | High-volume ledger + analytics |
@@ -793,4 +833,4 @@ arm/
 
 ---
 
-*End of spec v0.3. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
+*End of spec v0.4. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
