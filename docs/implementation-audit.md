@@ -90,25 +90,32 @@ Legend: ✅ done · 🔶 partial/stub · 🔴 missing · ➖ not yet in scope (f
 
 ---
 
-## §14.3 Repo hygiene gaps
+## Repo hygiene gaps (updated 2026-07-27)
 
 | Item | Status |
 |---|---|
-| `docs/solutions/` with D1/D2/D5 records | 🔴 not created |
+| `docs/solutions/` with D1/D2/D5 records | ✅ created |
 | CI sync check (AGENTS.md ↔ `.github/workflows/`) | 🔴 |
 | Pre-push gate (tiered: state + tree dependent) | 🔴 |
+| ESLint config | ✅ flat config with typescript-eslint |
 
 ---
 
-## Priority action list (fills 1.0 gaps, highest impact first)
+## Priority action list (updated 2026-07-27)
 
-1. **`packages/proto` zod event schemas** — foundational contract; unblocks trpc, billing, guardrails contract tests
-2. **`packages/config` env + secrets validation** — foundational; every service needs it
-3. **`guardrail: safe-render`** — spec §14.1 explicitly mandates it; XSS guard for LLM strings
-4. **ESLint config** — lint scripts currently broken
-5. **`docs/solutions/` D1/D2/D5 records** — spec §14.3 repo hygiene
-6. **`packages/auth` OIDC + RBAC skeleton** — needed before any route guards
-7. **`packages/trpc` router skeleton + tenant middleware** — needed before live dashboards
-8. **`packages/policy` resolver skeleton + deny-wins property tests** — §11.3 guardrail
+### Filled ✅
+1. ~~**`packages/proto` zod event schemas**~~ — ✅ 9 contract tests
+2. ~~**`packages/config` env + secrets validation**~~ — ✅ zod AppConfig
+3. ~~**`guardrail: safe-render`**~~ — ✅ 3 mutation proofs
+4. ~~**ESLint config**~~ — ✅ typescript-eslint flat config
+5. ~~**`docs/solutions/` D1/D2/D5 records**~~ — ✅ 3 decision records
+6. ~~**`packages/auth` OIDC + RBAC skeleton**~~ — ✅ jose verification, RBAC, issuer token shape, 11 tests
+7. ~~**`packages/trpc` router skeleton + tenant middleware**~~ — ✅ 4 routers, tenant isolation middleware, 6 tests
+8. ~~**`packages/policy` resolver skeleton + deny-wins property tests**~~ — ✅ resolveAccess + resolveLLMModel, 3 fast-check property tests
+
+### Remaining
 9. **OTel telemetry baseline** — spec §9 1.0 deliverable
 10. **Additional UI routes** (/agents, /spend, /access, /audit) — §5.3 IA
+11. **Lo-fi wireframes** (`docs/wireframes.md`)
+12. **Pre-push gate** (.husky tiered hook)
+13. **CI sync check** (AGENTS.md ↔ workflows)
