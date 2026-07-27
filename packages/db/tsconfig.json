@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "src/**/*",
+    "drizzle.config.ts"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "types": [
+      "node"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@arm/trpc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arm/proto": "workspace:*",
+    "@arm/config": "workspace:*",
+    "@arm/policy": "workspace:*",
+    "@arm/db": "workspace:*",
+    "@arm/auth": "workspace:*"
+  }
+}

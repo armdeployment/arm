@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "apps/*/*"
+  - "packages/*"
+  - "scripts/guardrails"
+
+allowBuilds:
+  esbuild: true

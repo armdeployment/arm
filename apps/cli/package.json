@@ -1,0 +1,16 @@
+{
+  "name": "@arm-app/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arm/proto": "workspace:*",
+    "@arm/config": "workspace:*",
+    "@arm/trpc": "workspace:*"
+  }
+}
