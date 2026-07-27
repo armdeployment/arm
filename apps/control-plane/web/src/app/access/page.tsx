@@ -1,5 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
+import { ScopeBreadcrumb } from "../../components/breadcrumb";
+import { useScope } from "../../lib/use-scope";
 import { trpc } from "../../lib/trpc/client";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -9,12 +12,22 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function AccessPage() {
-  const { data, isLoading } = trpc.access.pendingApprovals.useQuery();
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />}>
+      <AccessPageContent />
+    </Suspense>
+  );
+}
+
+function AccessPageContent() {
+  const scope = useScope();
+  const { data, isLoading } = trpc.access.pendingApprovals.useQuery({ scope });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Access</h1>
+        <ScopeBreadcrumb scope={scope} />
+        <h1 className="mt-2 text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Access</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
           JIT access requests — short-TTL elevation with stakeholder approval (spec §6.4)
         </p>
@@ -29,25 +42,20 @@ export default function AccessPage() {
         >
           <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>
             <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Pending Approvals</h3>
-            <span
-              className="flex h-6 items-center rounded-full px-2.5 text-xs font-bold text-white"
-              style={{ backgroundColor: "var(--warning)" }}
-            >
-              {data.requests.length}
-            </span>
+            {data.requests.length > 0 && (
+              <span className="flex h-6 items-center rounded-full px-2.5 text-xs font-bold text-white" style={{ backgroundColor: "var(--warning)" }}>
+                {data.requests.length}
+              </span>
+            )}
           </div>
           {data.requests.length === 0 ? (
-            <div className="px-5 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-              No pending requests
-            </div>
+            <div className="px-5 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>No pending requests</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
                   {["Agent", "Resource", "Action", "Reason", "Status"].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                      {h}
-                    </th>
+                    <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -56,15 +64,9 @@ export default function AccessPage() {
                   <tr key={req.id} className="transition-colors hover:bg-slate-50" style={{ borderBottom: "1px solid var(--border)" }}>
                     <td className="px-5 py-3.5 font-semibold" style={{ color: "var(--text-primary)" }}>{req.agentId}</td>
                     <td className="px-5 py-3.5 font-mono text-xs" style={{ color: "var(--text-secondary)" }}>{req.resourceId}</td>
-                    <td className="px-5 py-3.5">
-                      <code className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{req.action}</code>
-                    </td>
+                    <td className="px-5 py-3.5"><code className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{req.action}</code></td>
                     <td className="px-5 py-3.5 text-xs" style={{ color: "var(--text-secondary)" }}>{req.reason}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[req.status] ?? ""}`}>
-                        {req.status}
-                      </span>
-                    </td>
+                    <td className="px-5 py-3.5"><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[req.status] ?? ""}`}>{req.status}</span></td>
                   </tr>
                 ))}
               </tbody>

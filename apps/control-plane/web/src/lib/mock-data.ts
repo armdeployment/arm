@@ -22,6 +22,7 @@ export interface AgentRow {
   scope: string;
   monthlySpend: number;
   status: string;
+  taskType: string;
 }
 
 export interface ModelSpend {
@@ -41,14 +42,14 @@ export const spendTrend: SpendPoint[] = [
 ];
 
 export const agents: AgentRow[] = [
-  { id: "agt_05", name: "incident-triage", tier: "critical", stakeholder: "s.chen", scope: "Team: SRE", monthlySpend: 1580, status: "active" },
-  { id: "agt_01", name: "hot-issue-resolver", tier: "critical", stakeholder: "s.chen", scope: "Team: Payments", monthlySpend: 1240, status: "active" },
-  { id: "agt_02", name: "code-review-bot", tier: "standard", stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 890, status: "active" },
-  { id: "agt_07", name: "test-gen", tier: "standard", stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 430, status: "active" },
-  { id: "agt_03", name: "ux-optimizer", tier: "background", stakeholder: "m.kim", scope: "Dept: Product", monthlySpend: 320, status: "throttled" },
-  { id: "agt_04", name: "doc-writer", tier: "standard", stakeholder: "a.lee", scope: "Team: Docs", monthlySpend: 210, status: "active" },
-  { id: "agt_08", name: "data-pipeline-monitor", tier: "background", stakeholder: "k.tan", scope: "Team: Data", monthlySpend: 180, status: "disabled" },
-  { id: "agt_06", name: "upgrade-bot", tier: "background", stakeholder: "r.gupta", scope: "Group: Eng", monthlySpend: 95, status: "active" },
+  { id: "agt_05", name: "incident-triage", tier: "critical", stakeholder: "s.chen", scope: "Team: SRE", monthlySpend: 1580, status: "active", taskType: "" },
+  { id: "agt_01", name: "hot-issue-resolver", tier: "critical", stakeholder: "s.chen", scope: "Team: Payments", monthlySpend: 1240, status: "active", taskType: "" },
+  { id: "agt_02", name: "code-review-bot", tier: "standard", stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 890, status: "active", taskType: "" },
+  { id: "agt_07", name: "test-gen", tier: "standard", stakeholder: "j.park", scope: "Team: Platform", monthlySpend: 430, status: "active", taskType: "" },
+  { id: "agt_03", name: "ux-optimizer", tier: "background", stakeholder: "m.kim", scope: "Dept: Product", monthlySpend: 320, status: "throttled", taskType: "" },
+  { id: "agt_04", name: "doc-writer", tier: "standard", stakeholder: "a.lee", scope: "Team: Docs", monthlySpend: 210, status: "active", taskType: "" },
+  { id: "agt_08", name: "data-pipeline-monitor", tier: "background", stakeholder: "k.tan", scope: "Team: Data", monthlySpend: 180, status: "disabled", taskType: "" },
+  { id: "agt_06", name: "upgrade-bot", tier: "background", stakeholder: "r.gupta", scope: "Group: Eng", monthlySpend: 95, status: "active", taskType: "" },
 ];
 
 export const modelSpend: ModelSpend[] = [

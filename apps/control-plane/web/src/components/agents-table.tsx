@@ -56,6 +56,10 @@ const columns = [
     header: "Scope",
     cell: (info) => <span style={{ color: "var(--text-secondary)" }}>{info.getValue()}</span>,
   }),
+  columnHelper.accessor("taskType", {
+    header: "Task",
+    cell: (info) => <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{info.getValue()}</span>,
+  }),
   columnHelper.accessor("monthlySpend", {
     header: "Monthly $",
     cell: (info) => (
