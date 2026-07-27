@@ -10,7 +10,7 @@ ARM (Agent Resource Management) is an HR-style platform for AI agents: identity,
 
 ## Status
 
-Pre-1.0. The repo currently contains specification and governance documents only; code lands per the phase plan in `docs/arm-spec.md` §9. Sections marked *(target)* describe intended state.
+**1.0 foundation landed** (branch `scaffold-1.0`). Monorepo, Drizzle schema (22 tables), ClickHouse event ledger, 4 executable guardrails (mutation-proofed), CI workflows, and a Next.js dashboard UI with mock data. All 43 tests green; full workspace typecheck green.
 
 ## Repository Map
 
@@ -53,7 +53,7 @@ packages/proto → packages/config → packages/{db,clickhouse,policy,billing,au
 
 - `packages/proto` has zero internal imports (zod contracts only).
 - Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`.
-- Enforced by `scripts/guardrails/boundaries` *(target)*.
+- Enforced by `scripts/guardrails/boundaries`.
 
 ### Trust Boundaries
 
@@ -71,17 +71,18 @@ packages/proto → packages/config → packages/{db,clickhouse,policy,billing,au
 - **Merge authority is explicit and non-delegable**: never merge a PR, enable auto-merge, or take any equivalent action unless the user explicitly requested that exact action in the current conversation. Report the ready state instead.
 - **Before starting work**: check for parallel/duplicate work (`git branch -a`, open PRs).
 
-## How to Run *(target — lands with 1.0)*
+## How to Run
 
 ```bash
 pnpm install
-make dev             # control-plane web + api (local)
-make dev:data-plane  # docker-compose data plane (single node)
-make test            # unit/integration
-make guardrails      # executable invariant checks (mutation-proofed)
+pnpm dev             # control-plane web (Next.js dashboard, port 3100)
+make dev:data-plane  # docker-compose data plane (lands 1.2)
+pnpm test            # unit/integration (43 tests across db/guardrails/web)
+pnpm guardrails      # executable invariant checks
+pnpm --filter @arm/db db:generate   # regenerate Drizzle migrations
 ```
 
-## CI Checks *(target)*
+## CI Checks
 
 | Workflow | Trigger | What it checks |
 |---|---|---|
