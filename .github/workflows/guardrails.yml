@@ -1,0 +1,29 @@
+name: guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Spec §14: executable invariants + mutation proofs. A guard that cannot fail
+# is worse than no guard — mutation proofs are the acceptance test.
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      # Run the live guardrails (tenant-isolation, no-content-egress, etc.)
+      - run: pnpm guardrails
+      # Run mutation proofs (break→red, restore→green)
+      - run: pnpm --filter @arm/guardrails test

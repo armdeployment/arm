@@ -1,0 +1,26 @@
+name: security-audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Daily at 09:00 UTC
+    - cron: "0 9 * * *"
+
+# Spec §14.1: pnpm audit gate with baselined advisories.
+# Each baselined advisory must carry written justification (not yet enforced
+# mechanically — lands when first advisory is baselined).
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=high
+        continue-on-error: true # TODO: enforce once baselining lands

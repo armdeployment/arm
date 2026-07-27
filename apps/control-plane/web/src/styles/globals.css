@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/*
+ * ARM design system — dark admin theme.
+ * Spec §5.3: Tailwind + shadcn/ui aesthetic. CSS custom properties for theming.
+ */
+
+:root {
+  --bg-base: #0a0a0b;
+  --bg-surface: #131316;
+  --bg-elevated: #1a1a1f;
+  --border: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59, 130, 246, 0.15);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --critical: #f43f5e;
+  --standard: #3b82f6;
+  --background: #22c55e;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}

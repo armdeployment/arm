@@ -1,0 +1,31 @@
+name: contract-check
+
+on:
+  pull_request:
+    paths:
+      - "packages/db/**"
+      - "packages/clickhouse/**"
+
+# Spec §14.1: event-shape stability + migration freshness.
+# Regenerates Drizzle migrations and fails if committed output is stale
+# (someone changed the schema without running `pnpm --filter @arm/db db:generate`).
+
+jobs:
+  contract-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - name: Regenerate Drizzle migrations
+        run: pnpm --filter @arm/db db:generate
+      - name: Fail if migrations are stale
+        run: git diff --exit-code -- packages/db/drizzle/
