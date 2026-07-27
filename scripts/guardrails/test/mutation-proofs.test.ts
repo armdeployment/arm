@@ -11,6 +11,7 @@ import { checkTenantIsolation } from "../src/checks/tenant-isolation.js";
 import { checkNoContentEgress, parseColumns } from "../src/checks/no-content-egress.js";
 import { checkNoSecretDumps } from "../src/checks/no-secret-dumps.js";
 import { checkBoundaries } from "../src/checks/boundaries.js";
+import { checkSafeRender } from "../src/checks/safe-render.js";
 import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -136,5 +137,35 @@ describe("mutation proof: ClickHouse partitioning (§11.6)", () => {
       "PARTITION BY (toYYYYMM(ts))", // mutation — drops tenant_id partitioning on BOTH tables
     );
     expect(() => assertTenantMonthPartitioning(broken)).toThrow(/Invariant 6 violated/);
+  });
+});
+
+describe("mutation proof: safe-render (§14.1 LLM trust boundary)", () => {
+  const clean = [
+    { path: "apps/control-plane/web/src/components/sidebar.tsx", content: "<div>safe</div>" },
+  ];
+
+  it("FAILS when dangerouslySetInnerHTML appears", () => {
+    const broken = [
+      ...clean,
+      { path: "evil.tsx", content: '<div dangerouslySetInnerHTML={{__html: agent.name}} />' }, // mutation
+    ];
+    const r = checkSafeRender(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("dangerouslySetInnerHTML");
+  });
+
+  it("FAILS when eval() appears", () => {
+    const broken = [
+      ...clean,
+      { path: "evil.ts", content: "const result = eval(userInput);" }, // mutation
+    ];
+    const r = checkSafeRender(broken);
+    expect(r.status).toBe("fail");
+ expect(r.detail).toContain("eval()");
+  });
+
+  it("PASSES on safe React/Tailwind source", () => {
+    expect(checkSafeRender(clean).status).toBe("pass");
   });
 });
