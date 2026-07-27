@@ -12,6 +12,7 @@ import { checkNoContentEgress, parseColumns } from "../src/checks/no-content-egr
 import { checkNoSecretDumps } from "../src/checks/no-secret-dumps.js";
 import { checkBoundaries } from "../src/checks/boundaries.js";
 import { checkSafeRender } from "../src/checks/safe-render.js";
+import { checkCISync, parseTableWorkflows } from "../src/checks/ci-sync.js";
 import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -167,5 +168,39 @@ describe("mutation proof: safe-render (§14.1 LLM trust boundary)", () => {
 
   it("PASSES on safe React/Tailwind source", () => {
     expect(checkSafeRender(clean).status).toBe("pass");
+  });
+});
+
+describe("mutation proof: ci-sync (§14.3)", () => {
+  const table = ["typecheck.yml", "guardrails.yml", "contract-check.yml", "security-audit.yml"];
+  const actual = ["typecheck.yml", "guardrails.yml", "contract-check.yml", "security-audit.yml"];
+
+  it("FAILS when a workflow is in AGENTS.md but not in .github/workflows/", () => {
+    const r = checkCISync([...table, "phantom.yml"], actual);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("phantom.yml");
+  });
+
+  it("FAILS when a workflow file exists but is not in AGENTS.md", () => {
+    const r = checkCISync(table, [...actual, "untracked-ci.yml"]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("untracked-ci.yml");
+  });
+
+  it("PASSES when table and files match", () => {
+    expect(checkCISync(table, actual).status).toBe("pass");
+  });
+
+  it("parseTableWorkflows extracts backtick-quoted .yml names", () => {
+    const md = "Some text `typecheck.yml` and `guardrails.yml` in a row.";
+    expect(parseTableWorkflows(md).sort()).toEqual(["guardrails.yml", "typecheck.yml"]);
+  });
+
+  it("FAILS as VACUOUS when both lists are empty", () => {
+    // The pure fn returns pass (no drift), but assertsNegative + scanned=0
+    // means the runner will upgrade it to fail.
+    const r = checkCISync([], []);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
   });
 });

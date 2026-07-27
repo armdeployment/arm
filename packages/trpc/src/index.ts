@@ -15,6 +15,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { ARMClaims } from "@arm/auth";
+import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ const tenantProcedure = t.procedure.use(async (opts) => {
     ctx: { ...ctx, tenantId: ctx.tenantId },
   });
 });
+
+const telemetryState = initTelemetry("control-plane");
 
 const publicProcedure = t.procedure;
 
@@ -168,11 +171,9 @@ const accessRouter = t.router({
 });
 
 const healthRouter = t.router({
-  check: publicProcedure.query(() => ({
-    status: "ok",
-    version: "0.0.0",
-    timestamp: new Date().toISOString(),
-  })),
+  check: publicProcedure.query((): ServiceHealth =>
+    getHealth("control-plane", telemetryState.active),
+  ),
 });
 
 // ── Root router ────────────────────────────────────────────────────────────

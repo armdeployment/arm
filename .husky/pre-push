@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# ARM pre-push gate (spec §14.3 — tiered: state-dependent always runs;
+# tree-dependent runs diff-scoped).
+#
+# State-dependent (always): secret scan + CI sync
+echo "▶ ARM pre-push gate"
+echo "  [state] running guardrails (secret scan, ci-sync, tenant-isolation, …)"
+pnpm --silent guardrails 2>&1 | tail -8
+if [ $? -ne 0 ]; then
+  echo "✗ pre-push gate FAILED — guardrails did not pass"
+  exit 1
+fi
+echo "✓ pre-push gate passed"
