@@ -18,7 +18,7 @@ Pre-1.0. The repo currently contains specification and governance documents only
 .
 ├── docs/
 │   ├── arm-spec.md          # Product + architecture spec (source of truth)
-│   ├── open-decisions.md    # Decisions to lock: D1 multi-tenant, D2 classification gate, D5 policy-cache SLA
+│   ├── open-decisions.md    # Decision log (D1/D2/D5 locked 2026-07-26)
 │   ├── permission-rules.md  # Tiered-delegation / deny-override contract
 │   ├── CONCEPTS.md          # Shared domain vocabulary
 │   ├── solutions/           # Dated decision/solution records (target)

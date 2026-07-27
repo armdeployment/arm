@@ -27,7 +27,7 @@ A resource's `ClassificationLevel.rank` gates which LLM may receive that resourc
 - `restricted` / `confidential` content ⇒ the agent's holding context is tagged; closed external models (Anthropic/OpenAI) are **disallowed** for subsequent turns until the tagged context is dropped.
 - This gate is enforced in the **data plane** (proxy + resource connector), not the control plane, so it survives the metadata-only boundary (invariant 1).
 
-> ⚠ Open: this is the bidirectional link flagged in spec review. The *enforcement point in Phase 1* (no content DLP yet) is the resource-connector return path tagging the agent's working context at mint/issue time. See `docs/open-decisions.md` D2.
+> Decided (D2-a, 2026-07-26): Phase 1 enforcement is per-agent `classification_context` tagging in the data plane — *mint* connectors tag at credential-vending time, *proxy* connectors at response time; the proxy/gateway refuses closed-external-model routing while context ≥ `confidential`. Full mechanism: spec §6.5.
 
 ## 4. Resolution algorithm (per principal × resource × action)
 

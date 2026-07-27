@@ -1,9 +1,10 @@
 # ARM — Agent Resource Management Platform
-## Specification v0.2
+## Specification v0.3
 
 ### Document Status
 - **Drafted**: 2026-07-26 (v0.1)
 - **v0.2** (2026-07-26): review patches applied (diagram fixes, UserRole junction, AssumeRoleWithWebIdentity, risk rows); scope-owned (auto-spawned) agents + priority tiers + stakeholder governance (§4, §6.6, §8.5); engineering guardrails as code (§14) adopted from worldmonitor review; agent-onboarding CLI + `/.well-known/arm-agent` discovery (§8.1, §5.2); repo layout expanded (§15)
+- **v0.3** (2026-07-26): open decisions locked — D1-b (Tenant above Organization; dual delivery: SaaS + self-hosted enterprise, §3.4); D2-a (classification gate via context tagging at vend/return, §6.5); D5 (pull-based policy distribution with version watermark, push deferred to Phase 2+, §5.1)
 - **Scope**: Full Phase 1 (1.0–1.4) including LLM metering, dashboards, agent-IdP, and resource access connectors (S3, GCS, DB, SharePoint/OneDrive).
 - **Decisions locked**:
   - Deployment: hybrid (SaaS control plane, on-prem data plane per tenant VPC).
@@ -205,6 +206,20 @@ flowchart LR
 | Control plane → Data plane | Delegate keys (rotating, short-lived), policy cache | Resource content, prompts |
 | Control plane → Dashboard viewer | Aggregates, per-agent/per-team rollups | Prompts, content, secrets |
 
+### 3.4 Delivery models
+
+One codebase, two delivery models — the multi-tenant schema (D1-b) serves both; self-hosted is the degenerate single-tenant case, not a fork:
+
+| | **SaaS tier** (default) | **Self-hosted enterprise tier** |
+|---|---|---|
+| Control plane | ARM-operated, multi-tenant (shared) | Customer-operated, single-tenant (one `Tenant` row) |
+| Data plane | Per-tenant, in customer VPC | Customer VPC (same packaging) |
+| Master provider keys | ARM brokers (§7.2) | Pass-through: customer's own keys, never leave their environment (§13 Open Item 2) |
+| Target | Small/mid companies | Big enterprise, regulated industries |
+| Packaging | Helm/Terraform for data plane (1.2) | + control-plane packaging (post-Phase 1) |
+
+An ARM-managed dedicated control plane per enterprise (private SaaS) is a future middle option; it needs no schema change.
+
 ---
 
 ## 4. Data Model
@@ -212,7 +227,8 @@ flowchart LR
 ### 4.1 Postgres (OLTP)
 
 ```
-Organization(id, name, idp_config)
+Tenant(id, name, tier, deployment ENUM('saas','self_hosted'), license_json, created_at)
+Organization(id, tenant_id, name, idp_config)
   └── Department(id, org_id, name)
         └── Group(id, dept_id, name)
               └── Team(id, group_id, name)
@@ -260,6 +276,8 @@ AccessRequest(id, requester_agent_id, resource_id, actions[], reason, status,
 AccessApproval(id, request_id, approver_id, decision, conditions_json, decided_at)
 ```
 
+**Tenant isolation (decided — D1-b)**: `Tenant` sits above `Organization`, so one tenant may host several organizations (holding companies, MSPs, separate business units). **Every multi-tenant table carries `tenant_id NOT NULL`** (denormalized for join-free mandatory filtering), enforced by `guardrails/tenant-isolation` (§14.1). Self-hosted deployments seed exactly one tenant row — schema and guardrails are uniform across SaaS and on-prem (§3.4).
+
 ### 4.2 ClickHouse (events ledger)
 
 ```sql
@@ -294,6 +312,7 @@ CREATE TABLE access_audit_event (
 
 ```mermaid
 erDiagram
+  Tenant ||--o{ Organization : hosts
   Organization ||--o{ Department : has
   Department ||--o{ Group : has
   Group ||--o{ Team : has
@@ -336,6 +355,7 @@ erDiagram
   - *Access grants*: tiered inheritance, deny-overrides, classification gates.
 - **Priority-aware budget enforcement** (tiers `critical` > `standard` > `background`): on budget pressure the resolver degrades lower tiers first — `background` agents are (1) auto-downgraded to open models, (2) throttled, (3) queued/blocked; `standard` throttles only after `critical_reserve` is exhausted; `critical` draws on the reserve until hard cap. Tier assignment and stakeholder governance in §6.6.
 - **Cross-link**: classification tag on a resource restricts which LLM may receive that resource's content (e.g. `confidential` content cannot be sent to closed external models).
+- **Policy distribution (decided — D5)**: data-plane components pull their policy bundle from the control plane every 10 s over the existing outbound mTLS channel (no inbound surface into customer VPCs), keyed by a monotonic `policy_version`. Propagation SLA: DENY-class rules ≤15 s, ALLOW/quota ≤60 s. A cache older than SLA with the control plane unreachable fails closed for DENY-class (Open Item 3). Push-based invalidation is a Phase 2+ latency optimization layered on the same channel — it never replaces the pull, which bounds worst-case staleness by construction.
 
 **Savings Estimator**
 - Per-workstream comparison: current closed-model spend vs projected self-host cost for GLM-5.2 / DeepSeek / Kimi K3.
@@ -434,6 +454,8 @@ flowchart TB
 
 ### 6.5 DLP & cross-domain gates
 - Classification tag on a resource **gates LLM model routing** — confidential+ content cannot be sent to closed external models. This is the single bidirectional link between the LLM-policy and access-policy domains.
+- **Phase 1 enforcement (decided — D2-a): context tagging at vend/return.** The data plane maintains a per-agent `classification_context` — the max classification of content the agent has obtained — with a sliding TTL (~30 min). It is session metadata, not content, and lives entirely in the data plane. Tagging fires at the strategy-appropriate point (§6.2): *mint* connectors (S3/GCS/SharePoint) tag at **credential-vending** time (the grant implies imminent access — ARM never sees the agent→S3 bytes); *proxy* connectors (DB/internal) tag at **response** time (actual content return).
+- On every call the Closed-Proxy/Open-Gateway checks the context: if `classification_context ≥ confidential` and the requested model is closed-external, the call is denied with a typed error (retry with a self-hosted model, or wait for context expiry / explicit session reset). Gate decisions emit `access_audit_event(decision=deny, reason="classification_gate")` — a decision record, not content.
 - Phase 2 reserves hook points for content-pattern DLP at the proxy; Phase 1 ships metadata-only audit by default.
 
 ### 6.6 Agent priority, tier & stakeholder governance
@@ -677,7 +699,7 @@ gantt
 ## 13. Open Items
 
 1. **1.4 placement**: keep DB + SharePoint in Phase 1, or defer to Phase 2 if execution pressure surfaces during 1.0–1.3. Decision deferred until 1.3 complete.
-2. **Enterprise procurement model**: does ARM resell provider credits (regulated in some jx) or pass through customer's own master keys? Default: ARM brokers; revisit before 1.2 GA.
+2. **Enterprise procurement model**: does ARM resell provider credits (regulated in some jx) or pass through customer's own master keys? Default: ARM brokers; revisit before 1.2 GA. **Note (D1-b)**: the two modes now coexist by construction — brokerage for the SaaS tier, pass-through for the self-hosted enterprise tier (§3.4), where ARM-the-vendor holds nothing.
 3. **Fail-open vs fail-closed policy** when control plane unreachable: default fail-closed for access (safer), fail-open for LLM metering (don't block work). Needs sign-off from InfoSec.
 4. **Scope of "files" resource** — laptop-local files are out of ARM scope; only classification tag crossover applies. Confirm with InfoSec.
 5. **Critical-tier budget-exhaustion behavior**: draw on `critical_reserve` + alert (default) vs hard cap even for critical agents. Needs InfoSec + finance sign-off.
@@ -771,4 +793,4 @@ arm/
 
 ---
 
-*End of spec v0.2. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
+*End of spec v0.3. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
