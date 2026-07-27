@@ -1,11 +1,12 @@
 # ARM — Agent Resource Management Platform
-## Specification v0.4
+## Specification v0.5
 
 ### Document Status
 - **Drafted**: 2026-07-26 (v0.1)
 - **v0.2** (2026-07-26): review patches applied (diagram fixes, UserRole junction, AssumeRoleWithWebIdentity, risk rows); scope-owned (auto-spawned) agents + priority tiers + stakeholder governance (§4, §6.6, §8.5); engineering guardrails as code (§14) adopted from worldmonitor review; agent-onboarding CLI + `/.well-known/arm-agent` discovery (§8.1, §5.2); repo layout expanded (§15)
 - **v0.3** (2026-07-26): open decisions locked — D1-b (Tenant above Organization; dual delivery: SaaS + self-hosted enterprise, §3.4); D2-a (classification gate via context tagging at vend/return, §6.5); D5 (pull-based policy distribution with version watermark, push deferred to Phase 2+, §5.1)
 - **v0.4** (2026-07-26): frontend/UI plan — §5.3 Web UI (information architecture, role-scoped views, high-stakes action pattern, policy simulator, realtime via tRPC/SSE, deferred-shell stability, design system, onboarding UX, notification surfaces, a11y/testing stances); 1.0 gains web shell + wireframes; 1.3 gains policy simulator
+- **v0.5** (2026-07-26): gstack plan review applied — success criteria & exit gates (§9/1.y), agent-adoption risk row (§12), proxy performance budget + eventual-quota semantics (§5.2), 1.2 vertical-slice exit gate (§9), classification-context write-path hardening (§6.5), meter-agent disk-backed buffer (§5.2), scheduling assumptions + zero-slack note (§9), own-telemetry baseline (§9), differentiation statement (§1), notification preferences (§5.3)
 - **Scope**: Full Phase 1 (1.0–1.4) including LLM metering, dashboards, agent-IdP, and resource access connectors (S3, GCS, DB, SharePoint/OneDrive).
 - **Decisions locked**:
   - Deployment: hybrid (SaaS control plane, on-prem data plane per tenant VPC).
@@ -20,6 +21,8 @@
 ## 1. Overview
 
 ARM is an HR-style platform for AI agents — a centralized plane for **identity, metering, routing, budgeting, policy enforcement, and resource-access control** of every LLM agent an organization spawns. An agent is treated as a "digital employee": it has an identity, a manager (a human **stakeholder** plus its team/workstream), a salary (token cost), a budget, an assigned tool (LLM model), a priority tier, and scoped permissions to organizational resources.
+
+**Why ARM, not a gateway + OPA**: LLM gateways (LiteLLM, Portkey, Helicone, OpenRouter) meter and route traffic; policy engines (OPA) evaluate rules — but neither models the *agent as an identity*: owner, stakeholder, org-tree scope, priority tier, and resource clearance in one governed record. ARM's differentiators: (1) **identity-first** — every call is attributable to a governed agent with an accountable human; (2) **resource-access governance** — mint/proxy/sync connectors with deny-overrides, not just LLM routing; (3) **classification cross-link** — what an agent has *seen* constrains which model it may *use*; (4) **dual delivery** — multi-tenant SaaS and single-tenant self-hosted from one schema (§3.4).
 
 ### 1.1 Problem statements addressed
 1. Management cannot see how many agents are spawned per department/group/team/workstream, what LLMs they use, or what they cost.
@@ -372,6 +375,8 @@ erDiagram
 - Reads response `usage` block for exact metering; **prompt bodies never persisted**.
 - Enforces quota locally. Quota/routing decisions **fail-closed** if the control plane is unreachable (agent blocked); metering **event emission** fails-open (best-effort buffer + retry, never blocks the call). See §13 Open Item 3.
 - Enforces quota **priority-aware**: applies the tier ladder from §5.1 — `background` → downgrade → throttle → queue (`429 + Retry-After`); `standard` → throttle; `critical` → reserve draw. Hard cap still fails closed for all tiers; every tier action alerts the agent's stakeholder.
+- **Performance budget** (adoption-critical): added latency p50 < 25 ms, p99 < 100 ms per call excluding provider time; ≥ 500 RPS per data-plane node within the p99 budget. Measured by the 1.2 load-test harness; a regression blocks the 1.2 exit gate (§9).
+- Quota accounting is **eventual, not transactional** (Phase 1): concurrent calls from one agent may overshoot a day-cap by one in-flight window before enforcement catches up; overshoot is metered, attributed, and surfaced — never hidden. Strong reservation semantics are a Phase 2+ option if field data demands it.
 
 **Open-Gateway** (vLLM + TS shim, OpenAI-compat)
 - Hosts GLM-5.2, DeepSeek, Kimi K3.
@@ -393,6 +398,7 @@ erDiagram
 - Consolidates events from proxy / gateway / plugins / connectors.
 - Dedupes concurrent agents.
 - Pushes metadata-only events to control plane over mTLS.
+- Event buffer is **disk-backed and bounded** (WAL-style; default cap 1 GB / 24 h): a data-plane restart never silently loses metering. Buffer depth, oldest-event age, and drop counters are exported as metrics; sustained drops page the tenant admin.
 
 **Tenant Vault**
 - Sealed storage for secrets (legacy DB creds where OIDC not supported).
@@ -432,7 +438,7 @@ erDiagram
 
 **Onboarding UX**: guided setup checklist — org tree + IdP federation → master keys → first data-plane install (CLI handoff with verification) → first agent registration (web issues the credential, `arm agent init` writes the config).
 
-**Notification surfaces**: in-app notification center + outbound email/webhook for budget alerts, drift, tier actions (routed to stakeholders), and approval requests.
+**Notification surfaces**: in-app notification center + outbound email/webhook for budget alerts, drift, tier actions (routed to stakeholders), and approval requests; per-user channel preferences and muting ship with the 1.4 approval traffic.
 
 **Stances**: desktop-first responsive; WCAG 2.1 AA target (enterprise procurement requirement); dark mode default for ops surfaces; i18n deferred (stated non-goal for Phase 1).
 
@@ -494,6 +500,7 @@ flowchart TB
 - Classification tag on a resource **gates LLM model routing** — confidential+ content cannot be sent to closed external models. This is the single bidirectional link between the LLM-policy and access-policy domains.
 - **Phase 1 enforcement (decided — D2-a): context tagging at vend/return.** The data plane maintains a per-agent `classification_context` — the max classification of content the agent has obtained — with a sliding TTL (~30 min). It is session metadata, not content, and lives entirely in the data plane. Tagging fires at the strategy-appropriate point (§6.2): *mint* connectors (S3/GCS/SharePoint) tag at **credential-vending** time (the grant implies imminent access — ARM never sees the agent→S3 bytes); *proxy* connectors (DB/internal) tag at **response** time (actual content return).
 - On every call the Closed-Proxy/Open-Gateway checks the context: if `classification_context ≥ confidential` and the requested model is closed-external, the call is denied with a typed error (retry with a self-hosted model, or wait for context expiry / explicit session reset). Gate decisions emit `access_audit_event(decision=deny, reason="classification_gate")` — a decision record, not content.
+- **Write-path hardening**: only resource connectors may write `classification_context` (internal data-plane API, never agent-callable). Session reset is authenticated, policy-gated (scope-admin or stakeholder + recorded reason), and itself audited — an agent can never clear its own context to outrun the gate.
 - Phase 2 reserves hook points for content-pattern DLP at the proxy; Phase 1 ships metadata-only audit by default.
 
 ### 6.6 Agent priority, tier & stakeholder governance
@@ -629,6 +636,7 @@ sequenceDiagram
 - Web shell: Next.js app with route guards (UI RBAC), design system pinned (§5.3), lo-fi wireframes for the §5.3 IA — design lead-time before 1.1.
 - Auth: OIDC SSO + RBAC + **ARM-as-OIDC-issuer**.
 - tRPC routers for all CRUD/query surfaces.
+- Own-telemetry baseline: OTel instrumentation (traces/metrics/logs) for all services; control plane exposes service-health + event-pipeline-lag metrics from day one.
 
 ### 1.1 — LLM Metering & Dashboards
 - Anthropic + OpenAI admin-API connectors (Resolution D backstop).
@@ -643,6 +651,8 @@ sequenceDiagram
 - **Packaging**: Dockerfiles + `docker-compose.yml` + **Helm chart** (`arm-data-plane` with subcharts) + **Terraform module** (customer VPC: IAM role + Secret Manager + EKS/ECS targeting Helm).
 - `arm data-plane install` CLI: register tenant → pull delegate key → render chart → apply.
 - `arm agent init` onboarding CLI: detects agent type (opencode / claude code / copilot / Pi), writes config, verifies a metered round-trip.
+- Data-plane telemetry: proxy added-latency (vs §5.2 budget), meter-agent buffer depth, policy-pull freshness — exported to the control-plane health surface.
+- **Exit gate (1.2)**: vertical slice green — one engineer, one registered agent, one metered LLM call through closed-proxy → meter-agent → ClickHouse → dashboard, running E2E in CI; load test meets the §5.2 performance budget.
 
 ### 1.3 — Resource Access: Cloud-Native Connectors
 - Permission engine: RBAC + ABAC, inheritance, deny-overrides, JIT approval skeleton, audit emit.
@@ -674,6 +684,25 @@ gantt
   section 1.4 Data+Collab
   DB + SharePoint + JIT         :a5, after a4, 30d
 ```
+
+**Scheduling assumptions**: the gantt assumes 2–3 engineers full-time on ARM and contains **zero slack** — it is a critical-path map, not a commitment. 1.2 is the schedule risk (new infrastructure surface: proxy, gateway, packaging); if it slips, shed scope to Open Item 1 (1.4 → Phase 2) rather than compressing 1.3's live IdP verification. Sub-releases ship behind feature flags so a slipped connector never blocks a shipped one.
+
+### 1.y — Success criteria & exit gates (Phase 1)
+
+Phase 1 is measured on outcomes, not feature completion. The program succeeds if, by end of 1.4:
+
+| Metric | Target | Measured by |
+|---|---|---|
+| Agents onboarded (pilot tenants) | ≥ 2 pilot tenants, ≥ 50 agents registered | Postgres |
+| Proxied-traffic share | ≥ 80% of metered LLM calls via proxy/gateway (vs billing-API fallback) | `token_usage_event.source` |
+| Metering accuracy | dashboard spend within 3% of provider bill per tenant-month | reconciliation job |
+| Enforcement latency | quota/routing decisions within §5.2 budget (p99 < 100 ms added) | proxy telemetry |
+| Policy propagation | DENY-class ≤ 15 s (D5 SLA) | policy-freshness health surface |
+| Cost steering | ≥ 1 workstream switched to open models via the savings flow; $ delta tracked vs 30-day baseline | savings dashboard |
+| Access governance | 100% of resource-access decisions audited; JIT grant → audit visible < 1 min | `access_audit_event` |
+| Onboarding friction | `arm agent init`: SSO → first metered call < 5 min | onboarding funnel events |
+
+Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrails mutation-proofed; **1.1** = dashboards live on real metering for ≥ 1 internal tenant; **1.2** = vertical slice E2E + performance budget; **1.3** = live Okta/Entra federation test passing + policy simulator shipped; **1.4** = JIT approval round-trip + SharePoint drift detection running 7 days clean.
 
 ### Phases 2–5 (deferred)
 - **Phase 2**: SAML/SCIM, DLP content hooks, full approval workflow UX.
@@ -733,6 +762,7 @@ gantt
 | Priority-tier abuse (self-marked critical) | Budget bypass, critical-tier crowding | Tier assignment is policy (§6.6); `critical` requires scope-admin approval; tier changes audited |
 | Background-tier starvation under chronic budget pressure | Optimization/upgrade work never runs | Minimum floor / scheduled windows per scope; starvation metric in dashboards |
 | Orphaned scope-owned agents (scope deleted/reorged, stakeholder departs) | Zombie spend, dangling access, no accountable human | Cascade-disable on scope delete; stakeholder re-attestation on departure (transfer or retire); TTL for automation-spawned agents |
+| Agent adoption failure (agents not routed through ARM) | Metering backbone collapses to the lagging billing-API path; "live enforcement" claims die | `arm agent init` + `/.well-known/arm-agent` discovery minimize onboarding friction; plugin fallback for non-proxy agents; bypass spend capped provider-side; proxied-traffic share is a first-class success metric (§9 exit gates) |
 
 ---
 
@@ -833,4 +863,4 @@ arm/
 
 ---
 
-*End of spec v0.4. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
+*End of spec v0.5. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
