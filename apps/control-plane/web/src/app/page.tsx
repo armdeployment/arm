@@ -6,6 +6,7 @@ import { SpendTrendChart, ModelSpendChart, TierBreakdownChart } from "../compone
 import { AgentsTable } from "../components/agents-table";
 import { ScopeBreadcrumb } from "../components/breadcrumb";
 import { ChildScopeGrid } from "../components/child-scope-grid";
+import { SpendTreemap, SpendTreeView } from "../components/spend-tree";
 import { useScope } from "../lib/use-scope";
 import { trpc } from "../lib/trpc/client";
 import type { AgentRow } from "../lib/mock-data";
@@ -87,6 +88,12 @@ function DashboardContent() {
 
       {/* Drill-down: child scope cards (CEO sees departments, dept head sees groups, etc.) */}
       {hasChildren && <ChildScopeGrid scope={scope} />}
+
+      {/* Spend tree visualization — treemap for management, indented tree for detail */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SpendTreemap />
+        <SpendTreeView />
+      </div>
 
       {/* Charts + agents table */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

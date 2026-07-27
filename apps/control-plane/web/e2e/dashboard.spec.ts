@@ -11,17 +11,21 @@ test.describe("ARM dashboard — org-root (CEO view)", () => {
 
     await expect(page.getByRole("heading", { name: "Acme Corp" })).toBeVisible();
 
-    // Stat cards with rolled-up org totals
-    await expect(page.getByText("$7,150")).toBeVisible();
-    await expect(page.getByText("18 agents", { exact: false })).toBeVisible();
+    // Stat cards with rolled-up org totals — .first() because tree view root also shows $7,150
+    await expect(page.getByText("$7,150").first()).toBeVisible();
+    await expect(page.getByText("18 agents").first()).toBeVisible();
 
     // Department cards — scoped to avoid ambiguity with agent names
     await expect(page.getByRole("link", { name: /Engineering department/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Operations department/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Data department/ })).toBeVisible();
 
-    // Engineering card shows rolled-up spend
-    await expect(page.getByText("$3,335")).toBeVisible();
+    // Engineering card shows rolled-up spend — scope to the drill-down card link
+    await expect(page.getByRole("link", { name: /Engineering department/ }).getByText("$3,335")).toBeVisible();
+
+    // Spend tree visualizations (treemap + indented tree)
+    await expect(page.getByText("Spend by Org Tree", { exact: true })).toBeVisible();
+    await expect(page.getByText("Spend by Org Tree (Full Hierarchy)")).toBeVisible();
   });
 
   test("sidebar navigation works", async ({ page }) => {
@@ -50,8 +54,8 @@ test.describe("ARM dashboard — drill-down", () => {
     // Operations rolled-up values — .first() because both the stat card and SRE group card show $3,365
     await expect(page.getByText("$3,365").first()).toBeVisible({ timeout: 10_000 });
 
-    // Shows child groups (SRE)
-    await expect(page.getByText("SRE")).toBeVisible({ timeout: 10_000 });
+    // Shows child groups (SRE) — use the group card link to avoid ambiguity with treemap/tree-view
+    await expect(page.getByRole("link", { name: /SRE group/ })).toBeVisible({ timeout: 10_000 });
   });
 
   test("breadcrumb navigates back up to org root", async ({ page }) => {

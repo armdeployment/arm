@@ -213,6 +213,18 @@ const telemetryState = initTelemetry("control-plane");
 
 // ── Routers ────────────────────────────────────────────────────────────────
 
+interface TreeNode {
+  id: string;
+  name: string;
+  type: string;
+  monthlySpend: number;
+  agentCount: number;
+  budgetCap: number;
+  budgetUtilPct: number;
+  criticalCount: number;
+  children: TreeNode[];
+}
+
 const orgTreeRouter = t.router({
   /** Returns breadcrumb path from org root to the given scope. */
   path: tenantProcedure
@@ -246,6 +258,31 @@ const orgTreeRouter = t.router({
       });
       return { tenantId: opts.ctx.tenantId!, scope: { id: scope.id, name: scope.name, type: scope.type }, children };
     }),
+
+  /** Returns the FULL org tree with spend/agent rollups at every level.
+   *  Used for treemap and tree-view visualizations — no drill-down needed. */
+  fullTree: tenantProcedure.query(async (opts) => {
+    function buildNode(scope: ScopeNode): TreeNode {
+      const kids = childScopes(scope);
+      const agents = agentsInScope(scope);
+      const spend = agents.reduce((s, a) => s + a.monthlySpend, 0);
+      const node: TreeNode = {
+        id: scope.id,
+        name: scope.name,
+        type: scope.type,
+        monthlySpend: spend,
+        agentCount: agents.length,
+        budgetCap: scope.budgetCap,
+        budgetUtilPct: Math.round((spend / scope.budgetCap) * 100),
+        criticalCount: agents.filter((a) => a.tier === "critical").length,
+        children: kids.map(buildNode),
+      };
+      return node;
+    }
+
+    const root = SCOPES.find((s) => s.type === "org")!;
+    return { tenantId: opts.ctx.tenantId!, tree: buildNode(root) };
+  }),
 });
 
 const spendRouter = t.router({

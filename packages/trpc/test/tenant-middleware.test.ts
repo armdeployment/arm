@@ -145,6 +145,45 @@ describe("scope-aware agents list", () => {
   });
 });
 
+describe("org-tree full tree (management visualization)", () => {
+  it("returns the complete tree with rollups at every level", async () => {
+    const caller = makeCaller(authedClaims);
+    const result = await caller.orgTree.fullTree();
+    expect(result.tree.name).toBe("Acme Corp");
+    expect(result.tree.monthlySpend).toBe(7150);
+    expect(result.tree.agentCount).toBe(18);
+    expect(result.tree.children.length).toBe(3); // 3 departments
+  });
+
+  it("each department node has its own rollup", async () => {
+    const caller = makeCaller(authedClaims);
+    const result = await caller.orgTree.fullTree();
+    const eng = result.tree.children.find((c) => c.name === "Engineering")!;
+    expect(eng.monthlySpend).toBe(3335);
+    expect(eng.agentCount).toBe(11);
+    expect(eng.children.length).toBe(2); // Platform + Product Eng
+  });
+
+  it("team-level nodes carry task agents", async () => {
+    const caller = makeCaller(authedClaims);
+    const result = await caller.orgTree.fullTree();
+    const ops = result.tree.children.find((c) => c.name === "Operations")!;
+    const sre = ops.children.find((c) => c.name === "SRE")!;
+    const ir = sre.children.find((c) => c.name === "Incident Response")!;
+    expect(ir.monthlySpend).toBe(3160); // 1580+1240+340
+    expect(ir.criticalCount).toBe(2);
+  });
+
+  it("budget utilization is computed per node", async () => {
+    const caller = makeCaller(authedClaims);
+    const result = await caller.orgTree.fullTree();
+    for (const child of result.tree.children) {
+      expect(child.budgetUtilPct).toBeGreaterThan(0);
+      expect(child.budgetCap).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe("input validation (zod)", () => {
   it("rejects invalid agent creation input", async () => {
     const caller = makeCaller(authedClaims);
