@@ -1,0 +1,85 @@
+# ARM Data Plane Helm Chart — Values
+# Tenant overrides injected at install time by `arm data-plane install`.
+
+# ── Control plane connection (required) ──
+controlPlane:
+  url: ""      # Set at install: https://control.arm.example.com
+  tenantId: "" # Set at install: tenant UUID from registration
+
+# ── Closed proxy ──
+proxy:
+  enabled: true
+  replicas: 2
+  image:
+    repository: arm/closed-proxy
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: "500m", memory: "256Mi" }
+    limits:   { cpu: "2000m", memory: "512Mi" }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  port: 8787
+  env:
+    ARM_FAIL_MODE: "fail_closed"
+    PROXY_PERFORMANCE_BUDGET_MS: "25"  # p50 latency budget (spec §5.2)
+
+# ── Open gateway ──
+openGateway:
+  enabled: true
+  replicas: 1
+  image:
+    repository: arm/open-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: "250m", memory: "256Mi" }
+    limits:   { cpu: "1000m", memory: "512Mi" }
+  port: 8788
+  vllmEndpoint: "" # Set at install: http://vllm:8000
+
+# ── Meter agent ──
+meterAgent:
+  enabled: true
+  image:
+    repository: arm/meter-agent
+    tag: latest
+    pullPolicy: IfNotPresent
+  buffer:
+    maxBytes: 1073741024  # 1 GB (spec §5.2)
+    maxAgeHours: 24
+    dir: /data/meter-buffer
+  resources:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "500m", memory: "256Mi" }
+
+# ── Service ──
+service:
+  type: ClusterIP
+  proxyPort: 8787
+  gatewayPort: 8788
+
+# ── Ingress (optional) ──
+ingress:
+  enabled: false
+  className: ""
+  hosts: []
+
+# ── Persistence ──
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 10Gi
+
+# ── Monitoring ──
+serviceMonitor:
+  enabled: false  # Enable if Prometheus Operator is installed
+
+# ── TLS / mTLS ──
+tls:
+  controlPlaneMTLS:
+    enabled: true
+    certSecretName: arm-control-plane-mtls

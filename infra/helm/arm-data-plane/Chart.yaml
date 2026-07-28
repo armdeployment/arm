@@ -1,0 +1,12 @@
+apiVersion: v2
+name: arm-data-plane
+description: ARM Data Plane — closed-proxy + open-gateway + meter-agent for tenant VPC deployment
+type: application
+version: 0.0.0
+appVersion: "0.0.0"
+keywords:
+  - llm
+  - ai-agent
+  - proxy
+  - metering
+  - governance

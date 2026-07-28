@@ -50,6 +50,29 @@ interface MeteringEvent {
   ts: string;
 }
 
+
+// ── Delegate Key Rotation (spec §7.2, §9 1.2) ──────────────────────────────
+
+interface DelegateKey { keyRef: string; rotatedAt: string; expiresAt: string; }
+
+const delegateKeys = new Map<string, DelegateKey>();
+
+export function rotateDelegateKey(tenantId: string): DelegateKey {
+  const keyRef = `dk_${tenantId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const key: DelegateKey = {
+    keyRef, rotatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+  };
+  delegateKeys.set(tenantId, key);
+  return key;
+}
+
+export function validateDelegateKey(tenantId: string, keyRef: string): boolean {
+  const stored = delegateKeys.get(tenantId);
+  if (!stored) return true;
+  return new Date(stored.expiresAt) > new Date() && stored.keyRef === keyRef;
+}
+
 // ── In-Memory Quota Store (real impl uses Redis/Postgres) ─────────────────
 
 const quotaStore = new Map<string, { dailyCapUsd: number; usedTodayUsd: number }>();
