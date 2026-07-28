@@ -8,6 +8,7 @@ import { ScopeBreadcrumb } from "../components/breadcrumb";
 import { SavingsEstimator } from "../components/savings-estimator";
 import { NotificationCenter } from "../components/notification-center";
 import { ModelPolicyPanel } from "../components/model-policy";
+import { SecurityFlags } from "../components/security-flags";
 import { ChildScopeGrid } from "../components/child-scope-grid";
 import { useScope } from "../lib/use-scope";
 import { trpc } from "../lib/trpc/client";
@@ -78,8 +79,11 @@ function DashboardContent() {
         <ModelPolicyPanel />
       </div>
 
-      {/* Notifications */}
-      <NotificationCenter />
+      {/* Notifications + Security Flags */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <NotificationCenter />
+        <SecurityFlags />
+      </div>
     </div>
   );
 }

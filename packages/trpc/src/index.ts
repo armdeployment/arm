@@ -476,6 +476,29 @@ const spendRouter = t.router({
       return { tenantId: opts.ctx.tenantId!, points: FIXTURE_SPEND_TREND };
     }),
 
+
+  modelMix: tenantProcedure
+    .input(z.object({ scope: scopeInput }))
+    .query(async (opts) => {
+      const scope = resolveScope(opts.input.scope);
+      const agents = agentsInScope(scope);
+      const byModel = new Map<string, { count: number; spend: number }>();
+      for (const a of agents) {
+        // Simulate: confidential/restricted agents use self-hosted, others mixed
+        const model = a.classificationClearance === "confidential" || a.classificationClearance === "restricted"
+          ? "GLM-5.2" : Math.random() > 0.5 ? "Claude Sonnet 4.5" : "GPT-4o";
+        const entry = byModel.get(model) ?? { count: 0, spend: 0 };
+        entry.count++;
+        entry.spend += a.monthlySpend;
+        byModel.set(model, entry);
+      }
+      const models = [...byModel.entries()]
+        .map(([model, stats]) => ({ model, modelKind: model === "GLM-5.2" ? "self_hosted" : "closed", agentCount: stats.count, spend: stats.spend,
+          pct: Math.round((stats.count / agents.length) * 100), }))
+        .sort((a, b) => b.spend - a.spend);
+      return { tenantId: opts.ctx.tenantId!, scope: { id: scope.id, name: scope.name, type: scope.type }, models };
+    }),
+
   /** Savings estimator — how much if we switch scopes to open models (spec §8.3). */
   savingsEstimate: tenantProcedure
     .input(z.object({ scope: scopeInput }))
@@ -620,6 +643,24 @@ const policyRouter = t.router({
     }),
 });
 
+/** Security router — risky operation flags (ARM differentiator). */
+const FIXTURE_SECURITY_FLAGS = [
+  { id: "sf1", severity: "critical" as const, category: "model_violation" as const, agentName: "alloy-analyzer", scope: "R&D / Metallurgy", description: "Agent with RESTRICTED clearance attempted to route to Claude (closed model). Call blocked by DLP gate.", timestamp: "2026-07-26T14:32:00Z", status: "reviewed" as const },
+  { id: "sf2", severity: "critical" as const, category: "data_access" as const, agentName: "payroll-validator", scope: "HR / Payroll", description: "Agent accessed employee compensation data outside approved window (03:14 UTC). Flagged for stakeholder review.", timestamp: "2026-07-27T03:14:00Z", status: "pending" as const },
+  { id: "sf3", severity: "warning" as const, category: "budget_breach" as const, agentName: "line-monitor-a", scope: "Manufacturing / Assembly Line A", description: "Agent exceeded daily budget cap of $50 — auto-throttled. Monthly total now at 95%%.", timestamp: "2026-07-27T09:45:00Z", status: "acknowledged" as const },
+  { id: "sf4", severity: "warning" as const, category: "permission_escalation" as const, agentName: "compound-formulator", scope: "R&D / Polymers", description: "Agent requested access to s3://engineering/cad-files/ without JIT approval. Request denied — elevated to team lead.", timestamp: "2026-07-26T16:22:00Z", status: "pending" as const },
+  { id: "sf5", severity: "info" as const, category: "unusual_pattern" as const, agentName: "security-scanner", scope: "IT / Network", description: "Agent query rate spiked 5× baseline. No policy violation detected but flagged for inspection.", timestamp: "2026-07-27T11:05:00Z", status: "acknowledged" as const },
+];
+
+const securityRouter = t.router({
+  flags: tenantProcedure
+    .input(z.object({ scope: scopeInput }))
+    .query(async (opts) => {
+      return { tenantId: opts.ctx.tenantId!, flags: FIXTURE_SECURITY_FLAGS };
+    }),
+});
+
+
 export const appRouter = t.router({
   health: healthRouter,
   orgTree: orgTreeRouter,
@@ -627,6 +668,7 @@ export const appRouter = t.router({
   spend: spendRouter,
   access: accessRouter,
   policy: policyRouter,
+  security: securityRouter,
 });
 
 export type AppRouter = typeof appRouter;
