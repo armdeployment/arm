@@ -310,3 +310,39 @@ app.post("/v1/proxy", async (c) => {
 
 export default app;
 export { checkQuota, checkModelAccess, resolveAgent, type AgentContext, type MeteringEvent };
+
+// ── Server start (sandbox entry point — zero deps, uses node:http) ──
+import { createServer } from "node:http";
+const PORT = parseInt(process.env.PROXY_PORT ?? "8787");
+createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (v) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
+    }
+    const request = new Request(url, { method: req.method, headers });
+    // Read body if present
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      const body = Buffer.concat(chunks).toString();
+      if (body) {
+        const req2 = new Request(url, { method: req.method, headers, body });
+        const resp = await app.fetch(req2);
+        res.writeHead(resp.status, Object.fromEntries(resp.headers));
+        const respBody = await resp.text();
+        res.end(respBody);
+        return;
+      }
+    }
+    const resp = await app.fetch(request);
+    res.writeHead(resp.status, Object.fromEntries(resp.headers));
+    const respBody = await resp.text();
+    res.end(respBody);
+  } catch (err) {
+    console.error("[proxy-error]", err);
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: "proxy_internal_error" }));
+  }
+}).listen(PORT, () => console.log(`[closed-proxy] http://localhost:${PORT}`));
