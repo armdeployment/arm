@@ -9,6 +9,8 @@ import { SavingsEstimator } from "../components/savings-estimator";
 import { NotificationCenter } from "../components/notification-center";
 import { ModelPolicyPanel } from "../components/model-policy";
 import { SecurityFlags } from "../components/security-flags";
+import { HostingCost } from "../components/hosting-cost";
+import { LiveTicker } from "../components/live-ticker";
 import { ChildScopeGrid } from "../components/child-scope-grid";
 import { useScope } from "../lib/use-scope";
 import { trpc } from "../lib/trpc/client";
@@ -51,6 +53,9 @@ function DashboardContent() {
         </div>
       </div>
 
+      {/* Live ticker — polling-driven realtime snapshot */}
+      <LiveTicker />
+
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Monthly Spend" value={`$${s.totalMonthlySpend.toLocaleString()}`} sub={`Budget: $${s.budgetCap.toLocaleString()}`} tone={s.budgetUtilPct > 80 ? "danger" : s.budgetUtilPct > 60 ? "warning" : "default"} />
@@ -84,6 +89,9 @@ function DashboardContent() {
         <NotificationCenter />
         <SecurityFlags />
       </div>
+
+      {/* Hosting cost */}
+      <HostingCost />
     </div>
   );
 }

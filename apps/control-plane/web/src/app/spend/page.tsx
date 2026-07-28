@@ -6,6 +6,7 @@ import { SpendTrendChart, ModelSpendChart } from "../../components/charts";
 import { ScopeBreadcrumb } from "../../components/breadcrumb";
 import { SpendTreemap } from "../../components/spend-tree";
 import { WorkClassificationPanel } from "../../components/work-classification";
+import { HostingCost } from "../../components/hosting-cost";
 import { useScope } from "../../lib/use-scope";
 import { trpc } from "../../lib/trpc/client";
 
@@ -58,6 +59,9 @@ function SpendPageContent() {
 
           {/* Work-type classification — what agents DO */}
           <WorkClassificationPanel />
+
+          {/* Hosting cost model for self-hosted inference */}
+          <HostingCost />
         </>
       ) : (
         <div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />

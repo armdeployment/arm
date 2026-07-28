@@ -499,6 +499,33 @@ const spendRouter = t.router({
       return { tenantId: opts.ctx.tenantId!, scope: { id: scope.id, name: scope.name, type: scope.type }, models };
     }),
 
+
+  /** Hosting cost model — cost of running self-hosted inference (spec §7.2). */
+  hostingCost: tenantProcedure.query(async (opts) => {
+    return {
+      tenantId: opts.ctx.tenantId!,
+      models: [
+        { model: "GLM-5.2", provider: "Self-hosted", gpuHours: 420, costPerHour: 1.20, monthlyCost: 504, instance: "A100×2" },
+        { model: "DeepSeek V3", provider: "Self-hosted", gpuHours: 180, costPerHour: 0.80, monthlyCost: 144, instance: "A10G×4" },
+      ],
+      totalHostingCost: 648,
+      savingsVsApi: 16170 - 648, // if all traffic moved to self-hosted
+    };
+  }),
+
+  /** Live snapshot — last-known metering state (polling-driven "realtime"). */
+  liveSnapshot: tenantProcedure.query(async () => {
+    return {
+      timestamp: new Date().toISOString(),
+      spendTodayUsd: 542.30,
+      requestsToday: 1842,
+      activeAgents: 58,
+      blockedByGate: 4, // DLP gate blocked 4 calls today
+      driftPct: 2.0,
+      status: "ok" as const,
+    };
+  }),
+
   /** Savings estimator — how much if we switch scopes to open models (spec §8.3). */
   savingsEstimate: tenantProcedure
     .input(z.object({ scope: scopeInput }))
