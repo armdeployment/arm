@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ScopeBreadcrumb } from "../../components/breadcrumb";
 import { useScope } from "../../lib/use-scope";
 import { trpc } from "../../lib/trpc/client";
+import { PolicySimulator } from "../../components/policy-simulator";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",

@@ -88,3 +88,34 @@ Every resolution emits an `access_audit_event` (see `docs/arm-spec.md` §4.2) wi
 - [ ] Whether Workstream/Agent levels may issue `ALLOW` at all or only refine/constrain (current assumption: may allow within authority).
 - [ ] Constraint merge conflict policy (e.g., two `prefix` allows → intersection or union?).
 - [ ] JIT grant expiry vs session-bound proxy sessions: shared `expires_at` column?
+## 5. Enforcement Reference (1.3 — as implemented)
+
+The policy resolver in `packages/policy` implements:
+
+| Rule | Behavior |
+|---|---|
+| No matching grant | Default deny |
+| Allow at any level | Allow (unless higher deny exists) |
+| Deny at any level | Denies all lower-level allows |
+| Expired grant | Ignored (treated as no grant) |
+| Wildcard action `*` | Matches any action |
+
+### S3 Connector
+- Strategy: mint (STS AssumeRoleWithWebIdentity)
+- Enforcement: IAM policy templated from grants at credential mint time
+- TTL: ≤15 min default, ≤60 min max (Invariant §11.4)
+
+### GCS Connector
+- Strategy: mint (Workload Identity Federation)
+- Enforcement: Scoped OAuth token with bucket/prefix constraints
+- TTL: ≤15 min default, ≤60 min max
+
+### DB Connector
+- Strategy: proxy (ARM brokers every query)
+- Enforcement: Per-call policy check + query audit
+- Classification: Redacts confidential columns for restricted agents
+
+### SharePoint Connector
+- Strategy: mint + sync hybrid
+- Enforcement: Graph API scoped token + periodic permission drift detection
+- Drift: Stale grants auto-revoked; drift >0 triggers alert

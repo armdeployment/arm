@@ -1,6 +1,17 @@
-// @arm-app/connectors — stub; see docs/arm-spec.md §9 (1.0 foundation)
-export const APP_NAME = "@arm-app/connectors";
-// Boundary note (spec §14.3 dependency-direction):
-//   - control-plane apps import proto/config/db/clickhouse/policy/billing/auth/trpc.
-//   - data-plane apps import proto/config ONLY (cross-plane shared via proto/config).
-//   - data-plane apps must NOT import control-plane-only packages (db/trpc/policy/auth/billing).
+/**
+ * ARM Data-Plane Connectors (spec §6.2, §9 1.3–1.4).
+ *
+ * Strategy: mint (S3, GCS, SharePoint), proxy (DB), mint+sync (SharePoint/OneDrive).
+ * All connectors emit access_audit_event records and enforce classification gates.
+ */
+
+export { mintS3Credential, validateS3Access, type S3ScopeRequest, type S3Credential } from "./s3.js";
+export { mintGCSCredential, type GCSScopeRequest, type GCSCredential } from "./gcs.js";
+export { proxyDBQuery, type DBQueryRequest, type DBQueryResult, type DBType } from "./db.js";
+export {
+  mintSharePointToken,
+  syncSharePointPermissions,
+  type SharePointScopeRequest,
+  type SharePointToken,
+  type PermissionSyncResult,
+} from "./sharepoint.js";

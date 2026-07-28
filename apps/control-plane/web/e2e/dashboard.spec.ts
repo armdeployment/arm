@@ -28,7 +28,7 @@ test.describe("ARM dashboard — org-root (CEO view)", () => {
 
   test("sidebar navigation works", async ({ page }) => {
     await page.goto("/");
-    for (const label of ["Dashboard", "Agents", "Spend", "Access", "Audit"]) {
+    for (const label of ["Dashboard", "Agents", "Spend", "Access", "Resources", "Audit"]) {
       await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
   });
