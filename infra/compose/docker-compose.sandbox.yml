@@ -1,0 +1,77 @@
+# ARM Sandbox — Full Demo Environment
+#
+# Starts the complete ARM stack for local testing/demo:
+#   - Control plane (Next.js dashboard, port 3100)
+#   - Closed proxy (Hono, port 8787) 
+#   - Open gateway (Hono, port 8788)
+#   - Ollama (local model server, port 11434)
+#
+# No external API keys required. Agents route through the proxy,
+# metering flows, and the dashboard shows live data.
+#
+# Usage:
+#   docker compose -f infra/compose/docker-compose.sandbox.yml up
+#   # In another terminal: run the agent simulator
+#   pnpm tsx scripts/sandbox/agent-simulator.ts
+
+services:
+  # ── Ollama: local small model server (CPU-friendly) ──
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ── Open Gateway: routes to Ollama for self-hosted models ──
+  open-gateway:
+    build:
+      context: ../..
+      dockerfile: infra/docker/open-gateway.Dockerfile
+    ports:
+      - "8788:8788"
+    environment:
+      NODE_ENV: development
+      VLLM_ENDPOINT: http://ollama:11434/v1
+      GATEWAY_PORT: "8788"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Closed Proxy: routes to Anthropic/OpenAI (stub mode in sandbox) ──
+  closed-proxy:
+    build:
+      context: ../..
+      dockerfile: infra/docker/proxy.Dockerfile
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: development
+      PROXY_PORT: "8787"
+      ARM_FAIL_MODE: fail_closed
+    restart: unless-stopped
+
+  # ── Control Plane: Next.js dashboard ──
+  control-plane:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
+
+# ── Post-sandbox setup ──
+# After starting:
+#   1. Pull a small model:  docker exec <ollama-container> ollama pull tinyllama
+#   2. Run the agent simulator: pnpm tsx scripts/sandbox/agent-simulator.ts
+#   3. Open dashboard: http://localhost:3100

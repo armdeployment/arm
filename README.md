@@ -91,6 +91,41 @@ pnpm format:check     # prettier check
 
 ---
 
+
+## Sandbox Demo Environment
+
+Run a complete ARM demo locally with simulated agents and real metering:
+
+```bash
+# One-time: pull a small local model (no GPU needed)
+ollama pull tinyllama
+
+# Start everything (proxy, gateway, dashboard, ollama)
+bash scripts/sandbox/start.sh
+
+# In another terminal: run the agent simulator
+pnpm tsx scripts/sandbox/agent-simulator.ts
+
+# Open http://localhost:3100 to see live metering
+```
+
+The simulator spawns agents from the manufacturing org tree making realistic
+requests. You'll see live metering, DLP gate enforcement, priority-based quota,
+and security flags on the dashboard.
+
+```bash
+# Options
+NUM_AGENTS=20 INTERVAL_MS=1000 DURATION_SEC=600 pnpm tsx scripts/sandbox/agent-simulator.ts
+```
+
+### Docker (alternative)
+
+```bash
+docker compose -f infra/compose/docker-compose.sandbox.yml up
+docker exec <ollama-container> ollama pull tinyllama
+pnpm tsx scripts/sandbox/agent-simulator.ts
+```
+
 ## Troubleshooting
 
 **`pnpm install` fails with ignored builds** — run `pnpm install` again after the first attempt; the `allowBuilds` config in `pnpm-workspace.yaml` permits esbuild/sharp postinstall scripts.
