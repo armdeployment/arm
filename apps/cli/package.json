@@ -12,5 +12,8 @@
     "@arm/proto": "workspace:*",
     "@arm/config": "workspace:*",
     "@arm/trpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1"
   }
 }

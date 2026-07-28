@@ -1,0 +1,64 @@
+# ARM Data Plane — docker-compose (spec §9 1.2)
+# Single-node deployment for dev/testing. Production uses Helm + Terraform.
+
+version: "3.8"
+
+services:
+  # ── Closed Proxy (OpenAI/Anthropic wire) ──
+  closed-proxy:
+    build:
+      context: ../..
+      dockerfile: infra/docker/proxy.Dockerfile
+    ports:
+      - "${PROXY_PORT:-8787}:8787"
+    environment:
+      NODE_ENV: production
+      PROXY_PORT: "8787"
+      METER_AGENT_BUFFER_DIR: /data/meter-buffer
+      ARM_FAIL_MODE: fail_closed
+    volumes:
+      - meter-buffer-data:/data/meter-buffer
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Open Gateway (vLLM shim) ──
+  open-gateway:
+    build:
+      context: ../..
+      dockerfile: infra/docker/open-gateway.Dockerfile
+    ports:
+      - "${GATEWAY_PORT:-8788}:8788"
+    environment:
+      NODE_ENV: production
+      VLLM_ENDPOINT: ${VLLM_ENDPOINT:-http://vllm:8000}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8788/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Optional: vLLM (self-hosted model server) ──
+  # Uncomment to run GLM-5.2 / DeepSeek locally.
+  # vllm:
+  #   image: vllm/vllm-openai:latest
+  #   ports:
+  #     - "8000:8000"
+  #   command: --model glm-5.2 --port 8000
+  #   volumes:
+  #     - model-cache:/root/.cache/huggingface
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+volumes:
+  meter-buffer-data:
+  # model-cache:
