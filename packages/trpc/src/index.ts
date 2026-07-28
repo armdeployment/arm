@@ -583,12 +583,50 @@ const healthRouter = t.router({
 
 // ── Root router ────────────────────────────────────────────────────────────
 
+/** Policy router — classification-gated model routing (spec §6.5 DLP gate). */
+const policyRouter = t.router({
+  modelRules: publicProcedure.query(() => ({
+    rules: [
+      { clearance: "public" as const, allowedKinds: ["closed", "self_hosted"] as const, description: "All models available" },
+      { clearance: "internal" as const, allowedKinds: ["closed", "self_hosted"] as const, description: "All models available" },
+      { clearance: "confidential" as const, allowedKinds: ["self_hosted"] as const, description: "Closed external models blocked — self-hosted only" },
+      { clearance: "restricted" as const, allowedKinds: ["self_hosted"] as const, description: "Highest sensitivity — self-hosted only, full audit" },
+    ],
+  })),
+
+  scopeCompliance: tenantProcedure
+    .input(z.object({ scope: scopeInput }))
+    .query(async (opts) => {
+      const scope = resolveScope(opts.input.scope);
+      const agents = agentsInScope(scope);
+      const restricted = agents.filter(
+        (a) => a.classificationClearance === "confidential" || a.classificationClearance === "restricted",
+      );
+      return {
+        tenantId: opts.ctx.tenantId!,
+        scope: { id: scope.id, name: scope.name, type: scope.type },
+        totalAgents: agents.length,
+        restrictedAgents: restricted.length,
+        restrictedPct: agents.length > 0 ? Math.round((restricted.length / agents.length) * 100) : 0,
+        availableModels: [
+          { model: "GLM-5.2", provider: "Self-hosted", kind: "self_hosted" as const },
+          { model: "DeepSeek V3", provider: "Self-hosted", kind: "self_hosted" as const },
+        ],
+        blockedModels: [
+          { model: "Claude Sonnet 4.5", provider: "Anthropic", kind: "closed" as const, reason: "Blocked for confidential/restricted" },
+          { model: "GPT-4o", provider: "OpenAI", kind: "closed" as const, reason: "Blocked for confidential/restricted" },
+        ],
+      };
+    }),
+});
+
 export const appRouter = t.router({
   health: healthRouter,
   orgTree: orgTreeRouter,
   agents: agentsRouter,
   spend: spendRouter,
   access: accessRouter,
+  policy: policyRouter,
 });
 
 export type AppRouter = typeof appRouter;

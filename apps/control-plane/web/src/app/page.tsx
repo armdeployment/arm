@@ -7,6 +7,7 @@ import { AgentsTable } from "../components/agents-table";
 import { ScopeBreadcrumb } from "../components/breadcrumb";
 import { SavingsEstimator } from "../components/savings-estimator";
 import { NotificationCenter } from "../components/notification-center";
+import { ModelPolicyPanel } from "../components/model-policy";
 import { ChildScopeGrid } from "../components/child-scope-grid";
 import { useScope } from "../lib/use-scope";
 import { trpc } from "../lib/trpc/client";
@@ -71,11 +72,14 @@ function DashboardContent() {
         <AgentsTable data={(agents.data.agents as AgentRow[]).slice(0, 5)} />
       )}
 
-      {/* Savings estimator + notifications */}
+      {/* Savings estimator + model policy */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SavingsEstimator />
-        <NotificationCenter />
+        <ModelPolicyPanel />
       </div>
+
+      {/* Notifications */}
+      <NotificationCenter />
     </div>
   );
 }
