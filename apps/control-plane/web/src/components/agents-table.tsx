@@ -10,6 +10,13 @@ import type { AgentRow } from "../lib/mock-data";
 
 const columnHelper = createColumnHelper<AgentRow>();
 
+const CLEARANCE_STYLES: Record<string, string> = {
+  public: "bg-green-50 text-green-600 ring-1 ring-green-200",
+  internal: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
+  confidential: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
+  restricted: "bg-rose-50 text-rose-600 ring-1 ring-rose-200",
+};
+
 const TIER_STYLES: Record<string, string> = {
   critical: "bg-rose-50 text-rose-600 ring-1 ring-rose-200",
   standard: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
@@ -65,6 +72,14 @@ const columns = [
     cell: (info) => (
       <span className="font-mono font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
         ${info.getValue().toLocaleString()}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("classificationClearance", {
+    header: "Clearance",
+    cell: (info) => (
+      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${CLEARANCE_STYLES[info.getValue()] ?? ""}`}>
+        {info.getValue()}
       </span>
     ),
   }),

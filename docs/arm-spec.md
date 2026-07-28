@@ -22,7 +22,17 @@
 
 ARM is an HR-style platform for AI agents — a centralized plane for **identity, metering, routing, budgeting, policy enforcement, and resource-access control** of every LLM agent an organization spawns. An agent is treated as a "digital employee": it has an identity, a manager (a human **stakeholder** plus its team/workstream), a salary (token cost), a budget, an assigned tool (LLM model), a priority tier, and scoped permissions to organizational resources.
 
-**Why ARM, not a gateway + OPA**: LLM gateways (LiteLLM, Portkey, Helicone, OpenRouter) meter and route traffic; policy engines (OPA) evaluate rules — but neither models the *agent as an identity*: owner, stakeholder, org-tree scope, priority tier, and resource clearance in one governed record. ARM's differentiators: (1) **identity-first** — every call is attributable to a governed agent with an accountable human; (2) **resource-access governance** — mint/proxy/sync connectors with deny-overrides, not just LLM routing; (3) **classification cross-link** — what an agent has *seen* constrains which model it may *use*; (4) **dual delivery** — multi-tenant SaaS and single-tenant self-hosted from one schema (§3.4).
+**Why ARM, not a gateway + OPA**: LLM gateways (LiteLLM, Portkey, Helicone, OpenRouter, TrueFoundry Agent Gateway) meter and route traffic; policy engines (OPA) evaluate rules — but none models the *agent as a governed employee*. TrueFoundry offers per-agent quotas and RBAC; ARM's differentiators center on **management visibility and accountability at enterprise scale**:
+
+(1) **Hierarchical org-tree budgeting** — spend flows through Org → Dept → Group → Team → Agent with inheritance, rollups, and priority tiers. A CEO sees $16,170/mo across 60 agents in 10 departments; a department head sees their teams; a team lead sees their agents. Every level has budget caps, utilization bars, and automatic enforcement (downgrade → throttle → queue).
+
+(2) **Department-level work-type classification** — every agent has a `taskType` describing what it *does* (e.g. "CNC toolpath optimization", "Cash flow forecasting"). ARM classifies prompt domains and work categories per department, giving management a complete picture of how agents are being used — not just how much they cost. Classification gates LLM routing: confidential manufacturing specs cannot reach public models.
+
+(3) **Stakeholder accountability** — every agent has exactly one accountable human stakeholder who receives budget alerts, JIT approval requests, and compliance notifications. No anonymous automation.
+
+(4) **Priority tiers** (critical/standard/background) — assignment is policy, not self-declared. Under budget pressure, background agents auto-downgrade to open models, standard agents throttle, critical agents draw from reserve.
+
+(5) **Dual delivery** — multi-tenant SaaS and single-tenant self-hosted from one schema (§3.4), essential for manufacturing enterprises with data residency requirements.
 
 ### 1.1 Problem statements addressed
 1. Management cannot see how many agents are spawned per department/group/team/workstream, what LLMs they use, or what they cost.

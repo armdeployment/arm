@@ -81,112 +81,194 @@ interface AgentFixture {
   monthlySpend: number;
   status: string;
   taskType: string;
+  classificationClearance: "public" | "internal" | "confidential" | "restricted";
 }
 
 const SCOPES: ScopeNode[] = [
-  { id: "org_acme", name: "Acme Corp", type: "org", parentId: null, budgetCap: 12000 },
+  { id: "org_acme", name: "Acme Manufacturing", type: "org", parentId: null, budgetCap: 20000 },
   // Engineering
-  { id: "dept_eng", name: "Engineering", type: "department", parentId: "org_acme", budgetCap: 5000 },
-  { id: "grp_plat", name: "Platform", type: "group", parentId: "dept_eng", budgetCap: 3000 },
-  { id: "team_be", name: "Backend", type: "team", parentId: "grp_plat", budgetCap: 2000 },
-  { id: "team_fe", name: "Frontend", type: "team", parentId: "grp_plat", budgetCap: 1200 },
-  { id: "grp_prod", name: "Product Eng", type: "group", parentId: "dept_eng", budgetCap: 1500 },
-  { id: "team_mobile", name: "Mobile", type: "team", parentId: "grp_prod", budgetCap: 700 },
-  { id: "team_ds", name: "Design Systems", type: "team", parentId: "grp_prod", budgetCap: 500 },
-  // Operations
-  { id: "dept_ops", name: "Operations", type: "department", parentId: "org_acme", budgetCap: 5000 },
-  { id: "grp_sre", name: "SRE", type: "group", parentId: "dept_ops", budgetCap: 4500 },
-  { id: "team_ir", name: "Incident Response", type: "team", parentId: "grp_sre", budgetCap: 3500 },
-  { id: "team_mon", name: "Monitoring", type: "team", parentId: "grp_sre", budgetCap: 500 },
-  // Data
-  { id: "dept_data", name: "Data", type: "department", parentId: "org_acme", budgetCap: 1500 },
-  { id: "grp_analytics", name: "Analytics", type: "group", parentId: "dept_data", budgetCap: 1000 },
-  { id: "team_pipe", name: "Pipeline", type: "team", parentId: "grp_analytics", budgetCap: 800 },
+  { id: "dept_eng", name: "Engineering", type: "department", parentId: "org_acme", budgetCap: 2500 },
+  { id: "grp_prod_dsgn", name: "Product Design", type: "group", parentId: "dept_eng", budgetCap: 1500 },
+  { id: "team_cad", name: "CAD Design", type: "team", parentId: "grp_prod_dsgn", budgetCap: 700 },
+  { id: "team_sim", name: "Simulation", type: "team", parentId: "grp_prod_dsgn", budgetCap: 600 },
+  { id: "grp_tooling", name: "Tooling", type: "group", parentId: "dept_eng", budgetCap: 800 },
+  { id: "team_tool", name: "Tool Design", type: "team", parentId: "grp_tooling", budgetCap: 600 },
+  // Manufacturing
+  { id: "dept_mfg", name: "Manufacturing", type: "department", parentId: "org_acme", budgetCap: 4000 },
+  { id: "grp_production", name: "Production", type: "group", parentId: "dept_mfg", budgetCap: 3000 },
+  { id: "team_line_a", name: "Assembly Line A", type: "team", parentId: "grp_production", budgetCap: 1500 },
+  { id: "team_line_b", name: "Assembly Line B", type: "team", parentId: "grp_production", budgetCap: 1200 },
+  { id: "grp_maint", name: "Maintenance", type: "group", parentId: "dept_mfg", budgetCap: 1000 },
+  { id: "team_pm", name: "Predictive Maint", type: "team", parentId: "grp_maint", budgetCap: 600 },
+  // Quality Assurance
+  { id: "dept_qa", name: "Quality Assurance", type: "department", parentId: "org_acme", budgetCap: 2500 },
+  { id: "grp_inspection", name: "Inspection", type: "group", parentId: "dept_qa", budgetCap: 1800 },
+  { id: "team_incoming", name: "Incoming QC", type: "team", parentId: "grp_inspection", budgetCap: 700 },
+  { id: "team_final", name: "Final QC", type: "team", parentId: "grp_inspection", budgetCap: 1000 },
+  { id: "grp_compliance", name: "Compliance", type: "group", parentId: "dept_qa", budgetCap: 600 },
+  { id: "team_iso", name: "ISO Audit", type: "team", parentId: "grp_compliance", budgetCap: 400 },
+  // Supply Chain
+  { id: "dept_sc", name: "Supply Chain", type: "department", parentId: "org_acme", budgetCap: 2000 },
+  { id: "grp_procurement", name: "Procurement", type: "group", parentId: "dept_sc", budgetCap: 1200 },
+  { id: "team_raw", name: "Raw Materials", type: "team", parentId: "grp_procurement", budgetCap: 600 },
+  { id: "team_components", name: "Components", type: "team", parentId: "grp_procurement", budgetCap: 600 },
+  { id: "grp_logistics", name: "Logistics", type: "group", parentId: "dept_sc", budgetCap: 700 },
+  { id: "team_warehouse", name: "Warehouse", type: "team", parentId: "grp_logistics", budgetCap: 500 },
+  // R&D
+  { id: "dept_rd", name: "Research & Development", type: "department", parentId: "org_acme", budgetCap: 2500 },
+  { id: "grp_materials", name: "Materials Research", type: "group", parentId: "dept_rd", budgetCap: 1500 },
+  { id: "team_metallurgy", name: "Metallurgy", type: "team", parentId: "grp_materials", budgetCap: 700 },
+  { id: "team_polymers", name: "Polymers", type: "team", parentId: "grp_materials", budgetCap: 600 },
+  { id: "grp_process", name: "Process Innovation", type: "group", parentId: "dept_rd", budgetCap: 800 },
+  { id: "team_new_proc", name: "New Process", type: "team", parentId: "grp_process", budgetCap: 600 },
+  // Sales & Marketing
+  { id: "dept_sales", name: "Sales & Marketing", type: "department", parentId: "org_acme", budgetCap: 1800 },
+  { id: "grp_sales", name: "Sales", type: "group", parentId: "dept_sales", budgetCap: 1000 },
+  { id: "team_domestic", name: "Domestic", type: "team", parentId: "grp_sales", budgetCap: 500 },
+  { id: "team_export", name: "Export", type: "team", parentId: "grp_sales", budgetCap: 500 },
+  { id: "grp_mktg", name: "Marketing", type: "group", parentId: "dept_sales", budgetCap: 600 },
+  { id: "team_digital", name: "Digital", type: "team", parentId: "grp_mktg", budgetCap: 400 },
+  // Finance
+  { id: "dept_fin", name: "Finance", type: "department", parentId: "org_acme", budgetCap: 2000 },
+  { id: "grp_accounting", name: "Accounting", type: "group", parentId: "dept_fin", budgetCap: 1200 },
+  { id: "team_ap_ar", name: "AP/AR", type: "team", parentId: "grp_accounting", budgetCap: 600 },
+  { id: "team_cost", name: "Cost Accounting", type: "team", parentId: "grp_accounting", budgetCap: 600 },
+  { id: "grp_treasury", name: "Treasury", type: "group", parentId: "dept_fin", budgetCap: 600 },
+  { id: "team_cash", name: "Cash Mgmt", type: "team", parentId: "grp_treasury", budgetCap: 400 },
+  // HR
+  { id: "dept_hr", name: "Human Resources", type: "department", parentId: "org_acme", budgetCap: 1500 },
+  { id: "grp_talent", name: "Talent", type: "group", parentId: "dept_hr", budgetCap: 800 },
+  { id: "team_recruit", name: "Recruiting", type: "team", parentId: "grp_talent", budgetCap: 400 },
+  { id: "team_onboard", name: "Onboarding", type: "team", parentId: "grp_talent", budgetCap: 300 },
+  { id: "grp_people", name: "People Ops", type: "group", parentId: "dept_hr", budgetCap: 600 },
+  { id: "team_payroll", name: "Payroll", type: "team", parentId: "grp_people", budgetCap: 400 },
+  // IT & Digital
+  { id: "dept_it", name: "IT & Digital", type: "department", parentId: "org_acme", budgetCap: 2200 },
+  { id: "grp_infra", name: "Infrastructure", type: "group", parentId: "dept_it", budgetCap: 1400 },
+  { id: "team_network", name: "Network", type: "team", parentId: "grp_infra", budgetCap: 700 },
+  { id: "team_cloud", name: "Cloud", type: "team", parentId: "grp_infra", budgetCap: 500 },
+  { id: "grp_data_plat", name: "Data Platform", type: "group", parentId: "dept_it", budgetCap: 600 },
+  { id: "team_analytics", name: "Analytics", type: "team", parentId: "grp_data_plat", budgetCap: 500 },
+  // Customer Service
+  { id: "dept_cs", name: "Customer Service", type: "department", parentId: "org_acme", budgetCap: 1500 },
+  { id: "grp_support", name: "Support", type: "group", parentId: "dept_cs", budgetCap: 900 },
+  { id: "team_tech_sup", name: "Technical", type: "team", parentId: "grp_support", budgetCap: 500 },
+  { id: "team_field", name: "Field Service", type: "team", parentId: "grp_support", budgetCap: 400 },
+  { id: "grp_training", name: "Training", type: "group", parentId: "dept_cs", budgetCap: 400 },
+  { id: "team_cust_trn", name: "Customer Training", type: "team", parentId: "grp_training", budgetCap: 300 },
 ];
 
 const AGENTS: AgentFixture[] = [
-  // Backend team
-  { id: "agt_02", name: "code-review-bot", tier: "standard", stakeholder: "j.park", scopeType: "team", scopeId: "team_be", scopeLabel: "Backend", monthlySpend: 890, status: "active", taskType: "Code review & merge checks" },
-  { id: "agt_07", name: "test-gen", tier: "standard", stakeholder: "j.park", scopeType: "team", scopeId: "team_be", scopeLabel: "Backend", monthlySpend: 430, status: "active", taskType: "Unit test generation" },
-  { id: "agt_09", name: "refactor-bot", tier: "standard", stakeholder: "j.park", scopeType: "team", scopeId: "team_be", scopeLabel: "Backend", monthlySpend: 380, status: "active", taskType: "Automated refactoring" },
-  { id: "agt_06", name: "upgrade-bot", tier: "background", stakeholder: "r.gupta", scopeType: "team", scopeId: "team_be", scopeLabel: "Backend", monthlySpend: 95, status: "active", taskType: "Dependency upgrades" },
-  // Frontend team
-  { id: "agt_03", name: "ux-optimizer", tier: "background", stakeholder: "m.kim", scopeType: "team", scopeId: "team_fe", scopeLabel: "Frontend", monthlySpend: 320, status: "throttled", taskType: "UX optimization experiments" },
-  { id: "agt_04", name: "doc-writer", tier: "standard", stakeholder: "a.lee", scopeType: "team", scopeId: "team_fe", scopeLabel: "Frontend", monthlySpend: 210, status: "active", taskType: "Documentation generation" },
-  { id: "agt_10", name: "a11y-checker", tier: "background", stakeholder: "m.kim", scopeType: "team", scopeId: "team_fe", scopeLabel: "Frontend", monthlySpend: 140, status: "active", taskType: "Accessibility auditing" },
-  // Mobile team
-  { id: "agt_11", name: "mobile-test-gen", tier: "standard", stakeholder: "t.wong", scopeType: "team", scopeId: "team_mobile", scopeLabel: "Mobile", monthlySpend: 350, status: "active", taskType: "Mobile test generation" },
-  { id: "agt_12", name: "react-native-lint", tier: "background", stakeholder: "t.wong", scopeType: "team", scopeId: "team_mobile", scopeLabel: "Mobile", monthlySpend: 110, status: "active", taskType: "RN lint & type-check" },
-  // Design Systems team
-  { id: "agt_13", name: "design-token-bot", tier: "background", stakeholder: "m.kim", scopeType: "team", scopeId: "team_ds", scopeLabel: "Design Systems", monthlySpend: 130, status: "active", taskType: "Design token sync" },
-  { id: "agt_14", name: "figma-sync", tier: "standard", stakeholder: "a.lee", scopeType: "team", scopeId: "team_ds", scopeLabel: "Design Systems", monthlySpend: 280, status: "active", taskType: "Figma ↔ code component sync" },
-  // Incident Response team
-  { id: "agt_05", name: "incident-triage", tier: "critical", stakeholder: "s.chen", scopeType: "team", scopeId: "team_ir", scopeLabel: "Incident Response", monthlySpend: 1580, status: "active", taskType: "SEV-1 incident triage & diagnosis" },
-  { id: "agt_01", name: "hot-issue-resolver", tier: "critical", stakeholder: "s.chen", scopeType: "team", scopeId: "team_ir", scopeLabel: "Incident Response", monthlySpend: 1240, status: "active", taskType: "Hot-fix generation for prod incidents" },
-  { id: "agt_15", name: "alert-triage", tier: "standard", stakeholder: "d.miller", scopeType: "team", scopeId: "team_ir", scopeLabel: "Incident Response", monthlySpend: 340, status: "active", taskType: "Alert correlation & routing" },
-  // Monitoring team
-  { id: "agt_16", name: "uptime-checker", tier: "background", stakeholder: "d.miller", scopeType: "team", scopeId: "team_mon", scopeLabel: "Monitoring", monthlySpend: 120, status: "active", taskType: "Uptime monitoring & alerting" },
-  { id: "agt_17", name: "log-scanner", tier: "background", stakeholder: "d.miller", scopeType: "team", scopeId: "team_mon", scopeLabel: "Monitoring", monthlySpend: 85, status: "active", taskType: "Log anomaly detection" },
-  // Pipeline team
-  { id: "agt_08", name: "data-pipeline-monitor", tier: "background", stakeholder: "k.tan", scopeType: "team", scopeId: "team_pipe", scopeLabel: "Pipeline", monthlySpend: 180, status: "disabled", taskType: "Pipeline health monitoring" },
-  { id: "agt_18", name: "etl-watcher", tier: "standard", stakeholder: "k.tan", scopeType: "team", scopeId: "team_pipe", scopeLabel: "Pipeline", monthlySpend: 270, status: "active", taskType: "ETL job validation" },
+  // Engineering: CAD Design
+  { id: "agt_01", name: "cad-assistant", tier: "standard", stakeholder: "j.chen", scopeType: "team", scopeId: "team_cad", scopeLabel: "CAD Design", monthlySpend: 420, status: "active", taskType: "CAD model generation & validation", classificationClearance: "confidential" },
+  { id: "agt_02", name: "drawing-checker", tier: "standard", stakeholder: "j.chen", scopeType: "team", scopeId: "team_cad", scopeLabel: "CAD Design", monthlySpend: 280, status: "active", taskType: "Engineering drawing compliance check", classificationClearance: "confidential" },
+  // Engineering: Simulation
+  { id: "agt_03", name: "fea-solver", tier: "standard", stakeholder: "j.chen", scopeType: "team", scopeId: "team_sim", scopeLabel: "Simulation", monthlySpend: 350, status: "active", taskType: "FEA stress analysis", classificationClearance: "confidential" },
+  { id: "agt_04", name: "cfd-analyzer", tier: "background", stakeholder: "j.chen", scopeType: "team", scopeId: "team_sim", scopeLabel: "Simulation", monthlySpend: 180, status: "active", taskType: "CFD thermal simulation", classificationClearance: "confidential" },
+  // Engineering: Tool Design
+  { id: "agt_05", name: "toolpath-optimizer", tier: "standard", stakeholder: "j.chen", scopeType: "team", scopeId: "team_tool", scopeLabel: "Tool Design", monthlySpend: 310, status: "active", taskType: "CNC toolpath optimization", classificationClearance: "confidential" },
+  { id: "agt_06", name: "die-designer", tier: "standard", stakeholder: "j.chen", scopeType: "team", scopeId: "team_tool", scopeLabel: "Tool Design", monthlySpend: 260, status: "active", taskType: "Die & mold CAD design", classificationClearance: "confidential" },
+  // Manufacturing: Assembly Line A
+  { id: "agt_07", name: "line-monitor-a", tier: "critical", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_line_a", scopeLabel: "Assembly Line A", monthlySpend: 890, status: "active", taskType: "Real-time line throughput monitoring", classificationClearance: "internal" },
+  { id: "agt_08", name: "defect-detector-a", tier: "critical", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_line_a", scopeLabel: "Assembly Line A", monthlySpend: 720, status: "active", taskType: "Vision-based defect detection", classificationClearance: "confidential" },
+  // Manufacturing: Assembly Line B
+  { id: "agt_09", name: "line-monitor-b", tier: "standard", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_line_b", scopeLabel: "Assembly Line B", monthlySpend: 560, status: "active", taskType: "Production speed optimization", classificationClearance: "internal" },
+  { id: "agt_10", name: "yield-optimizer", tier: "standard", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_line_b", scopeLabel: "Assembly Line B", monthlySpend: 340, status: "active", taskType: "First-pass yield improvement", classificationClearance: "confidential" },
+  // Manufacturing: Predictive Maintenance
+  { id: "agt_11", name: "vibration-analyzer", tier: "standard", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_pm", scopeLabel: "Predictive Maint", monthlySpend: 380, status: "active", taskType: "Vibration signature analysis", classificationClearance: "internal" },
+  { id: "agt_12", name: "pm-scheduler", tier: "background", stakeholder: "s.ramos", scopeType: "team", scopeId: "team_pm", scopeLabel: "Predictive Maint", monthlySpend: 150, status: "active", taskType: "Preventive maintenance scheduling", classificationClearance: "internal" },
+  // QA: Incoming QC
+  { id: "agt_13", name: "material-inspector", tier: "standard", stakeholder: "l.wu", scopeType: "team", scopeId: "team_incoming", scopeLabel: "Incoming QC", monthlySpend: 290, status: "active", taskType: "Raw material batch inspection", classificationClearance: "confidential" },
+  { id: "agt_14", name: "spec-checker", tier: "standard", stakeholder: "l.wu", scopeType: "team", scopeId: "team_incoming", scopeLabel: "Incoming QC", monthlySpend: 240, status: "active", taskType: "Specification compliance check", classificationClearance: "confidential" },
+  // QA: Final QC
+  { id: "agt_15", name: "visual-inspector", tier: "critical", stakeholder: "l.wu", scopeType: "team", scopeId: "team_final", scopeLabel: "Final QC", monthlySpend: 680, status: "active", taskType: "Final visual inspection", classificationClearance: "confidential" },
+  { id: "agt_16", name: "dimension-checker", tier: "standard", stakeholder: "l.wu", scopeType: "team", scopeId: "team_final", scopeLabel: "Final QC", monthlySpend: 320, status: "active", taskType: "Dimensional tolerance verification", classificationClearance: "confidential" },
+  // QA: ISO Audit
+  { id: "agt_17", name: "audit-checker", tier: "standard", stakeholder: "l.wu", scopeType: "team", scopeId: "team_iso", scopeLabel: "ISO Audit", monthlySpend: 270, status: "active", taskType: "ISO 9001 compliance checklist", classificationClearance: "confidential" },
+  { id: "agt_18", name: "cert-renewal-bot", tier: "background", stakeholder: "l.wu", scopeType: "team", scopeId: "team_iso", scopeLabel: "ISO Audit", monthlySpend: 130, status: "active", taskType: "Certification renewal tracking", classificationClearance: "internal" },
+  // Supply Chain: Raw Materials
+  { id: "agt_19", name: "price-tracker", tier: "standard", stakeholder: "m.patel", scopeType: "team", scopeId: "team_raw", scopeLabel: "Raw Materials", monthlySpend: 250, status: "active", taskType: "Commodity price monitoring", classificationClearance: "internal" },
+  { id: "agt_20", name: "vendor-evaluator", tier: "background", stakeholder: "m.patel", scopeType: "team", scopeId: "team_raw", scopeLabel: "Raw Materials", monthlySpend: 140, status: "active", taskType: "Supplier performance scoring", classificationClearance: "internal" },
+  // Supply Chain: Components
+  { id: "agt_21", name: "bom-optimizer", tier: "standard", stakeholder: "m.patel", scopeType: "team", scopeId: "team_components", scopeLabel: "Components", monthlySpend: 360, status: "active", taskType: "BOM cost optimization", classificationClearance: "confidential" },
+  { id: "agt_22", name: "lead-time-tracker", tier: "background", stakeholder: "m.patel", scopeType: "team", scopeId: "team_components", scopeLabel: "Components", monthlySpend: 120, status: "active", taskType: "Supplier lead time tracking", classificationClearance: "internal" },
+  // Supply Chain: Warehouse
+  { id: "agt_23", name: "inventory-optimizer", tier: "standard", stakeholder: "m.patel", scopeType: "team", scopeId: "team_warehouse", scopeLabel: "Warehouse", monthlySpend: 330, status: "active", taskType: "Inventory level optimization", classificationClearance: "internal" },
+  { id: "agt_24", name: "pick-route-planner", tier: "background", stakeholder: "m.patel", scopeType: "team", scopeId: "team_warehouse", scopeLabel: "Warehouse", monthlySpend: 110, status: "active", taskType: "Pick-and-pack route planning", classificationClearance: "internal" },
+  // R&D: Metallurgy
+  { id: "agt_25", name: "alloy-analyzer", tier: "standard", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_metallurgy", scopeLabel: "Metallurgy", monthlySpend: 410, status: "active", taskType: "Alloy composition analysis", classificationClearance: "restricted" },
+  { id: "agt_26", name: "stress-tester", tier: "standard", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_metallurgy", scopeLabel: "Metallurgy", monthlySpend: 340, status: "active", taskType: "Tensile & fatigue testing", classificationClearance: "restricted" },
+  // R&D: Polymers
+  { id: "agt_27", name: "compound-formulator", tier: "standard", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_polymers", scopeLabel: "Polymers", monthlySpend: 380, status: "active", taskType: "Polymer compound formulation", classificationClearance: "restricted" },
+  { id: "agt_28", name: "durability-tester", tier: "background", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_polymers", scopeLabel: "Polymers", monthlySpend: 190, status: "active", taskType: "Accelerated aging tests", classificationClearance: "restricted" },
+  // R&D: New Process
+  { id: "agt_29", name: "process-simulator", tier: "standard", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_new_proc", scopeLabel: "New Process", monthlySpend: 460, status: "active", taskType: "Manufacturing process simulation", classificationClearance: "restricted" },
+  { id: "agt_30", name: "yield-predictor", tier: "background", stakeholder: "k.yamamoto", scopeType: "team", scopeId: "team_new_proc", scopeLabel: "New Process", monthlySpend: 210, status: "active", taskType: "Production yield prediction", classificationClearance: "restricted" },
+  // Sales: Domestic
+  { id: "agt_31", name: "quote-generator", tier: "standard", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_domestic", scopeLabel: "Domestic", monthlySpend: 280, status: "active", taskType: "Customer quote generation", classificationClearance: "internal" },
+  { id: "agt_32", name: "crm-updater", tier: "background", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_domestic", scopeLabel: "Domestic", monthlySpend: 90, status: "active", taskType: "CRM data enrichment", classificationClearance: "internal" },
+  // Sales: Export
+  { id: "agt_33", name: "trade-compliance", tier: "standard", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_export", scopeLabel: "Export", monthlySpend: 310, status: "active", taskType: "Export regulation compliance", classificationClearance: "confidential" },
+  { id: "agt_34", name: "forex-hedger", tier: "background", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_export", scopeLabel: "Export", monthlySpend: 160, status: "active", taskType: "FX risk assessment", classificationClearance: "confidential" },
+  // Marketing: Digital
+  { id: "agt_35", name: "content-gen", tier: "standard", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_digital", scopeLabel: "Digital", monthlySpend: 220, status: "active", taskType: "Technical content generation", classificationClearance: "internal" },
+  { id: "agt_36", name: "seo-optimizer", tier: "background", stakeholder: "a.garcia", scopeType: "team", scopeId: "team_digital", scopeLabel: "Digital", monthlySpend: 110, status: "active", taskType: "SEO meta optimization", classificationClearance: "internal" },
+  // Finance: AP/AR
+  { id: "agt_37", name: "invoice-processor", tier: "standard", stakeholder: "r.smith", scopeType: "team", scopeId: "team_ap_ar", scopeLabel: "AP/AR", monthlySpend: 260, status: "active", taskType: "Invoice processing & matching", classificationClearance: "confidential" },
+  { id: "agt_38", name: "recon-bot", tier: "standard", stakeholder: "r.smith", scopeType: "team", scopeId: "team_ap_ar", scopeLabel: "AP/AR", monthlySpend: 180, status: "active", taskType: "Bank reconciliation", classificationClearance: "confidential" },
+  // Finance: Cost Accounting
+  { id: "agt_39", name: "cost-analyzer", tier: "standard", stakeholder: "r.smith", scopeType: "team", scopeId: "team_cost", scopeLabel: "Cost Accounting", monthlySpend: 320, status: "active", taskType: "Manufacturing cost analysis", classificationClearance: "confidential" },
+  { id: "agt_40", name: "variance-reporter", tier: "background", stakeholder: "r.smith", scopeType: "team", scopeId: "team_cost", scopeLabel: "Cost Accounting", monthlySpend: 140, status: "active", taskType: "Budget vs actual variance", classificationClearance: "internal" },
+  // Finance: Treasury
+  { id: "agt_41", name: "cash-forecaster", tier: "standard", stakeholder: "r.smith", scopeType: "team", scopeId: "team_cash", scopeLabel: "Cash Mgmt", monthlySpend: 290, status: "active", taskType: "Cash flow forecasting", classificationClearance: "confidential" },
+  { id: "agt_42", name: "credit-monitor", tier: "background", stakeholder: "r.smith", scopeType: "team", scopeId: "team_cash", scopeLabel: "Cash Mgmt", monthlySpend: 120, status: "active", taskType: "Customer credit monitoring", classificationClearance: "confidential" },
+  // HR: Recruiting
+  { id: "agt_43", name: "resume-screener", tier: "standard", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_recruit", scopeLabel: "Recruiting", monthlySpend: 190, status: "active", taskType: "Resume screening & ranking", classificationClearance: "confidential" },
+  { id: "agt_44", name: "interview-scheduler", tier: "background", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_recruit", scopeLabel: "Recruiting", monthlySpend: 80, status: "active", taskType: "Interview scheduling automation", classificationClearance: "internal" },
+  // HR: Onboarding
+  { id: "agt_45", name: "onboarding-assist", tier: "standard", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_onboard", scopeLabel: "Onboarding", monthlySpend: 150, status: "active", taskType: "New hire onboarding checklist", classificationClearance: "confidential" },
+  { id: "agt_46", name: "doc-collector", tier: "background", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_onboard", scopeLabel: "Onboarding", monthlySpend: 70, status: "active", taskType: "Onboarding document collection", classificationClearance: "confidential" },
+  // HR: Payroll
+  { id: "agt_47", name: "payroll-validator", tier: "standard", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_payroll", scopeLabel: "Payroll", monthlySpend: 230, status: "active", taskType: "Payroll calculation validation", classificationClearance: "confidential" },
+  { id: "agt_48", name: "tax-filer", tier: "background", stakeholder: "t.johnson", scopeType: "team", scopeId: "team_payroll", scopeLabel: "Payroll", monthlySpend: 100, status: "active", taskType: "Payroll tax filing", classificationClearance: "confidential" },
+  // IT: Network
+  { id: "agt_49", name: "network-monitor", tier: "standard", stakeholder: "d.lee", scopeType: "team", scopeId: "team_network", scopeLabel: "Network", monthlySpend: 340, status: "active", taskType: "Network performance monitoring", classificationClearance: "internal" },
+  { id: "agt_50", name: "security-scanner", tier: "critical", stakeholder: "d.lee", scopeType: "team", scopeId: "team_network", scopeLabel: "Network", monthlySpend: 520, status: "active", taskType: "Vulnerability scanning", classificationClearance: "confidential" },
+  // IT: Cloud
+  { id: "agt_51", name: "cloud-cost-opt", tier: "standard", stakeholder: "d.lee", scopeType: "team", scopeId: "team_cloud", scopeLabel: "Cloud", monthlySpend: 310, status: "active", taskType: "Cloud resource cost optimization", classificationClearance: "internal" },
+  { id: "agt_52", name: "backup-checker", tier: "background", stakeholder: "d.lee", scopeType: "team", scopeId: "team_cloud", scopeLabel: "Cloud", monthlySpend: 90, status: "active", taskType: "Backup verification & reporting", classificationClearance: "internal" },
+  // IT: Analytics
+  { id: "agt_53", name: "etl-watcher", tier: "standard", stakeholder: "d.lee", scopeType: "team", scopeId: "team_analytics", scopeLabel: "Analytics", monthlySpend: 270, status: "active", taskType: "ETL pipeline monitoring", classificationClearance: "internal" },
+  { id: "agt_54", name: "data-pipe-monitor", tier: "background", stakeholder: "d.lee", scopeType: "team", scopeId: "team_analytics", scopeLabel: "Analytics", monthlySpend: 180, status: "disabled", taskType: "Data pipeline health checks", classificationClearance: "internal" },
+  // Customer Service: Technical
+  { id: "agt_55", name: "warranty-processor", tier: "standard", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_tech_sup", scopeLabel: "Technical", monthlySpend: 240, status: "active", taskType: "Warranty claim processing", classificationClearance: "internal" },
+  { id: "agt_56", name: "faq-bot", tier: "standard", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_tech_sup", scopeLabel: "Technical", monthlySpend: 190, status: "active", taskType: "Customer FAQ automation", classificationClearance: "internal" },
+  // Customer Service: Field Service
+  { id: "agt_57", name: "dispatch-optimizer", tier: "standard", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_field", scopeLabel: "Field Service", monthlySpend: 280, status: "active", taskType: "Field service dispatch routing", classificationClearance: "internal" },
+  { id: "agt_58", name: "parts-tracker", tier: "background", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_field", scopeLabel: "Field Service", monthlySpend: 130, status: "active", taskType: "Spare parts inventory tracking", classificationClearance: "internal" },
+  // Customer Service: Customer Training
+  { id: "agt_59", name: "manual-generator", tier: "background", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_cust_trn", scopeLabel: "Customer Training", monthlySpend: 110, status: "active", taskType: "User manual generation", classificationClearance: "internal" },
+  { id: "agt_60", name: "video-script-writer", tier: "background", stakeholder: "c.nunez", scopeType: "team", scopeId: "team_cust_trn", scopeLabel: "Customer Training", monthlySpend: 140, status: "active", taskType: "Training video scriptwriting", classificationClearance: "internal" },
 ];
 
-// ── Tree helpers ───────────────────────────────────────────────────────────
 
-/** Returns the scope node for a ref, or the org root if null. */
-function resolveScope(ref: ScopeRef): ScopeNode {
-  if (!ref) return SCOPES.find((s) => s.type === "org")!;
-  return SCOPES.find((s) => s.id === ref.id && s.type === ref.type) ??
-    (() => { throw new TRPCError({ code: "NOT_FOUND", message: `Scope ${ref.type}:${ref.id} not found` }); })();
+
+
+// ── Routers ────────────────────────────────────────────────────────────────
+
+interface TreeNode {
+  id: string;
+  name: string;
+  type: string;
+  monthlySpend: number;
+  agentCount: number;
+  budgetCap: number;
+  budgetUtilPct: number;
+  criticalCount: number;
+  children: TreeNode[];
 }
 
-/** Returns all descendant scope IDs (inclusive of the given scope). */
-function descendantScopeIds(scope: ScopeNode): Set<string> {
-  const ids = new Set<string>([scope.id]);
-  let added = true;
-  while (added) {
-    added = false;
-    for (const s of SCOPES) {
-      if (s.parentId && ids.has(s.parentId) && !ids.has(s.id)) {
-        ids.add(s.id);
-        added = true;
-      }
-    }
-  }
-  return ids;
-}
-
-/** Returns the breadcrumb path from org root to this scope (inclusive). */
-function scopePath(scope: ScopeNode): ScopeNode[] {
-  const path: ScopeNode[] = [scope];
-  let current = scope;
-  while (current.parentId) {
-    const parent = SCOPES.find((s) => s.id === current.parentId);
-    if (!parent) break;
-    path.unshift(parent);
-    current = parent;
-  }
-  return path;
-}
-
-/** Returns immediate child scopes of a node. */
-function childScopes(scope: ScopeNode): ScopeNode[] {
-  return SCOPES.filter((s) => s.parentId === scope.id);
-}
-
-/** Returns agents within a scope (including all descendants). */
-function agentsInScope(scope: ScopeNode): AgentFixture[] {
-  const ids = descendantScopeIds(scope);
-  return AGENTS.filter((a) => ids.has(a.scopeId));
-}
-
-/** Rolled-up spend for a scope. */
-function spendInScope(scope: ScopeNode): number {
-  return agentsInScope(scope).reduce((sum, a) => sum + a.monthlySpend, 0);
-}
-
-// ── Fixture: charts + access (scope-independent for now) ───────────────────
+// ── Fixture: charts + access ───────────────────────────────────────────────
 
 const FIXTURE_SPEND_TREND = [
   { date: "Jul 01", claude: 420, gpt: 310, glm: 80 },
@@ -205,25 +287,61 @@ const FIXTURE_MODEL_SPEND = [
 ];
 
 const FIXTURE_ACCESS_REQUESTS = [
-  { id: "req_01", agentId: "incident-triage", resourceId: "s3://prod-logs/", status: "pending", action: "read", reason: "Debug SEV-1 incident #2847" },
-  { id: "req_02", agentId: "data-pipeline-monitor", resourceId: "db://analytics/transactions", status: "pending", action: "query", reason: "Weekly health check" },
+  { id: "req_01", agentId: "cad-assistant", resourceId: "s3://engineering/cad-files/", status: "pending", action: "read", reason: "Review new product CAD models (confidential)" },
+  { id: "req_02", agentId: "cost-analyzer", resourceId: "db://erp/manufacturing_costs", status: "pending", action: "query", reason: "Monthly cost variance analysis" },
 ];
 
 const telemetryState = initTelemetry("control-plane");
 
-// ── Routers ────────────────────────────────────────────────────────────────
 
-interface TreeNode {
-  id: string;
-  name: string;
-  type: string;
-  monthlySpend: number;
-  agentCount: number;
-  budgetCap: number;
-  budgetUtilPct: number;
-  criticalCount: number;
-  children: TreeNode[];
+// ── Tree helpers ───────────────────────────────────────────────────────────
+
+function resolveScope(ref: ScopeRef): ScopeNode {
+  if (!ref) return SCOPES.find((s) => s.type === "org")!;
+  return SCOPES.find((s) => s.id === ref.id && s.type === ref.type) ??
+    (() => { throw new TRPCError({ code: "NOT_FOUND", message: `Scope ${ref.type}:${ref.id} not found` }); })();
 }
+
+function descendantScopeIds(scope: ScopeNode): Set<string> {
+  const ids = new Set<string>([scope.id]);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const s of SCOPES) {
+      if (s.parentId && ids.has(s.parentId) && !ids.has(s.id)) {
+        ids.add(s.id);
+        added = true;
+      }
+    }
+  }
+  return ids;
+}
+
+function scopePath(scope: ScopeNode): ScopeNode[] {
+  const path: ScopeNode[] = [scope];
+  let current = scope;
+  while (current.parentId) {
+    const parent = SCOPES.find((s) => s.id === current.parentId);
+    if (!parent) break;
+    path.unshift(parent);
+    current = parent;
+  }
+  return path;
+}
+
+function childScopes(scope: ScopeNode): ScopeNode[] {
+  return SCOPES.filter((s) => s.parentId === scope.id);
+}
+
+function agentsInScope(scope: ScopeNode): AgentFixture[] {
+  const ids = descendantScopeIds(scope);
+  return AGENTS.filter((a) => ids.has(a.scopeId));
+}
+
+function spendInScope(scope: ScopeNode): number {
+  return agentsInScope(scope).reduce((sum, a) => sum + a.monthlySpend, 0);
+}
+
 
 const orgTreeRouter = t.router({
   /** Returns breadcrumb path from org root to the given scope. */
@@ -283,6 +401,38 @@ const orgTreeRouter = t.router({
     const root = SCOPES.find((s) => s.type === "org")!;
     return { tenantId: opts.ctx.tenantId!, tree: buildNode(root) };
   }),
+  /** Work-type classification per scope — what agents DO, not just what they cost. */
+  workTypes: tenantProcedure
+    .input(z.object({ scope: scopeInput }))
+    .query(async (opts) => {
+      const scope = resolveScope(opts.input.scope);
+      const agents = agentsInScope(scope);
+      // Group by first 2 words of taskType
+      const byCategory = new Map<string, { count: number; spend: number }>();
+      for (const a of agents) {
+        const cat = a.taskType.split(" ").slice(0, 3).join(" ").replace(/[&,].*$/, "").trim();
+        const entry = byCategory.get(cat) ?? { count: 0, spend: 0 };
+        entry.count++;
+        entry.spend += a.monthlySpend;
+        byCategory.set(cat, entry);
+      }
+      const workTypes = [...byCategory.entries()]
+        .map(([category, stats]) => ({ category, agentCount: stats.count, spend: stats.spend }))
+        .sort((a, b) => b.spend - a.spend);
+      const classes: Record<string, number> = { public: 0, internal: 0, confidential: 0, restricted: 0 };
+      for (const a of agents) { const k = a.classificationClearance; classes[k] = (classes[k] ?? 0) + 1; }
+      const classificationBreakdown = Object.entries(classes)
+        .filter(([, c]) => c > 0)
+        .map(([clearance, count]) => ({ clearance, count }));
+      return {
+        tenantId: opts.ctx.tenantId!,
+        scope: { id: scope.id, name: scope.name, type: scope.type },
+        totalSpend: agents.reduce((s, a) => s + a.monthlySpend, 0),
+        agentCount: agents.length,
+        workTypes,
+        classificationBreakdown,
+      };
+    }),
 });
 
 const spendRouter = t.router({
@@ -349,6 +499,7 @@ const agentsRouter = t.router({
           monthlySpend: a.monthlySpend,
           status: a.status,
           taskType: a.taskType,
+          classificationClearance: a.classificationClearance,
         })),
       };
     }),

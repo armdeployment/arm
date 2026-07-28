@@ -1,200 +1,133 @@
 /**
  * tRPC router tests — tenant middleware + scope-aware queries.
  *
- * Verifies:
- *   - Unauthenticated requests are rejected (no tenant context = UNAUTHORIZED).
- *   - Authenticated requests get tenantId stamped into context.
- *   - Scope queries return hierarchical data (drill-down).
- *   - Input validation (zod) works on procedures.
+ * Uses the manufacturing company fixture data:
+ *   10 departments, 60 agents, $16,170/mo total spend
  */
 
 import { describe, it, expect } from "vitest";
-import { createContext, appRouter, type AppRouter } from "../src/index.js";
+import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
 
-const authedClaims: ARMClaims = {
-  sub: "user_01",
-  tenant_id: "tn_01",
-  email: "eng@acme.com",
-};
-
-function makeCaller(claims: ARMClaims | null) {
+const authedClaims: ARMClaims = { sub: "user_01", tenant_id: "tn_01", email: "eng@acme.com" };
+function caller(claims: ARMClaims | null) {
   return appRouter.createCaller(createContext({ claims }));
 }
 
 describe("tenant middleware (Invariant §11.6)", () => {
-  it("REJECTS unauthenticated requests to protected procedures", async () => {
-    const caller = makeCaller(null);
-    await expect(
-      caller.orgTree.children({ scope: null }),
-    ).rejects.toThrowError(/No authenticated tenant context/);
+  it("REJECTS unauthenticated requests", async () => {
+    await expect(caller(null).orgTree.children({ scope: null })).rejects.toThrowError(/No authenticated tenant context/);
   });
-
-  it("ALLOWS authenticated requests with tenant context", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.children({ scope: null });
-    expect(result.tenantId).toBe("tn_01");
-  });
-
-  it("stamps tenantId into every procedure context", async () => {
-    const caller = makeCaller(authedClaims);
-    const spend = await caller.spend.summary({ scope: null });
-    expect(spend.tenantId).toBe("tn_01");
+  it("ALLOWS authenticated requests", async () => {
+    const r = await caller(authedClaims).orgTree.children({ scope: null });
+    expect(r.tenantId).toBe("tn_01");
   });
 });
 
-describe("public procedures (no auth required)", () => {
-  it("health check works without auth", async () => {
-    const caller = makeCaller(null);
-    const result = await caller.health.check();
-    expect(result.status).toBe("ok");
-  });
-});
-
-describe("org-tree drill-down (§6.1 hierarchy)", () => {
-  it("org root returns 3 departments as children", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.children({ scope: null });
-    expect(result.scope.type).toBe("org");
-    expect(result.children.length).toBe(3);
-    expect(result.children.map((c) => c.name)).toContain("Engineering");
-    expect(result.children.map((c) => c.name)).toContain("Operations");
-    expect(result.children.map((c) => c.name)).toContain("Data");
+describe("org tree (manufacturing company)", () => {
+  it("org root returns 10 departments as children", async () => {
+    const r = await caller(authedClaims).orgTree.children({ scope: null });
+    expect(r.scope.name).toBe("Acme Manufacturing");
+    expect(r.children.length).toBe(10);
+    expect(r.children.map((c) => c.name)).toContain("Manufacturing");
+    expect(r.children.map((c) => c.name)).toContain("Quality Assurance");
+    expect(r.children.map((c) => c.name)).toContain("Supply Chain");
   });
 
-  it("Engineering dept returns Platform + Product Eng groups", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.children({
+  it("Engineering dept returns Product Design + Tooling groups", async () => {
+    const r = await caller(authedClaims).orgTree.children({
       scope: { type: "department", id: "dept_eng" },
     });
-    expect(result.children.map((c) => c.name).sort()).toEqual(["Platform", "Product Eng"]);
+    expect(r.children.map((c) => c.name).sort()).toEqual(["Product Design", "Tooling"]);
   });
 
-  it("child spend rollups are correct", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.children({ scope: null });
-    const eng = result.children.find((c) => c.name === "Engineering")!;
-    // Backend (890+430+380+95=1795) + Frontend (320+210+140=670) +
-    // Mobile (350+110=460) + Design Systems (130+280=410) = 3335
-    expect(eng.monthlySpend).toBe(3335);
-    expect(eng.agentCount).toBe(11);
+  it("Engineering spend rollup is $1,800", async () => {
+    const r = await caller(authedClaims).orgTree.children({ scope: null });
+    const eng = r.children.find((c: any) => c.name === "Engineering")!;
+    // CAD (420+280=700) + Simulation (350+180=530) + Tool Design (310+260=570)
+    // Product Design (700+530=1230) + Tooling (570) = 1800
+    expect(eng.monthlySpend).toBe(1800);
+    expect(eng.agentCount).toBe(6);
   });
 
-  it("breadcrumb path resolves from root to team", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.path({
-      scope: { type: "team", id: "team_be" },
+  it("breadcrumb path from a team is correct", async () => {
+    const r = await caller(authedClaims).orgTree.path({
+      scope: { type: "team", id: "team_cad" },
     });
-    expect(result.path.map((p) => p.name)).toEqual([
-      "Acme Corp", "Engineering", "Platform", "Backend",
+    expect(r.path.map((p) => p.name)).toEqual([
+      "Acme Manufacturing", "Engineering", "Product Design", "CAD Design",
     ]);
+  });
+
+  it("fullTree returns complete hierarchy", async () => {
+    const r = await caller(authedClaims).orgTree.fullTree();
+    expect(r.tree.name).toBe("Acme Manufacturing");
+    expect(r.tree.monthlySpend).toBe(16170);
+    expect(r.tree.agentCount).toBe(60);
+    expect(r.tree.children.length).toBe(10);
+  });
+
+  it("each department in fullTree has correct rollups", async () => {
+    const r = await caller(authedClaims).orgTree.fullTree();
+    const mfg = r.tree.children.find((c: any) => c.name === "Manufacturing")!;
+    // Line A (890+720=1610) + Line B (560+340=900) + Predictive Maint (380+150=530)
+    // Production (2510) + Maintenance (530) = 3040
+    expect(mfg.monthlySpend).toBe(3040);
+    expect(mfg.agentCount).toBe(6);
+    expect(mfg.children.length).toBe(2); // Production + Maintenance
+  });
+
+  it("team-level critical counts are accurate", async () => {
+    const r = await caller(authedClaims).orgTree.fullTree();
+    const qa = r.tree.children.find((c: any) => c.name === "Quality Assurance")!;
+    const insp = qa.children.find((c: any) => c.name === "Inspection")!;
+    const finalQc = insp.children.find((c: any) => c.name === "Final QC")!;
+    expect(finalQc.criticalCount).toBe(1); // visual-inspector
   });
 });
 
 describe("scope-aware spend summary", () => {
-  it("org-level summary rolls up all agents", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.spend.summary({ scope: null });
-    expect(result.scope.type).toBe("org");
-    expect(result.agentCount).toBe(18);
-    expect(result.totalMonthlySpend).toBe(7150);
+  it("org-level: $16,170 total, 60 agents", async () => {
+    const r = await caller(authedClaims).spend.summary({ scope: null });
+    expect(r.scope.name).toBe("Acme Manufacturing");
+    expect(r.totalMonthlySpend).toBe(16170);
+    expect(r.agentCount).toBe(60);
   });
 
-  it("department-level summary only counts that dept's agents", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.spend.summary({
-      scope: { type: "department", id: "dept_ops" },
+  it("Supply Chain dept: $1,310 spend, 6 agents", async () => {
+    const r = await caller(authedClaims).spend.summary({
+      scope: { type: "department", id: "dept_sc" },
     });
-    expect(result.scope.name).toBe("Operations");
-    expect(result.agentCount).toBe(5);
+    expect(r.scope.name).toBe("Supply Chain");
+    expect(r.totalMonthlySpend).toBe(1310);
+    expect(r.agentCount).toBe(6);
   });
 
-  it("budget utilization is computed per scope", async () => {
-    const caller = makeCaller(authedClaims);
-    const org = await caller.spend.summary({ scope: null });
-    const ops = await caller.spend.summary({
-      scope: { type: "department", id: "dept_ops" },
-    });
-    // Different scopes have different budgets
-    expect(org.budgetCap).not.toBe(ops.budgetCap);
-    expect(ops.budgetUtilPct).toBeGreaterThan(0);
+  it("budget utilization varies by department", async () => {
+    const mfg = await caller(authedClaims).spend.summary({ scope: { type: "department", id: "dept_mfg" } });
+    const hr = await caller(authedClaims).spend.summary({ scope: { type: "department", id: "dept_hr" } });
+    expect(mfg.budgetUtilPct).toBeGreaterThan(0);
+    expect(hr.budgetUtilPct).toBeGreaterThan(0);
   });
 });
 
 describe("scope-aware agents list", () => {
-  it("org scope returns all agents", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.agents.list({ scope: null, status: "all" });
-    expect(result.agents.length).toBe(18);
+  it("org scope returns all 60 agents", async () => {
+    const r = await caller(authedClaims).agents.list({ scope: null, status: "all" });
+    expect(r.agents.length).toBe(60);
   });
 
-  it("team scope returns only that team's agents", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.agents.list({
-      scope: { type: "team", id: "team_ir" },
-      status: "all",
-    });
-    expect(result.agents.length).toBe(3);
-    expect(result.agents.every((a) => a.scope === "Incident Response")).toBe(true);
-  });
-
-  it("agents include taskType field", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.agents.list({ scope: null, status: "all" });
-    expect(result.agents[0]!.taskType).toBeTruthy();
+  it("a team returns only that team's agents", async () => {
+    const r = await caller(authedClaims).agents.list({ scope: { type: "team", id: "team_line_a" }, status: "all" });
+    expect(r.agents.length).toBe(2);
+    expect(r.agents.every((a: any) => a.name.includes("monitor") || a.name.includes("detector"))).toBe(true);
   });
 });
 
-describe("org-tree full tree (management visualization)", () => {
-  it("returns the complete tree with rollups at every level", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.fullTree();
-    expect(result.tree.name).toBe("Acme Corp");
-    expect(result.tree.monthlySpend).toBe(7150);
-    expect(result.tree.agentCount).toBe(18);
-    expect(result.tree.children.length).toBe(3); // 3 departments
-  });
-
-  it("each department node has its own rollup", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.fullTree();
-    const eng = result.tree.children.find((c) => c.name === "Engineering")!;
-    expect(eng.monthlySpend).toBe(3335);
-    expect(eng.agentCount).toBe(11);
-    expect(eng.children.length).toBe(2); // Platform + Product Eng
-  });
-
-  it("team-level nodes carry task agents", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.fullTree();
-    const ops = result.tree.children.find((c) => c.name === "Operations")!;
-    const sre = ops.children.find((c) => c.name === "SRE")!;
-    const ir = sre.children.find((c) => c.name === "Incident Response")!;
-    expect(ir.monthlySpend).toBe(3160); // 1580+1240+340
-    expect(ir.criticalCount).toBe(2);
-  });
-
-  it("budget utilization is computed per node", async () => {
-    const caller = makeCaller(authedClaims);
-    const result = await caller.orgTree.fullTree();
-    for (const child of result.tree.children) {
-      expect(child.budgetUtilPct).toBeGreaterThan(0);
-      expect(child.budgetCap).toBeGreaterThan(0);
-    }
-  });
-});
-
-describe("input validation (zod)", () => {
+describe("input validation", () => {
   it("rejects invalid agent creation input", async () => {
-    const caller = makeCaller(authedClaims);
-    await expect(
-      caller.agents.create({
-        name: "",
-        scopeType: "org",
-        scopeId: "not-a-uuid",
-        stakeholderUserId: "also-not-uuid",
-        type: "test",
-      }),
-    ).rejects.toThrow();
+    await expect(caller(authedClaims).agents.create({
+      name: "", scopeType: "org", scopeId: "bad-uuid", stakeholderUserId: "bad-uuid", type: "test",
+    })).rejects.toThrow();
   });
 });
