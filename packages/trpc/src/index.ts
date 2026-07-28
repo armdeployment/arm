@@ -475,6 +475,49 @@ const spendRouter = t.router({
       // TODO(1.1): scope-filter from ClickHouse
       return { tenantId: opts.ctx.tenantId!, points: FIXTURE_SPEND_TREND };
     }),
+
+  /** Savings estimator — how much if we switch scopes to open models (spec §8.3). */
+  savingsEstimate: tenantProcedure
+    .input(z.object({ scope: scopeInput }))
+    .query(async (opts) => {
+      const scope = resolveScope(opts.input.scope);
+      const agents = agentsInScope(scope);
+      const totalSpend = agents.reduce((s, a) => s + a.monthlySpend, 0);
+      // Estimate: 40% saving by switching to open models
+      const potentialSavings = Math.round(totalSpend * 0.40);
+      const newTotal = totalSpend - potentialSavings;
+      const switchedAgents = agents.length;
+      return {
+        tenantId: opts.ctx.tenantId!,
+        scope: { id: scope.id, name: scope.name, type: scope.type },
+        currentMonthlySpend: totalSpend,
+        openModelMonthlyEstimate: newTotal,
+        potentialSavings,
+        savingsPct: 40,
+        impactedAgents: switchedAgents,
+        recommendation: potentialSavings > 0 ? `Switch ${switchedAgents} agents to open models to save $${potentialSavings.toLocaleString()}/mo` : "No savings available",
+      };
+    }),
+
+  /** Reconciliation — provider bill vs proxy metering (spec §7.3). */
+  reconciliation: tenantProcedure.query(async (opts) => {
+    // TODO(1.1): call billing.anthropicConnector.fetchUsage + billing.reconcile
+    // with real proxy totals from ClickHouse.
+    return {
+      tenantId: opts.ctx.tenantId!,
+      providerTotalUsd: 16170,
+      proxyTotalUsd: 15840,
+      driftPct: 2.0,
+      status: "ok" as const,
+      message: "Reconciled within tolerance (2.0% drift).",
+      byModel: [
+        { model: "Claude Sonnet 4.5", providerUsd: 9200, proxyUsd: 9016, driftPct: 2.0 },
+        { model: "GPT-4o", providerUsd: 4700, proxyUsd: 4610, driftPct: 1.9 },
+        { model: "GLM-5.2", providerUsd: 1270, proxyUsd: 1250, driftPct: 1.6 },
+        { model: "DeepSeek V3", providerUsd: 1000, proxyUsd: 964, driftPct: 3.6 },
+      ],
+    };
+  }),
 });
 
 const agentsRouter = t.router({

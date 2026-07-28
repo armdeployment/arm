@@ -5,6 +5,8 @@ import { StatCard } from "../components/stat-card";
 import { SpendTrendChart, TierBreakdownChart } from "../components/charts";
 import { AgentsTable } from "../components/agents-table";
 import { ScopeBreadcrumb } from "../components/breadcrumb";
+import { SavingsEstimator } from "../components/savings-estimator";
+import { NotificationCenter } from "../components/notification-center";
 import { ChildScopeGrid } from "../components/child-scope-grid";
 import { useScope } from "../lib/use-scope";
 import { trpc } from "../lib/trpc/client";
@@ -68,6 +70,12 @@ function DashboardContent() {
       {agents.data && agents.data.agents.length > 0 && (
         <AgentsTable data={(agents.data.agents as AgentRow[]).slice(0, 5)} />
       )}
+
+      {/* Savings estimator + notifications */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SavingsEstimator />
+        <NotificationCenter />
+      </div>
     </div>
   );
 }
