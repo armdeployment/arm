@@ -201,3 +201,229 @@ export function verifySAMLAssertion(assertionXml: string): SAMLAssertion {
     notOnOrAfter: new Date(Date.now() + 3600000).toISOString(),
   };
 }
+
+// ── Enterprise IdP Integration (spec §6.3, §8.1) ──────────────────────────
+
+/**
+ * Supported enterprise identity providers.
+ * Every real company uses one of these — ARM integrates with all of them.
+ */
+export type IdPProvider =
+  | "entra"       // Microsoft Entra ID (Azure AD)
+  | "okta"        // Okta Workforce Identity
+  | "google"      // Google Cloud Identity / Workspace
+  | "aws"         // AWS IAM Identity Center
+  | "auth0"       // Auth0 by Okta
+  | "oidc"        // Generic OpenID Connect
+  | "saml";       // Generic SAML 2.0
+
+/** Per-provider configuration. Stored in tenant IdP config (encrypted at rest). */
+export interface IdPConfig {
+  provider: IdPProvider;
+  /** Human-readable label (e.g. "Acme Corp Okta"). */
+  label: string;
+  /** Issuer URL (OIDC .well-known/openid-configuration or SAML entity ID). */
+  issuerUrl: string;
+  /** Client ID (ARM is the Relying Party / Service Provider). */
+  clientId: string;
+  /** Client secret or certificate reference (vaulted). */
+  clientSecretRef: string;
+  /** JWKS URL for OIDC; certificate for SAML. */
+  jwksUrl?: string;
+  /** SAML-specific: IdP metadata XML URL. */
+  samlMetadataUrl?: string;
+  /** How to map IdP claims → ARM user attributes. */
+  claimMapping: IdPClaimMapping;
+  /** Domains this IdP serves (for email-based routing). */
+  domains: string[];
+  /** Whether to auto-provision new users discovered via this IdP. */
+  autoProvision: boolean;
+  /** Whether this is the default IdP for the tenant. */
+  isDefault: boolean;
+}
+
+/** Maps external IdP claims to ARM internal attributes. */
+export interface IdPClaimMapping {
+  /** Which claim contains the user's email (primary identifier). */
+  emailClaim: string;              // e.g. "email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+  /** Which claim contains the display name. */
+  displayNameClaim?: string;       // e.g. "name", "displayName"
+  /** Which claim contains the department (maps to ARM org tree). */
+  departmentClaim?: string;        // e.g. "department", "https://acme.com/claims/department"
+  /** Which claim contains the group memberships (maps to ARM roles). */
+  groupsClaim?: string;            // e.g. "groups", "https://acme.com/claims/groups"
+  /** Which claim contains the employee ID (for HR sync). */
+  employeeIdClaim?: string;        // e.g. "employee_id", "workerId"
+  /** Which claim contains the job title (informational). */
+  titleClaim?: string;             // e.g. "jobTitle", "title"
+}
+
+/** Pre-built claim mappings for common providers. */
+export const PRESET_CLAIM_MAPPINGS: Record<IdPProvider, IdPClaimMapping> = {
+  entra: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    departmentClaim: "department",
+    groupsClaim: "groups",
+    employeeIdClaim: "oid",
+    titleClaim: "jobTitle",
+  },
+  okta: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    departmentClaim: "department",
+    groupsClaim: "groups",
+    employeeIdClaim: "employee_id",
+    titleClaim: "title",
+  },
+  google: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    groupsClaim: "groups",
+  },
+  aws: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    groupsClaim: "groups",
+  },
+  auth0: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    departmentClaim: "https://acme.com/department",
+    groupsClaim: "https://acme.com/groups",
+  },
+  oidc: {
+    emailClaim: "email",
+    displayNameClaim: "name",
+    groupsClaim: "groups",
+  },
+  saml: {
+    emailClaim: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+    displayNameClaim: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+    groupsClaim: "http://schemas.xmlsoap.org/claims/Group",
+  },
+};
+
+/** Example Entra config (for manufacturing company "Acme Corp"). */
+export const EXAMPLE_ENTRA_CONFIG: IdPConfig = {
+  provider: "entra",
+  label: "Acme Corp — Microsoft Entra ID",
+  issuerUrl: "https://login.microsoftonline.com/acmecorp.onmicrosoft.com/v2.0",
+  clientId: "arm-control-plane",
+  clientSecretRef: "vault:tenant/acme/idp/entra/secret",
+  jwksUrl: "https://login.microsoftonline.com/acmecorp.onmicrosoft.com/discovery/v2.0/keys",
+  claimMapping: PRESET_CLAIM_MAPPINGS.entra,
+  domains: ["acmecorp.com", "acme-manufacturing.com"],
+  autoProvision: true,
+  isDefault: true,
+};
+
+// ── Multi-IdP Token Verification ───────────────────────────────────────────
+
+/**
+ * Routes an authentication request to the correct IdP based on:
+ *   1. The domain in the user's email (looks up IdP by domain)
+ *   2. The `idp` hint parameter in the auth request
+ *   3. The default IdP if no match
+ */
+export function routeIdP(email: string, idps: IdPConfig[]): IdPConfig | null {
+  // Try domain-based routing
+  const domain = email.split("@")[1];
+  if (domain) {
+    const matched = idps.find((idp) => idp.domains.includes(domain));
+    if (matched) return matched;
+  }
+  // Fall back to default
+  return idps.find((idp) => idp.isDefault) ?? idps[0] ?? null;
+}
+
+/**
+ * Maps raw IdP claims to ARM internal claims using the provider's claim mapping.
+ * This is how "department: Engineering" in Entra becomes a scope reference in ARM.
+ */
+export function mapIdPClaims(rawClaims: Record<string, unknown>, mapping: IdPClaimMapping): ARMClaims {
+  const email = String(rawClaims[mapping.emailClaim!] ?? "");
+  const tenant_id = "tn_demo"; // TODO: resolve from org context
+  return {
+    sub: String(rawClaims.sub ?? rawClaims.oid ?? email),
+    tenant_id,
+    email,
+    scope: mapping.departmentClaim ? String(rawClaims[mapping.departmentClaim!] ?? "") : undefined,
+  };
+}
+
+// ── Agent Identity Issuance Flow (spec §6.6, §8.1) ────────────────────────
+
+/**
+ * Agent identity bootstrapping flow:
+ *
+ *   1. Human engineer authenticates via corporate IdP (Entra/Okta/etc.)
+ *      → ARM maps IdP claims → ARM user + scope (dept, team)
+ *   2. Engineer runs `arm agent init` or clicks "Add Agent" in dashboard
+ *   3. ARM creates:
+ *      a. Agent record (owner_user_id = human, stakeholder_user_id = human)
+ *      b. SubAccount record (agent_id = new agent, api_key_hash)
+ *      c. DelegateKey (tenant_id, provider, key_ref)
+ *   4. ARM returns credentials: sub_account_id + api_key
+ *   5. Engineer configures their agent tool with the credentials
+ *   6. Agent authenticates via ARM-issued credentials on subsequent calls
+ *
+ * For scope-owned agents (auto-spawned by automation):
+ *   - owner_user_id = NULL, stakeholder_user_id = scope admin / template author
+ *   - The spawning template must be approved by a scope admin
+ */
+
+export interface AgentOnboardingRequest {
+  /** The human who owns/oversees this agent (authenticated via IdP). */
+  stakeholderUserId: string;
+  /** Agent display name. */
+  agentName: string;
+  /** Agent type (opencode / claude code / copilot / pi / custom). */
+  agentType: string;
+  /** Org scope for the agent. */
+  scopeType: "org" | "department" | "group" | "team" | "workstream";
+  scopeId: string;
+  /** Requested priority tier (may be downgraded if not approved). */
+  requestedTier: "critical" | "standard" | "background";
+}
+
+export interface AgentOnboardingResult {
+  success: boolean;
+  agentId?: string;
+  subAccountId?: string;
+  apiKey?: string;
+  delegateKeyRef?: string;
+  configuredBaseUrl?: string;
+  message: string;
+}
+
+/**
+ * Bootstraps a new agent identity. In production: creates the Agent + SubAccount
+ * + DelegateKey rows, provisions credentials, and returns config for the agent.
+ *
+ * Stub: returns fixture credentials.
+ */
+export async function bootstrapAgent(req: AgentOnboardingRequest): Promise<AgentOnboardingResult> {
+  // TODO(1.1): INSERT INTO agent (...) VALUES (...)
+  // TODO(1.1): INSERT INTO sub_account (...) VALUES (...)
+  // TODO(1.1): INSERT INTO delegate_key (...) VALUES (...)
+
+  const agentId = `agt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const subAccountId = `sa_${agentId}`;
+  const apiKey = `arm_sk_${agentId}_${Math.random().toString(36).slice(2, 16)}`;
+
+  // Tier enforcement: critical requires scope-admin approval
+  const effectiveTier = req.requestedTier === "critical" ? "standard" : req.requestedTier;
+
+  return {
+    success: true,
+    agentId,
+    subAccountId,
+    apiKey,
+    delegateKeyRef: `dk_arm_${subAccountId}`,
+    configuredBaseUrl: "https://data.arm.acme.com/v1",
+    message: effectiveTier !== req.requestedTier
+      ? `Agent created at '${effectiveTier}' tier. 'critical' tier requires scope-admin approval (Invariant §11.8).`
+      : `Agent '${req.agentName}' onboarded successfully.`,
+  };
+}

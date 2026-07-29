@@ -113,3 +113,40 @@ describe("SAML/SCIM provisioning", () => {
     expect(r.email).toBeTruthy();
   });
 });
+
+describe("IdP integration — enterprise identity", () => {
+  it("routeIdP matches by domain", async () => {
+    const { routeIdP, EXAMPLE_ENTRA_CONFIG } = await import("../src/index.js");
+    const result = routeIdP("alice@acmecorp.com", [EXAMPLE_ENTRA_CONFIG]);
+    expect(result).toBeTruthy();
+    expect(result!.provider).toBe("entra");
+  });
+
+  it("routeIdP falls back to default", async () => {
+    const { routeIdP, EXAMPLE_ENTRA_CONFIG } = await import("../src/index.js");
+    const result = routeIdP("bob@unknown.com", [EXAMPLE_ENTRA_CONFIG]);
+    expect(result).toBeTruthy(); // falls back to default
+  });
+
+  it("mapIdPClaims maps Entra claims to ARM claims", async () => {
+    const { mapIdPClaims, PRESET_CLAIM_MAPPINGS } = await import("../src/index.js");
+    const raw = { sub: "user-1", email: "eng@acme.com", oid: "oid-1", department: "Engineering", jobTitle: "Senior Engineer" };
+    const claims = mapIdPClaims(raw, PRESET_CLAIM_MAPPINGS.entra);
+    expect(claims.email).toBe("eng@acme.com");
+    expect(claims.scope).toBe("Engineering");
+  });
+
+  it("bootstrapAgent creates agent identity with credentials", async () => {
+    const { bootstrapAgent } = await import("../src/index.js");
+    const result = await bootstrapAgent({
+      stakeholderUserId: "user_eng_1", agentName: "test-agent", agentType: "opencode",
+      scopeType: "team", scopeId: "team_be", requestedTier: "critical",
+    });
+    expect(result.success).toBe(true);
+    expect(result.agentId).toContain("agt_");
+    expect(result.subAccountId).toContain("sa_");
+    expect(result.apiKey).toContain("arm_sk_");
+    // Critical tier downgraded without approval
+    expect(result.message).toContain("standard");
+  });
+});
