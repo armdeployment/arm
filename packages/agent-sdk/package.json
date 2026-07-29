@@ -1,0 +1,23 @@
+{
+  "name": "@arm/agent-sdk",
+  "version": "0.0.0",
+  "description": "ARM Agent SDK — connect coding agents (opencode, claude code, copilot, Pi) to the ARM governance platform",
+  "private": true,
+  "type": "module",
+  "bin": { "arm-agent": "./dist/setup.js" },
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "setup": "tsx src/setup.ts"
+  },
+  "dependencies": {
+    "@arm/config": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "tsx": "4.20.6",
+    "vitest": "4.1.10"
+  }
+}
