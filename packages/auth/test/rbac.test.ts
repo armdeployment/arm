@@ -98,3 +98,18 @@ describe("Agent token payload builder", () => {
     expect(exp).toBeLessThanOrEqual(before + 301);
   });
 });
+
+describe("SAML/SCIM provisioning", () => {
+  it("provisions a SCIM user successfully", async () => {
+    const { provisionSCIMUser } = await import("../src/index.js");
+    const r = await provisionSCIMUser({ schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"], userName: "a@b.com", emails: [{ value: "a@b.com", type: "work" }], active: true });
+    expect(r.success).toBe(true);
+    expect(r.resourceId).toContain("user_");
+  });
+
+  it("verifies a SAML assertion (stub)", async () => {
+    const { verifySAMLAssertion } = await import("../src/index.js");
+    const r = verifySAMLAssertion("<saml/>");
+    expect(r.email).toBeTruthy();
+  });
+});

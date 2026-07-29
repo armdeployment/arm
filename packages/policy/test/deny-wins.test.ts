@@ -227,3 +227,19 @@ describe("resolveLLMModel — model routing policy", () => {
     expect(r.reason).toBe("no_applicable_policy");
   });
 });
+
+describe("DLP content hooks", () => {
+  it("PII hook detects SSN pattern", async () => {
+    const { DLP_HOOKS } = await import("../src/index.js");
+    const piiHook = DLP_HOOKS.find((h) => h.name === "pii_detection")!;
+    expect(piiHook).toBeDefined();
+    expect(piiHook.scan("hello world").matched).toBe(false);
+    expect(piiHook.scan("SSN: 123-45-6789").matched).toBe(true);
+  });
+
+  it("API key hook detects Anthropic keys", async () => {
+    const { DLP_HOOKS } = await import("../src/index.js");
+    const keyHook = DLP_HOOKS.find((h) => h.name === "api_key_leakage")!;
+    expect(keyHook.scan("const key = 'sk-ant-api03-xxx'").matched).toBe(true);
+  });
+});
