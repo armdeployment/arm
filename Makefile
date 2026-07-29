@@ -13,6 +13,7 @@ install:
 	pnpm install --frozen-lockfile
 
 dev:
+dev: ## Start control-plane web in production mode (fixes Turbopack dev hang)
 	pnpm dev
 
 dev-data-plane:

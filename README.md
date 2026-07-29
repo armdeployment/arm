@@ -26,7 +26,7 @@ pnpm install
 
 ```bash
 cd apps/control-plane/web
-pnpm dev
+pnpm build && pnpm start
 ```
 
 Open **http://localhost:3100** in your browser.
@@ -81,7 +81,7 @@ pnpm e2e
 
 ```bash
 pnpm install          # install all workspace deps
-pnpm dev              # start dev server (dashboard)
+pnpm build && pnpm start              # start dev server (dashboard)
 pnpm build            # build all packages
 pnpm typecheck        # tsc --noEmit across all workspaces
 pnpm test             # run all test suites
@@ -134,4 +134,4 @@ pnpm tsx scripts/sandbox/agent-simulator.ts
 
 **Playwright reuses a stale server** — kill all next processes before running e2e: `pkill -f next && pnpm e2e`
 
-**Browser shows "Loading…" indefinitely** — the tRPC API route (`/api/trpc`) is dynamic; ensure you're running `pnpm dev` or `pnpm start` (not opening the HTML file directly).
+**Browser shows "Loading…" indefinitely** — the tRPC API route (`/api/trpc`) is dynamic; ensure you're running `pnpm build && pnpm start` or `pnpm start` (not opening the HTML file directly).
