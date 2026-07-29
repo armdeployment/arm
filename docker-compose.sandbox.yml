@@ -1,0 +1,25 @@
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: infra/docker/proxy-sandbox.Dockerfile
+    ports:
+      - "8787:8787"
+    container_name: arm-proxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8787/health"]
+      interval: 10s
+      retries: 3
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    container_name: arm-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
