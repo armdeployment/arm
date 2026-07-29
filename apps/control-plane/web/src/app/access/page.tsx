@@ -22,7 +22,9 @@ export default function AccessPage() {
 
 function AccessPageContent() {
   const scope = useScope();
-  const { data, isLoading } = trpc.access.pendingApprovals.useQuery({ scope });
+  const { data, isLoading, refetch } = trpc.access.pendingApprovals.useQuery({ scope });
+  const approveMutation = trpc.access.approve.useMutation({ onSuccess: () => refetch() });
+  const denyMutation = trpc.access.deny.useMutation({ onSuccess: () => refetch() });
 
   return (
     <div className="space-y-6">
@@ -55,7 +57,7 @@ function AccessPageContent() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  {["Agent", "Resource", "Action", "Reason", "Status"].map((h) => (
+                  {["Agent", "Resource", "Action", "Reason", "Status", ""].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                   ))}
                 </tr>
@@ -68,6 +70,27 @@ function AccessPageContent() {
                     <td className="px-5 py-3.5"><code className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{req.action}</code></td>
                     <td className="px-5 py-3.5 text-xs" style={{ color: "var(--text-secondary)" }}>{req.reason}</td>
                     <td className="px-5 py-3.5"><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[req.status] ?? ""}`}>{req.status}</span></td>
+                    <td className="px-3 py-3.5">
+                      {req.status === "pending" && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => approveMutation.mutate({ requestId: req.id })}
+                            className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            disabled={approveMutation.isPending}
+                          >Approve</button>
+                          <button
+                            onClick={() => denyMutation.mutate({ requestId: req.id, reason: "Denied by stakeholder" })}
+                            className="rounded-lg bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                            disabled={denyMutation.isPending}
+                          >Deny</button>
+                        </div>
+                      )}
+                      {req.status !== "pending" && (
+                        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          {new Date().toLocaleDateString()}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

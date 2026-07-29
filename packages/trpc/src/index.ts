@@ -625,6 +625,50 @@ const accessRouter = t.router({
     .mutation(async (opts) => {
       return { id: "req_new", tenantId: opts.ctx.tenantId!, status: "pending" };
     }),
+
+  /** Approve a JIT access request. */
+  approve: tenantProcedure
+    .input(z.object({ requestId: z.string() }))
+    .mutation(async (opts) => {
+      // TODO(Phase 2): UPDATE access_request SET status='approved', decided_at=NOW()
+      return { id: opts.input.requestId, status: "approved", message: `Request ${opts.input.requestId} approved. Short-lived credential issued (15-min TTL).` };
+    }),
+
+  /** Deny a JIT access request. */
+  deny: tenantProcedure
+    .input(z.object({ requestId: z.string(), reason: z.string().optional() }))
+    .mutation(async (opts) => {
+      return { id: opts.input.requestId, status: "denied", message: `Request ${opts.input.requestId} denied. ${opts.input.reason ?? "Access not granted."}` };
+    }),
+});
+
+/** GPU brokering router (spec §9 Phase 3) — self-hosted GPU capacity across tenants. */
+const gpuRouter = t.router({
+  capacity: tenantProcedure.query(async (opts) => ({
+    tenantId: opts.ctx.tenantId!,
+    pools: [
+      { id: "gpu-1", name: "A100 Cluster", gpus: 8, allocatedGpus: 6, availableGpus: 2, model: "GLM-5.2", hourlyRate: 1.20, department: "IT & Digital" },
+      { id: "gpu-2", name: "A10G Pool", gpus: 16, allocatedGpus: 10, availableGpus: 6, model: "DeepSeek V3", hourlyRate: 0.80, department: "Engineering" },
+      { id: "gpu-3", name: "H100 Reserved", gpus: 4, allocatedGpus: 4, availableGpus: 0, model: "Custom Fine-tune", hourlyRate: 2.50, department: "R&D" },
+    ],
+    totalGpus: 28, totalAllocated: 20, totalAvailable: 8,
+    monthlyCost: 648,
+  })),
+});
+
+/** Anomaly detection router (spec §9 Phase 5) — statistical spend pattern analysis. */
+const anomalyRouter = t.router({
+  scan: tenantProcedure.query(async (opts) => ({
+    tenantId: opts.ctx.tenantId!,
+    anomalies: [
+      { id: "anom-1", agentId: "line-monitor-a", agentName: "line-monitor-a", scope: "Manufacturing", severity: "warning" as const, description: "Spend increased 3.2× vs 7-day moving average. Today: $890, Avg: $278.", detectedAt: "2026-07-27T14:30:00Z", status: "open" as const },
+      { id: "anom-2", agentId: "alloy-analyzer", agentName: "alloy-analyzer", scope: "R&D", severity: "critical" as const, description: "Unusual model routing detected: RESTRICTED agent briefly attempted Claude access (blocked by DLP). 3 attempts in 1 hour.", detectedAt: "2026-07-27T13:15:00Z", status: "reviewing" as const },
+      { id: "anom-3", agentId: "invoice-processor", agentName: "invoice-processor", scope: "Finance", severity: "warning" as const, description: "Output token count 8× above baseline. Possible prompt injection or data extraction attempt.", detectedAt: "2026-07-27T11:45:00Z", status: "open" as const },
+      { id: "anom-4", agentId: "cad-assistant", agentName: "cad-assistant", scope: "Engineering", severity: "info" as const, description: "Request pattern changed: previously 90% read, now 60% read / 40% write. May indicate new workflow.", detectedAt: "2026-07-27T09:00:00Z", status: "acknowledged" as const },
+    ],
+    summary: { totalAnomalies: 4, critical: 1, warning: 2, info: 1, openCount: 2 },
+    scanTime: new Date().toISOString(),
+  })),
 });
 
 const healthRouter = t.router({
@@ -696,6 +740,8 @@ export const appRouter = t.router({
   access: accessRouter,
   policy: policyRouter,
   security: securityRouter,
+  gpu: gpuRouter,
+  anomaly: anomalyRouter,
 });
 
 export type AppRouter = typeof appRouter;

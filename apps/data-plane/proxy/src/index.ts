@@ -321,14 +321,14 @@ createServer(async (req, res) => {
     for (const [k, v] of Object.entries(req.headers)) {
       if (v) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
     }
-    const request = new Request(url, { method: req.method, headers });
+    const request = new Request(url, { method: req.method ?? "GET", headers });
     // Read body if present
     if (req.method !== "GET" && req.method !== "HEAD") {
       const chunks: Buffer[] = [];
       for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       const body = Buffer.concat(chunks).toString();
       if (body) {
-        const req2 = new Request(url, { method: req.method, headers, body });
+        const req2 = new Request(url, { method: req.method ?? "GET", headers, body });
         const resp = await app.fetch(req2);
         res.writeHead(resp.status, Object.fromEntries(resp.headers));
         const respBody = await resp.text();

@@ -9,6 +9,8 @@ import { SavingsEstimator } from "../components/savings-estimator";
 import { NotificationCenter } from "../components/notification-center";
 import { ModelPolicyPanel } from "../components/model-policy";
 import { SecurityFlags } from "../components/security-flags";
+import { GPUBrokeringPanel } from "../components/gpu-brokering";
+import { AnomalyPanel } from "../components/anomaly-panel";
 import { HostingCost } from "../components/hosting-cost";
 import { LiveTicker } from "../components/live-ticker";
 import { ChildScopeGrid } from "../components/child-scope-grid";
@@ -88,6 +90,12 @@ function DashboardContent() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <NotificationCenter />
         <SecurityFlags />
+      </div>
+
+      {/* GPU Brokering + Anomaly Detection */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <GPUBrokeringPanel />
+        <AnomalyPanel />
       </div>
 
       {/* Hosting cost */}
