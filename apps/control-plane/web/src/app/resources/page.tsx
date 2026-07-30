@@ -27,7 +27,7 @@ export default function ResourcesPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="overflow-hidden rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <div className="border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{RESOURCES.length} Governed Resources</h3>
         </div>

@@ -15,18 +15,18 @@ import {
 } from "recharts";
 
 const CHART_COLORS = {
-  claude: "#6366f1",  // indigo-500
-  gpt: "#0066ff",     // premium blue
-  glm: "#16a34a",     // green-600
+  claude: "#6366f1",  // indigo
+  gpt: "#1E3A8A",     // navy — brand
+  glm: "#15803D",     // green-700
 };
 
 const TOOLTIP_STYLE = {
-  backgroundColor: "#ffffff",
-  border: "1px solid #e4e4e4",
-  borderRadius: "12px",
+  backgroundColor: "#FFFFFF",
+  border: "1px solid #E2E8F0",
+  borderRadius: "6px",
   fontSize: "12px",
-  color: "#1a1a1a",
-  boxShadow: "0 4px 16px -4px rgba(0,0,0,0.08)",
+  color: "#0F172A",
+  boxShadow: "0 4px 12px -2px rgba(15,23,42,0.08)",
   padding: "8px 12px",
 } as const;
 
@@ -63,9 +63,9 @@ export function SpendTrendChart({ data }: { data: SpendTrendPoint[] }) {
               </linearGradient>
             ))}
           </defs>
-          <XAxis dataKey="date" stroke="#9e9e9e" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#9e9e9e" fontSize={11} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#e4e4e4", strokeWidth: 1 }} />
+          <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+          <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#E2E8F0", strokeWidth: 1 }} />
           <Area type="monotone" dataKey="claude" stroke={CHART_COLORS.claude} fill={`url(#g-claude)`} strokeWidth={2.5} />
           <Area type="monotone" dataKey="gpt" stroke={CHART_COLORS.gpt} fill={`url(#g-gpt)`} strokeWidth={2.5} />
           <Area type="monotone" dataKey="glm" stroke={CHART_COLORS.glm} fill={`url(#g-glm)`} strokeWidth={2.5} />
@@ -85,19 +85,19 @@ export function ModelSpendChart({ data }: { data: ModelSpendItem[] }) {
     <ChartCard title="Spend by Model">
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-          <XAxis type="number" stroke="#9e9e9e" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis type="category" dataKey="model" stroke="#6e6e6e" fontSize={11} tickLine={false} axisLine={false} width={110} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#fafafa" }} />
-          <Bar dataKey="spend" radius={[0, 6, 6, 0]} barSize={22}>
+          <XAxis type="number" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+          <YAxis type="category" dataKey="model" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} width={110} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#F1F5F9" }} />
+          <Bar dataKey="spend" radius={[0, 4, 4, 0]} barSize={22}>
             {data.map((entry, i) => (
-              <Cell key={i} fill={entry.kind === "self_hosted" ? "#16a34a" : "#0066ff"} />
+              <Cell key={i} fill={entry.kind === "self_hosted" ? "#15803D" : "#1E3A8A"} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
       <ChartLegend items={[
-        { label: "Closed", color: "#0066ff" },
-        { label: "Self-hosted", color: "#16a34a" },
+        { label: "Closed", color: "#1E3A8A" },
+        { label: "Self-hosted", color: "#15803D" },
       ]} />
     </ChartCard>
   );
@@ -132,8 +132,8 @@ export function TierBreakdownChart({ data }: { data: TierItem[] }) {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="premium-card p-5">
-      <h3 className="mb-5 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
+    <div className="inst-card p-5">
+      <h3 className="label-meta mb-4">{title}</h3>
       {children}
     </div>
   );

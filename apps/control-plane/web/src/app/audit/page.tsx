@@ -9,11 +9,11 @@ export default function AuditPage() {
       </div>
 
       <div
-        className="rounded-2xl border p-12 text-center"
+        className="rounded-lg border p-12 text-center"
         style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
       >
         <div
-          className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+          className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md"
           style={{ backgroundColor: "var(--accent-soft)" }}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="var(--accent)" strokeWidth={1.5}>

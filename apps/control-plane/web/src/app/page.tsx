@@ -27,8 +27,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const scope = useScope();
-  const summary = trpc.spend.summary.useQuery({ scope });
+  const scope = useScope();  const summary = trpc.spend.summary.useQuery({ scope });
   const trend = trpc.spend.trend.useQuery({ scope });
   const agents = trpc.agents.list.useQuery({ scope, status: "all" });
   const children = trpc.orgTree.children.useQuery({ scope });
@@ -39,22 +38,22 @@ function DashboardContent() {
   const hasChildren = children.data ? children.data.children.length > 0 : false;
 
   return (
-    <div className="space-y-6">
-      {/* Header with breadcrumb */}
+    <div className="space-y-6 p-8">
+      {/* Header */}
       <div>
         <ScopeBreadcrumb scope={scope} />
-        <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-[28px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{s.scope.name}</h1>
+        <div className="mt-1.5 flex items-center gap-2.5">
+          <h1 className="text-[22px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>{s.scope.name}</h1>
           <span
-            className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize"
-            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--border-accent)" }}
+            className="label-meta px-2 py-0.5 capitalize"
+            style={{ backgroundColor: "var(--navy-light)", color: "var(--navy)", borderRadius: "var(--radius-sm)" }}
           >
             {s.scope.type}
           </span>
         </div>
-        <div className="mt-1.5 flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span className="accent-dot animate-pulse-glow" />
-          Live via tRPC · {s.tenantId}
+        <div className="mt-1 flex items-center gap-1.5 text-[12px]" style={{ color: "var(--text-muted)" }}>
+          <span className="status-dot live" />
+          Live · {s.tenantId}
         </div>
       </div>
 
@@ -113,7 +112,7 @@ function DashboardSkeleton() {
       <div className="h-4 w-32 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }} />
+          <div key={i} className="h-28 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }} />
         ))}
       </div>
     </div>

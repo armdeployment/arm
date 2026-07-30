@@ -9,7 +9,7 @@ export function SavingsEstimator() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Savings Estimator</h3>
         <div className="h-24 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
@@ -17,7 +17,7 @@ export function SavingsEstimator() {
   }
 
   return (
-    <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Savings Opportunity</h3>
         <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--success)]">
@@ -63,12 +63,12 @@ export function SavingsEstimator() {
       {!switched ? (
         <button
           onClick={() => setSwitched(true)}
-          className="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          className="mt-4 w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           Simulate Switch to Open Models
         </button>
       ) : (
-        <div className="mt-4 rounded-xl bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-700">
+        <div className="mt-4 rounded-md bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-700">
           ✓ Simulated — policy update logged. Impact preview: ${data.potentialSavings.toLocaleString()}/mo saved across {data.impactedAgents} agents.
         </div>
       )}

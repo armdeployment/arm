@@ -12,7 +12,7 @@ export function GPUBrokeringPanel() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">GPU Capacity</h3>
         <div className="h-28 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
@@ -20,14 +20,14 @@ export function GPUBrokeringPanel() {
   }
 
   return (
-    <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>GPU Capacity (Self-Hosted)</h3>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>${data.monthlyCost}/mo hosting</span>
       </div>
       <div className="p-4 space-y-3">
         {data.pools.map((pool) => (
-          <div key={pool.id} className="rounded-xl border p-3" style={{ borderColor: "var(--border)" }}>
+          <div key={pool.id} className="rounded-md border p-3" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{pool.name}</span>

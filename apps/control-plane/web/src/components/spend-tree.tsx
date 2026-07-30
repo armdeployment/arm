@@ -105,7 +105,7 @@ export function SpendTreemap() {
   if (isLoading || !data) {
     return (
       <ChartCard title="Spend by Org Tree (Treemap)">
-        <div className="h-64 animate-pulse rounded-xl bg-[var(--bg-elevated)]" />
+        <div className="h-64 animate-pulse rounded-md bg-[var(--bg-elevated)]" />
       </ChartCard>
     );
   }
@@ -282,7 +282,7 @@ export function SpendTreeView() {
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div
-      className="rounded-2xl border p-5"
+      className="rounded-lg border p-5"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
     >
       <h3 className="mb-5 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>

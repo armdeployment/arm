@@ -23,7 +23,7 @@ export function PolicySimulator() {
   const scenario = PREDEFINED_SCENARIOS[selected]!;
 
   return (
-    <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Policy Simulator (What-If)</h3>
@@ -62,7 +62,7 @@ export function PolicySimulator() {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-3 rounded-xl border p-3" style={{ borderColor: scenario.expected === "allow" ? "#bbf7d0" : "#fecaca", backgroundColor: scenario.expected === "allow" ? "#f0fdf4" : "#fef2f2" }}>
+        <div className="mt-3 flex items-center gap-3 rounded-md border p-3" style={{ borderColor: scenario.expected === "allow" ? "#bbf7d0" : "#fecaca", backgroundColor: scenario.expected === "allow" ? "#f0fdf4" : "#fef2f2" }}>
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-bold ${scenario.expected === "allow" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}
           >

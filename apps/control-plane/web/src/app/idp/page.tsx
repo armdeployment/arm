@@ -17,14 +17,14 @@ export default function IdPPage() {
           { name: "Generic OIDC", provider: "oidc", desc: "Any OpenID Connect provider" },
           { name: "SAML 2.0", provider: "saml", desc: "Any SAML 2.0 provider" },
         ].map((idp) => (
-          <div key={idp.provider} className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+          <div key={idp.provider} className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
             <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{idp.name}</div>
             <div className="text-[10px] font-mono mb-2" style={{ color: "var(--text-muted)" }}>{idp.provider}</div>
             <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{idp.desc}</p>
           </div>
         ))}
       </div>
-      <div className="rounded-2xl border p-6" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-6" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Agent Onboarding Flow</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
@@ -32,7 +32,7 @@ export default function IdPPage() {
             { step: "2", title: "ARM creates agent identity", desc: "Agent + SubAccount provisioned, API credentials issued, stakeholder assigned." },
             { step: "3", title: "Agent runs via ARM proxy", desc: "Agent tool configured with ARM credentials. All calls flow through proxy with enforcement." },
           ].map((s) => (
-            <div key={s.step} className="rounded-xl border p-4" style={{ borderColor: "var(--border)" }}>
+            <div key={s.step} className="rounded-md border p-4" style={{ borderColor: "var(--border)" }}>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white bg-blue-600">{s.step}</div>
               <div className="mt-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{s.title}</div>
               <p className="mt-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>{s.desc}</p>
@@ -40,7 +40,7 @@ export default function IdPPage() {
           ))}
         </div>
       </div>
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Example: Entra ID Config</h3>
         <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs text-green-400">{`provider: entra
 issuer_url: https://login.microsoftonline.com/acmecorp/v2.0

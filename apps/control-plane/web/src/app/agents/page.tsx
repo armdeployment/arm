@@ -11,7 +11,7 @@ const STATUS_FILTERS = ["all", "active", "disabled"] as const;
 
 export default function AgentsPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
       <AgentsPageContent />
     </Suspense>
   );
@@ -32,7 +32,7 @@ function AgentsPageContent() {
             Governed identities — every agent has an accountable stakeholder (Invariant §11.7)
           </p>
         </div>
-        <div className="flex gap-1 rounded-xl border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+        <div className="flex gap-1 rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
           {STATUS_FILTERS.map((f) => (
             <button
               key={f}
@@ -50,10 +50,10 @@ function AgentsPageContent() {
       </div>
 
       {isLoading || !data ? (
-        <div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+        <div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
       ) : data.agents.length === 0 ? (
         <div
-          className="rounded-2xl border px-5 py-16 text-center text-sm"
+          className="rounded-lg border px-5 py-16 text-center text-sm"
           style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-muted)" }}
         >
           No agents in this scope

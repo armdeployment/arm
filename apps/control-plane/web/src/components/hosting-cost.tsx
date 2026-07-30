@@ -7,7 +7,7 @@ export function HostingCost() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Hosting Cost Model</h3>
         <div className="h-20 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
@@ -15,7 +15,7 @@ export function HostingCost() {
   }
 
   return (
-    <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Self-Hosted Inference Cost</h3>
         <span style={{backgroundColor:"var(--accent-soft)"}} className="rounded-full  px-2.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
@@ -25,7 +25,7 @@ export function HostingCost() {
 
       <div className="p-4">
         {data.models.map((m) => (
-          <div key={m.model} className="mb-3 flex items-center gap-3 rounded-xl border p-3" style={{ borderColor: "var(--border)" }}>
+          <div key={m.model} className="mb-3 flex items-center gap-3 rounded-md border p-3" style={{ borderColor: "var(--border)" }}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold" style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent)" }}>
               {m.instance.slice(0, 2)}
             </div>

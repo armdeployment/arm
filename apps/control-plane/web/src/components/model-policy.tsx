@@ -8,7 +8,7 @@ export function ModelPolicyPanel() {
 
   if (!rules || !compliance) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Model Access Policy</h3>
         <div className="h-20 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
@@ -17,7 +17,7 @@ export function ModelPolicyPanel() {
 
   return (
     <div
-      className="rounded-2xl border"
+      className="rounded-lg border"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
     >
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
@@ -32,7 +32,7 @@ export function ModelPolicyPanel() {
         {rules.rules.map((rule) => (
           <div
             key={rule.clearance}
-            className={`rounded-xl border p-3 ${
+            className={`rounded-md border p-3 ${
               rule.allowedKinds.length === 1 ? "border-amber-200 bg-amber-50/50" : "border-green-200 bg-green-50/50"
             }`}
           >

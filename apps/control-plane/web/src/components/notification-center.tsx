@@ -16,7 +16,7 @@ const SEVERITY_ICONS: Record<string, { icon: string; bg: string; text: string }>
 export function NotificationCenter() {
   return (
     <div
-      className="rounded-2xl border"
+      className="rounded-lg border"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
     >
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>

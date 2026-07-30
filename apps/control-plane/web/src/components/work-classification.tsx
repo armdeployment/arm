@@ -22,7 +22,7 @@ export function WorkClassificationPanel() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Work Classification by Department</h3>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -36,7 +36,7 @@ export function WorkClassificationPanel() {
   return (
     <div className="space-y-4">
       {/* Classification clearance summary */}
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Work Classification Across All Departments
@@ -54,7 +54,7 @@ export function WorkClassificationPanel() {
             return (
               <div
                 key={clearance}
-                className="flex flex-1 flex-col items-center rounded-xl border p-3"
+                className="flex flex-1 flex-col items-center rounded-md border p-3"
                 style={{ borderColor: "var(--border)", minWidth: 100 }}
               >
                 <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${style}`}>
@@ -71,7 +71,7 @@ export function WorkClassificationPanel() {
       </div>
 
       {/* Work types by department — what agents actually DO */}
-      <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <div className="border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>What Agents Do — Work Types</h3>
         </div>

@@ -27,7 +27,7 @@ export function SecurityFlags() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Security Flags</h3>
         <div className="h-32 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
@@ -37,7 +37,7 @@ export function SecurityFlags() {
   const criticalCount = data.flags.filter((f) => f.severity === "critical").length;
 
   return (
-    <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Security Flags</h3>

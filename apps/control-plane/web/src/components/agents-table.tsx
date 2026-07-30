@@ -99,7 +99,7 @@ export function AgentsTable({ data }: { data: AgentRow[] }) {
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border"
+      className="overflow-hidden rounded-lg border"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
     >
       <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>

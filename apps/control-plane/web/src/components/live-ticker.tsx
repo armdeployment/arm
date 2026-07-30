@@ -14,7 +14,7 @@ export function LiveTicker() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border bg-[var(--bg-elevated)] px-4 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
+      <div className="flex items-center gap-3 rounded-md border bg-[var(--bg-elevated)] px-4 py-2 text-xs" style={{ borderColor: "var(--border)" }}>
         <span style={{backgroundColor:"var(--accent-soft)"}} className="h-1.5 w-1.5 animate-pulse rounded-full 0" />
         <span style={{ color: "var(--text-muted)" }}>Initializing live metering…</span>
       </div>
@@ -24,7 +24,7 @@ export function LiveTicker() {
   const time = new Date(data.timestamp).toLocaleTimeString();
   return (
     <div
-      className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border px-4 py-2"
+      className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border px-4 py-2"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
     >
       <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--success)" }}>

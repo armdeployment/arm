@@ -14,7 +14,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AccessPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
       <AccessPageContent />
     </Suspense>
   );
@@ -37,10 +37,10 @@ function AccessPageContent() {
       </div>
 
       {isLoading || !data ? (
-        <div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+        <div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
       ) : (
         <div
-          className="overflow-hidden rounded-2xl border"
+          className="overflow-hidden rounded-lg border"
           style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
         >
           <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>

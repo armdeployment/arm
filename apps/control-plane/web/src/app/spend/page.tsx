@@ -12,7 +12,7 @@ import { trpc } from "../../lib/trpc/client";
 
 export default function SpendPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
       <SpendPageContent />
     </Suspense>
   );
@@ -64,7 +64,7 @@ function SpendPageContent() {
           <HostingCost />
         </>
       ) : (
-        <div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+        <div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
       )}
     </div>
   );
