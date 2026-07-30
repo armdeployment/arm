@@ -20,14 +20,20 @@ const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 
 // ── DB Connection Pool ─────────────────────────────────────────────────────
 
-const pgClient = new Client({ connectionString: PG_URL });
-let pgConnected = false;
+const { Pool } = pg;
+const pgPool = new Pool({ connectionString: PG_URL, max: 20 });
 
 async function ensurePg(): Promise<void> {
-  if (!pgConnected) {
-    await pgClient.connect();
-    pgConnected = true;
-  }
+  // Pool manages connections lazily; verify connectivity.
+  const c = await pgPool.connect();
+  c.release();
+}
+
+// Helper that runs a query using a pooled client.
+async function pgQuery(text: string, params?: any[]) {
+  const c = await pgPool.connect();
+  try { return await c.query(text, params); }
+  finally { c.release(); }
 }
 
 // ── ClickHouse Helpers ─────────────────────────────────────────────────────
@@ -77,7 +83,7 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
   if (!apiKey) return sendJSON(res, 401, { error: { message: "Missing API key", type: "auth_error" } });
 
   await ensurePg();
-  const saResult = await pgClient.query(
+  const saResult = await pgQuery(
     `SELECT sa.id as sub_account_id, sa.agent_id, sa.monthly_quota_tokens,
             a.name as agent_name, a.department_id, a.classification_clearance,
             a.priority_tier, a.preferred_model, a.status, a.task_type,
@@ -127,7 +133,7 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
   }
 
   // 4. BUDGET CHECK — department monthly spend
-  const budgetResult = await pgClient.query(
+  const budgetResult = await pgQuery(
     `SELECT budget_monthly_cents, spend_monthly_cents FROM departments WHERE id = $1`,
     [sa.department_id]
   );
@@ -186,7 +192,7 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
     // Update department spend in Postgres (track cloud-equivalent cost
     // so managers see the financial value consumed, even though actual
     // cost is $0 for self-hosted models)
-    await pgClient.query(
+    await pgQuery(
       `UPDATE departments SET spend_monthly_cents = spend_monthly_cents + $1 WHERE id = $2`,
       [cloudCostCents, sa.department_id]
     );
@@ -344,6 +350,6 @@ server.listen(PORT, async () => {
 
 process.on("SIGINT", async () => {
   console.log("\n Shutting down proxy...");
-  await pgClient.end();
+  await pgPool.end();
   process.exit(0);
 });

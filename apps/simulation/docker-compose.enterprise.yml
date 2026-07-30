@@ -1,0 +1,192 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  ARM Enterprise Simulation — Multi-Container Network
+#
+#  Simulates a real enterprise deployment with:
+#    - Internal domain: armtest.com (Docker DNS aliases)
+#    - 5 employee workstations running coding agents
+#    - ARM server (proxy + governance)
+#    - Infrastructure (Postgres + ClickHouse)
+#    - External PC demonstrating VPN requirement
+#
+#  Network topology:
+#
+#    armtest-internal (armtest.com)          armtest-external
+#    ┌──────────────────────────┐           ┌──────────────┐
+#    │ arm-server   postgres    │           │ remote-pc    │
+#    │ clickhouse   emp-sarah   │    VPN    │ (no access)  │
+#    │ emp-mike     emp-carlos  │◄─────────►│              │
+#    │ emp-jenny    emp-david   │           └──────────────┘
+#    └──────────────────────────┘
+# ═══════════════════════════════════════════════════════════════════════════
+
+networks:
+  armtest-internal:
+    name: armtest-internal
+    driver: bridge
+  armtest-external:
+    name: armtest-external
+    driver: bridge
+
+services:
+
+  # ── Infrastructure (internal network only) ──────────────────────────────
+
+  postgres-ent:
+    image: postgres:16-alpine
+    networks: [armtest-internal]
+    environment:
+      POSTGRES_USER: arm
+      POSTGRES_PASSWORD: arm_dev_password
+      POSTGRES_DB: arm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arm"]
+      interval: 2s
+      retries: 10
+
+  clickhouse-ent:
+    image: clickhouse/clickhouse-server:latest
+    networks: [armtest-internal]
+    environment:
+      CLICKHOUSE_USER: arm
+      CLICKHOUSE_PASSWORD: arm_dev_password
+      CLICKHOUSE_DB: arm
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'"]
+      interval: 3s
+      retries: 15
+      start_period: 10s
+
+  # ── ARM Server (proxy + dashboard) ──────────────────────────────────────
+
+  arm-server:
+    build:
+      context: .
+      dockerfile: docker/arm-server.Dockerfile
+    networks:
+      armtest-internal:
+        aliases:
+          - arm.armtest.com        # Main ARM domain
+          - proxy.armtest.com      # LLM proxy endpoint
+          - dashboard.armtest.com  # Management dashboard
+    depends_on:
+      postgres-ent:
+        condition: service_healthy
+      clickhouse-ent:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://arm:arm_dev_password@postgres-ent:5432/arm
+      CLICKHOUSE_URL: http://clickhouse-ent:8123
+      CLICKHOUSE_DEFAULT_AUTH: "arm:arm_dev_password"
+      OLLAMA_URL: http://host.docker.internal:11434
+      PROXY_PORT: "8787"
+    ports:
+      - "8787:8787"   # ARM Proxy (accessible from host for monitoring)
+
+  # ── Employee Workstations ───────────────────────────────────────────────
+  #  Each container = one employee's computer running a coding agent
+  #  All on armtest-internal network → can access arm.armtest.com
+
+  emp-sarah:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-internal]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "Sarah Chen (Sr. Engineer)"
+      DEPARTMENT: "Engineering"
+      AGENT_TYPE: "Claude Code"
+      TASK_TYPE: "code_review"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_eng_review_x1a2b3"
+      MODEL: "minicpm5-1b"
+      CALL_INTERVAL: "10000"
+      MAX_CALLS: "6"
+
+  emp-mike:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-internal]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "Mike Rodriguez (Engineer)"
+      DEPARTMENT: "Engineering"
+      AGENT_TYPE: "OpenCode"
+      TASK_TYPE: "documentation"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_eng_docs_m4n5o6"
+      MODEL: "minicpm5-1b"
+      CALL_INTERVAL: "12000"
+      MAX_CALLS: "5"
+
+  emp-carlos:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-internal]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "Carlos Mendes (Mfg. Lead)"
+      DEPARTMENT: "Manufacturing"
+      AGENT_TYPE: "OpenCode"
+      TASK_TYPE: "cnc_toolpath"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_mfg_tool_s0t1u2"
+      MODEL: "qwen3.5"
+      CALL_INTERVAL: "15000"
+      MAX_CALLS: "4"
+
+  emp-jenny:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-internal]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "Jenny Park (QA Lead)"
+      DEPARTMENT: "Quality Assurance"
+      AGENT_TYPE: "Claude Code"
+      TASK_TYPE: "security_scan"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_qa_sec_b9c0d1"
+      MODEL: "qwen3.5"
+      CALL_INTERVAL: "18000"
+      MAX_CALLS: "3"
+
+  emp-david:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-internal]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "David Kim (Supply Chain)"
+      DEPARTMENT: "Supply Chain"
+      AGENT_TYPE: "GitHub Copilot"
+      TASK_TYPE: "demand_forecast"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_sc_fore_e2f3g4"
+      MODEL: "minicpm5-1b"
+      CALL_INTERVAL: "11000"
+      MAX_CALLS: "5"
+
+  # ── External PC (outside corporate firewall — no VPN) ───────────────────
+
+  remote-pc:
+    build:
+      context: docker
+      dockerfile: employee.Dockerfile
+    networks: [armtest-external]
+    depends_on: [arm-server]
+    environment:
+      EMPLOYEE_NAME: "Alex Thompson (Remote - No VPN)"
+      DEPARTMENT: "R&D"
+      AGENT_TYPE: "Pi"
+      TASK_TYPE: "research"
+      ARM_PROXY: "http://arm.armtest.com:8787"
+      API_KEY: "arm_sk_rd_res_k8l9m0"
+      MODEL: "minicpm5-1b"
+      NO_VPN: "true"
+      CALL_INTERVAL: "8000"
+      MAX_CALLS: "3"
