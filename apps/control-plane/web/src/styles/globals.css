@@ -1,62 +1,65 @@
 @import "tailwindcss";
 
 /*
- * ARM Design System — Dark Premium
- * Inspired by fitxlab.com: near-black surfaces, electric cyan accents,
- * semi-transparent borders, Inter Tight typography.
- * Designed for enterprise AI governance dashboards.
+ * ARM Design System — Premium Light
+ * Inspired by fitxlab.com: clean #f5f5f7 backgrounds, high-contrast text,
+ * subtle borders, generous whitespace, Inter Tight typography.
+ * Apple-like refinement for enterprise AI governance.
  */
 
 :root {
-  /* ── Surfaces (zinc scale, dark-first) ── */
-  --bg-app: #09090b;            /* zinc-950 — app background */
-  --bg-surface: #111113;        /* card background */
-  --bg-elevated: #18181b;       /* hover/active — zinc-900 */
-  --bg-sidebar: #0c0c0e;        /* sidebar — slightly darker than app */
-  --bg-input: #18181b;          /* input fields */
+  /* ── Surfaces (clean, Apple-style) ── */
+  --bg-app: #f5f5f7;            /* off-white — fitxlab/Apple background */
+  --bg-surface: #ffffff;         /* card background — pure white */
+  --bg-elevated: #fafafa;        /* hover/active — subtle elevation */
+  --bg-sidebar: #ffffff;         /* sidebar */
+  --bg-input: #ffffff;           /* input fields */
+  --bg-dark: #1a1a1a;            /* dark sections for contrast (fitxlab pattern) */
 
-  /* ── Borders (semi-transparent white) ── */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --border-accent: rgba(0, 243, 255, 0.25);
+  /* ── Borders (subtle, refined) ── */
+  --border: #e4e4e4;             /* primary border — fitxlab style */
+  --border-strong: #d1d1d1;      /* stronger border */
+  --border-accent: rgba(0, 102, 255, 0.2);
 
-  /* ── Text ── */
-  --text-primary: #fafafa;      /* zinc-50 */
-  --text-secondary: #a1a1aa;    /* zinc-400 */
-  --text-muted: #71717a;        /* zinc-500 */
-  --text-dim: #52525b;          /* zinc-600 */
+  /* ── Text (high contrast) ── */
+  --text-primary: #1a1a1a;      /* near-black — fitxlab primary */
+  --text-secondary: #6e6e6e;     /* gray — fitxlab secondary */
+  --text-muted: #9e9e9e;         /* lighter gray */
+  --text-dim: #c4c4c4;           /* dimmest text */
 
-  /* ── Brand — Electric Cyan (fitxlab-inspired) ── */
-  --accent: #00f3ff;            /* electric cyan */
-  --accent-hover: #00d4dd;      /* slightly darker on hover */
-  --accent-soft: rgba(0, 243, 255, 0.08);
-  --accent-glow: rgba(0, 243, 255, 0.15);
-  --accent-text: #00f3ff;
+  /* ── Brand — Premium Blue ── */
+  --accent: #0066ff;             /* clean, confident blue */
+  --accent-hover: #0052cc;       /* darker on hover */
+  --accent-soft: rgba(0, 102, 255, 0.06);
+  --accent-glow: rgba(0, 102, 255, 0.12);
+  --accent-text: #0066ff;
 
   /* ── Semantic ── */
-  --success: #22c55e;           /* green-500 */
-  --success-soft: rgba(34, 197, 94, 0.1);
-  --warning: #f59e0b;           /* amber-500 */
-  --warning-soft: rgba(245, 158, 11, 0.1);
-  --danger: #ef4444;            /* red-500 */
-  --danger-soft: rgba(239, 68, 68, 0.1);
-  --info: #818cf8;              /* indigo-400 */
-  --info-soft: rgba(129, 140, 248, 0.1);
+  --success: #16a34a;            /* green-600 */
+  --success-soft: rgba(22, 163, 74, 0.08);
+  --warning: #d97706;            /* amber-600 */
+  --warning-soft: rgba(217, 119, 6, 0.08);
+  --danger: #dc2626;             /* red-600 */
+  --danger-soft: rgba(220, 38, 38, 0.06);
+  --info: #6366f1;               /* indigo-500 */
+  --info-soft: rgba(99, 102, 241, 0.08);
 
   /* ── Tier colors ── */
-  --tier-critical: #f43f5e;     /* rose-500 */
-  --tier-standard: #00f3ff;     /* cyan */
-  --tier-background: #71717a;   /* zinc-500 */
+  --tier-critical: #e11d48;      /* rose-600 */
+  --tier-standard: #0066ff;      /* blue */
+  --tier-background: #9ca3af;    /* gray-400 */
 
-  /* ── Effects ── */
-  --glow-accent: 0 0 20px rgba(0, 243, 255, 0.15);
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
-  --shadow-glow: 0 0 24px -4px rgba(0, 243, 255, 0.2);
+  /* ── Shadows (subtle, premium) ── */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.08), 0 1px 3px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.12), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  --shadow-accent: 0 4px 16px -4px rgba(0, 102, 255, 0.25);
 
-  /* ── Gradients ── */
-  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
-  --gradient-accent: linear-gradient(135deg, #00f3ff 0%, #00b4d8 100%);
+  /* ── Radius ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 }
 
 /* ── Base ── */
@@ -70,16 +73,16 @@ body {
   letter-spacing: -0.011em;
 }
 
-/* ── Premium scrollbar ── */
+/* ── Scrollbar (minimal, Apple-style) ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(0, 243, 255, 0.2);
-  color: #fff;
+  background: rgba(0, 102, 255, 0.12);
+  color: var(--text-primary);
 }
 
 /* ── Focus ring ── */
@@ -88,26 +91,17 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Utility: glass card ── */
-.glass-card {
+/* ── Utility: premium card ── */
+.premium-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.glass-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-surface);
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-/* ── Utility: glow text ── */
-.glow-text {
-  text-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+.premium-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 
 /* ── Utility: accent dot ── */
@@ -116,8 +110,8 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
+  background: var(--success);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
 }
 
 /* ── Tabular numbers for data ── */
@@ -128,20 +122,20 @@ body {
 
 /* ── Subtle entrance animation ── */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-up {
-  animation: fadeUp 0.4s ease-out forwards;
+  animation: fadeUp 0.35s ease-out forwards;
 }
 
 /* ── Pulse for live indicators ── */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
-  50% { box-shadow: 0 0 16px var(--accent-glow); }
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(22, 163, 74, 0); }
 }
 .animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

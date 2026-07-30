@@ -35,9 +35,9 @@ export function Sidebar() {
         <div
           className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold"
           style={{
-            background: "linear-gradient(135deg, #00f3ff 0%, #00b4d8 100%)",
-            color: "#09090b",
-            boxShadow: "0 0 16px rgba(0, 243, 255, 0.3)",
+            background: "linear-gradient(135deg, #0066ff 0%, #0052cc 100%)",
+            color: "#fff",
+            boxShadow: "0 2px 8px rgba(0, 102, 255, 0.2)",
           }}
         >
           A
@@ -90,7 +90,7 @@ export function Sidebar() {
                   {active && (
                     <span
                       className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full"
-                      style={{ backgroundColor: "var(--accent)", boxShadow: "0 0 8px var(--accent-glow)" }}
+                      style={{ backgroundColor: "var(--accent)" }}
                     />
                   )}
                   <Icon active={active} />
@@ -103,7 +103,7 @@ export function Sidebar() {
       </nav>
 
       {/* Status indicator */}
-      <div className="mx-3 mb-2 rounded-lg border p-3" style={{ borderColor: "var(--border)", backgroundColor: "rgba(255,255,255,0.02)" }}>
+      <div className="mx-3 mb-2 rounded-lg border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}>
         <div className="flex items-center gap-2">
           <span className="accent-dot animate-pulse-glow" />
           <span className="text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>

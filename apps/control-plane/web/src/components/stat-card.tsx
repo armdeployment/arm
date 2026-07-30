@@ -15,7 +15,7 @@ export function StatCard({ label, value, sub, tone = "default", icon }: StatCard
   }[tone];
 
   const toneBg = {
-    default: "rgba(255,255,255,0.04)",
+    default: "var(--bg-elevated)",
     success: "var(--success-soft)",
     warning: "var(--warning-soft)",
     danger: "var(--danger-soft)",
@@ -23,8 +23,7 @@ export function StatCard({ label, value, sub, tone = "default", icon }: StatCard
 
   return (
     <div
-      className="glass-card group p-5 transition-all duration-300 hover:border-[rgba(255,255,255,0.14)]"
-      style={{ boxShadow: "var(--shadow-sm)" }}
+      className="premium-card group p-5"
     >
       <div className="relative flex items-start justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
