@@ -52,7 +52,7 @@ export const Monitor: React.FC<{
             paddingLeft: 16,
             paddingRight: 16,
             borderBottom: `1px solid ${COLORS.border}`,
-            backgroundColor: bezel === "#1E293B" ? "#F1F5F9" : screenBg,
+            backgroundColor: bezel === "#1E293B" ? "#F1F5F9" : "#1A2540",
             fontFamily: FONT_SANS,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -60,11 +60,11 @@ export const Monitor: React.FC<{
               <div style={{ width: 10, height: 10, borderRadius: 99, backgroundColor: "#FEBC2E", marginRight: -2 }} />
               <div style={{ width: 10, height: 10, borderRadius: 99, backgroundColor: "#28C840", marginRight: -2 }} />
               {title && (
-                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, fontFamily: FONT_MONO, marginLeft: 10 }}>{title}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: bezel === "#1E293B" ? COLORS.text : COLORS.textDark, fontFamily: FONT_MONO, marginLeft: 10 }}>{title}</span>
               )}
             </div>
             {subtitle && (
-              <span style={{ fontSize: 12, color: COLORS.textMuted, fontFamily: FONT_MONO }}>{subtitle}</span>
+              <span style={{ fontSize: 12, color: bezel === "#1E293B" ? COLORS.textMuted : COLORS.textDarkMuted, fontFamily: FONT_MONO }}>{subtitle}</span>
             )}
           </div>
         )}
@@ -93,7 +93,7 @@ export const Terminal: React.FC<{
       fontFamily: FONT_MONO,
       fontSize,
       lineHeight: 1.6,
-      color: COLORS.text,
+      color: COLORS.textDark,
       height: "100%",
       overflow: "hidden",
     }}>
@@ -104,8 +104,8 @@ export const Terminal: React.FC<{
         const ic = line.dir === "in" ? "→" : line.dir === "out" ? "←" : line.dir === "block" ? "✗" : line.dir === "ok" ? "✓" : (line.icon || "·");
         return (
           <div key={i} style={{ opacity: o, display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <span style={{ color: line.dir === "block" ? COLORS.red : line.dir === "ok" ? COLORS.green : COLORS.textMuted, minWidth: 20, fontWeight: 700 }}>{ic}</span>
-            <span style={{ color: line.color || COLORS.text }}>{line.text}</span>
+            <span style={{ color: line.dir === "block" ? COLORS.red : line.dir === "ok" ? COLORS.green : COLORS.textDarkMuted, minWidth: 20, fontWeight: 700 }}>{ic}</span>
+            <span style={{ color: line.color || COLORS.textDark }}>{line.text}</span>
           </div>
         );
       })}
