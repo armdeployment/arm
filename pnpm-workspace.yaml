@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "apps/simulation"
   - "apps/*/*"
   - "packages/*"
   - "packages/agent-sdk"
@@ -7,4 +8,5 @@ packages:
 
 allowBuilds:
   esbuild: true
+  puppeteer: true
   sharp: true
