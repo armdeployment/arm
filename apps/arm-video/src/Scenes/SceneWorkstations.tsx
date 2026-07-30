@@ -39,7 +39,7 @@ export const SceneWorkstations: React.FC = () => {
         Agent Workstations
       </div>
       <div style={{ position: "absolute", top: 50, left: 40, fontSize: 12, color: COLORS.textDarkMuted, fontFamily: FONT_MONO }}>
-        REAL-TIME AGENT ACTIVITY ACROSS DEPARTMENTS
+        SIMULATED EMPLOYEE WORKSTATIONS · ARM SERVES AS GOVERNANCE BACKBONE
       </div>
 
       {EMPLOYEES.map((emp, i) => {

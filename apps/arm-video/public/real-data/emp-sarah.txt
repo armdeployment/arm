@@ -1,0 +1,20 @@
+
+[2m19:43:32[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:43:38[0m ✅ [32m98 tokens[0m in 5776ms · cloud $0.0100 · saved $0.0100
+
+[2m19:43:48[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:45:47[0m ✅ [32m87 tokens[0m in 118777ms · cloud $0.0100 · saved $0.0100
+
+[2m19:45:57[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:46:15[0m ✅ [32m105 tokens[0m in 18099ms · cloud $0.0100 · saved $0.0100
+
+[2m19:46:25[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:47:01[0m ✅ [32m98 tokens[0m in 35366ms · cloud $0.0100 · saved $0.0100
+
+[2m19:47:11[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:47:12[0m ✅ [32m87 tokens[0m in 1332ms · cloud $0.0100 · saved $0.0100
+
+[2m19:47:22[0m ⬆️ [34m[Engineering][0m Sending prompt to minicpm5-1b via arm.armtest.com
+[2m19:47:42[0m ✅ [32m105 tokens[0m in 19839ms · cloud $0.0100 · saved $0.0100
+
+[2m19:47:52[0m ✓ Session complete — 6 calls processed through ARM governance

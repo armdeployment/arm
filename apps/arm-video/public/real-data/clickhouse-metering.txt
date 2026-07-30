@@ -1,0 +1,8 @@
+   ┌─department────────┬─status──┬─calls─┬─tokens─┬─cost_cents─┐
+1. │ Engineering       │ denied  │     1 │      0 │          0 │
+2. │ Engineering       │ success │    12 │   1079 │         12 │
+3. │ Manufacturing     │ success │     4 │    378 │          4 │
+4. │ Quality Assurance │ denied  │     2 │      0 │          0 │
+5. │ Quality Assurance │ success │     1 │     96 │          1 │
+6. │ Supply Chain      │ success │     5 │    466 │          5 │
+   └───────────────────┴─────────┴───────┴────────┴────────────┘

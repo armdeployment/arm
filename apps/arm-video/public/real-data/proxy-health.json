@@ -1,0 +1,14 @@
+{
+    "status": "ok",
+    "service": "arm-data-plane-proxy",
+    "version": "2.0.0-simulation",
+    "upstream": "http://host.docker.internal:11434",
+    "features": [
+        "auth",
+        "budget_enforcement",
+        "quota",
+        "dlp_scan",
+        "classification_gate",
+        "metering"
+    ]
+}

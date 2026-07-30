@@ -1,0 +1,4 @@
+   ┌─decision─┬─reason─────────────────┬─events─┐
+1. │ deny     │ DLP: API Key (sk-ant-) │      3 │
+2. │ deny     │ Invalid API key        │      1 │
+   └──────────┴────────────────────────┴────────┘

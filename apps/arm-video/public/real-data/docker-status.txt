@@ -1,0 +1,5 @@
+NAMES                         STATUS                 PORTS
+simulation-remote-pc-1        Up 2 hours             
+simulation-arm-server-1       Up 2 hours             0.0.0.0:8787->8787/tcp, [::]:8787->8787/tcp
+simulation-postgres-ent-1     Up 2 hours (healthy)   5432/tcp
+simulation-clickhouse-ent-1   Up 2 hours (healthy)   8123/tcp, 9000/tcp, 9009/tcp

@@ -1,0 +1,2 @@
+  minicpm5-1b:latest             2.2GB
+  qwen3.5:latest                 6.6GB

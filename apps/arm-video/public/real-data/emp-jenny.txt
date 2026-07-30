@@ -1,0 +1,7 @@
+[2m19:43:30[0m 🔐 Authenticating with ARM via Claude Code plugin...
+[2m19:43:33[0m 🛡️ DLP scanner active · Classification gate active · Budget enforcement active
+[2m19:43:33[0m 🚀 [1mJenny Park (QA Lead)'s Claude Code agent is now active[0m
+[2m19:43:33[0m 🛡️ [31mBLOCKED by policy[0m: DLP gate blocked: API Key (sk-ant-) detected in prompt
+[2m19:44:50[0m ✅ [32m96 tokens[0m in 57881ms · cloud $0.0100 · saved $0.0100
+[2m19:45:09[0m 🛡️ [31mBLOCKED by policy[0m: DLP gate blocked: API Key (sk-ant-) detected in prompt
+[2m19:45:27[0m ✓ Session complete — 3 calls processed through ARM governance

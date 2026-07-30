@@ -1,0 +1,25 @@
+
+╔══════════════════════════════════════════════════════════╗
+║  ARM Enterprise Server — arm.armtest.com                 ║
+║  Data-Plane Proxy + Control-Plane DB                     ║
+╚══════════════════════════════════════════════════════════╝
+
+▸ Waiting for PostgreSQL...
+  ✓ PostgreSQL ready
+▸ Waiting for ClickHouse...
+  ✓ ClickHouse ready
+▸ Initializing database schema + seed data...
+▸ Initializing Postgres...
+  ✓ Postgres: 1 tenant, 5 departments, 7 users, 4 models, 10 agents
+▸ Initializing ClickHouse...
+  ✓ ClickHouse: llm_events + policy_events tables ready (partitioned by tenant_id, toYYYYMM)
+
+✓ Database initialization complete.
+
+
+▸ Pre-warming Ollama models...
+  minicpm5-1b... ✓ warm
+  qwen3.5... ✓ warm
+
+▸ Starting ARM data-plane proxy on :8787...
+  Internal: http://arm.armtest.com:8787

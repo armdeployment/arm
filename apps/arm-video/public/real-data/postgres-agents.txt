@@ -1,0 +1,14 @@
+         name          | agent_type  |          dept          | status | priority_tier 
+-----------------------+-------------+------------------------+--------+---------------
+ ArchDesign-Agent      | pi          | Engineering            | active | standard
+ CodeReview-Bot        | claude_code | Engineering            | active | critical
+ DocGen-Agent          | opencode    | Engineering            | active | standard
+ QualityAnalysis-Agent | claude_code | Manufacturing          | active | standard
+ ToolPath-Optimizer    | opencode    | Manufacturing          | active | critical
+ SecurityScan-Agent    | claude_code | Quality Assurance      | active | critical
+ TestGen-Agent         | copilot     | Quality Assurance      | active | standard
+ ResearchAssist-Agent  | pi          | Research & Development | active | standard
+ DemandForecast-Agent  | opencode    | Supply Chain           | active | standard
+ LogisticsOpt-Agent    | copilot     | Supply Chain           | active | background
+(10 rows)
+
