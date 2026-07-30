@@ -195,7 +195,7 @@ async function main() {
   await pgClient.end();
 
   // ── Build charts ──
-  const COLORS = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#ec4899"];
+  const COLORS = ["#1E3A8A", "#3B82F6", "#64748B", "#15803D", "#B45309", "#B91C1C", "#6366F1"];
   const deptChart = barChart(
     deptStats.map((d, i) => ({ label: d.department.slice(0, 12), value: Number(d.cloud_cost), color: COLORS[i % COLORS.length] })),
     "Cloud-Equivalent Cost by Department", "$"
@@ -278,69 +278,73 @@ function buildHTML(d: any): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { -webkit-print-color-adjust: exact; }
   body { 
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #1e293b; line-height: 1.5; font-size: 12px;
+    font-family: "IBM Plex Sans", -apple-system, sans-serif;
+    color: #0F172A; line-height: 1.5; font-size: 12px;
+    letter-spacing: -0.01em;
   }
 
-  /* Cover — fills full first page */
+  /* Cover — flat institutional navy, no gradient */
   .cover { 
     position: relative;
     width: 100vw; height: 100vh;
     min-height: 250mm;
-    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
-    color: white; display: flex; flex-direction: column; justify-content: center; 
-    padding: 50px; page-break-after: always;
+    background: #0F172A;
+    color: #fff; display: flex; flex-direction: column; justify-content: center;
+    padding: 60px; page-break-after: always;
   }
-  .cover h1 { font-size: 38px; font-weight: 800; margin-bottom: 6px; }
-  .cover h2 { font-size: 20px; font-weight: 400; opacity: 0.9; margin-bottom: 30px; }
-  .cover .company { font-size: 26px; font-weight: 700; margin: 16px 0; }
-  .cover .meta { margin-top: 50px; opacity: 0.8; font-size: 13px; }
-  .cover .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 14px; border-radius: 20px; font-size: 11px; margin: 3px 6px 3px 0; }
+  .cover::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: #B45309;
+  }
+  .cover h1 { font-size: 42px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.03em; }
+  .cover h2 { font-size: 18px; font-weight: 300; opacity: 0.7; margin-bottom: 28px; letter-spacing: 0; }
+  .cover .company { font-size: 24px; font-weight: 600; margin: 14px 0; }
+  .cover .meta { margin-top: 50px; opacity: 0.5; font-size: 12px; font-weight: 400; line-height: 1.8; }
+  .cover .badge { display: inline-block; border: 1px solid rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 4px; font-size: 10px; margin: 3px 6px 3px 0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
 
   /* Content sections */
   .content { padding: 0; }
-  h2.section { font-size: 20px; font-weight: 700; color: #1e3a8a; border-bottom: 3px solid #3b82f6; padding-bottom: 6px; margin: 25px 0 16px; page-break-after: avoid; }
-  h3 { font-size: 15px; font-weight: 600; color: #334155; margin: 16px 0 8px; page-break-after: avoid; }
+  h2.section { font-size: 18px; font-weight: 600; color: #0F172A; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; margin: 28px 0 16px; page-break-after: avoid; letter-spacing: -0.02em; }
+  h3 { font-size: 11px; font-weight: 600; color: #64748B; margin: 18px 0 8px; page-break-after: avoid; text-transform: uppercase; letter-spacing: 0.06em; }
   p { margin-bottom: 8px; }
 
-  /* KPI cards */
+  /* KPI cards — flat, hairline border */
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
-  .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
-  .kpi .value { font-size: 22px; font-weight: 800; color: #1e3a8a; }
-  .kpi .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
-  .kpi.green .value { color: #059669; }
-  .kpi.red .value { color: #dc2626; }
+  .kpi { background: #fff; border: 1px solid #E2E8F0; border-radius: 6px; padding: 14px; text-align: left; }
+  .kpi .value { font-size: 24px; font-weight: 600; color: #0F172A; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .kpi .label { font-size: 9px; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; font-weight: 600; }
+  .kpi.navy .value { color: #1E3A8A; }
+  .kpi.green .value { color: #15803D; }
+  .kpi.red .value { color: #B91C1C; }
 
-  /* Tables */
-  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; page-break-inside: auto; }
-  th { background: #1e3a8a; color: white; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
-  td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+  /* Tables — institutional precision */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; page-break-inside: auto; font-variant-numeric: tabular-nums; }
+  th { background: #1E3A8A; color: white; padding: 7px 8px; text-align: left; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
   tr { page-break-inside: avoid; }
-  tr:nth-child(even) td { background: #f8fafc; }
+  tr:nth-child(even) td { background: #F8FAFC; }
 
-  /* Chart containers — responsive, no overflow */
+  /* Chart containers */
   .chart-box { 
-    margin: 12px 0; 
-    page-break-inside: avoid; 
-    overflow: hidden;
+    margin: 12px 0; page-break-inside: avoid; overflow: hidden;
   }
   .chart-box svg { display: block; height: auto; }
-  .chart-row { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; align-items: flex-start; }
 
-  /* Decision cards */
-  .decision { border-left: 4px solid #3b82f6; background: #f8fafc; padding: 12px 16px; margin: 10px 0; border-radius: 0 8px 8px 0; page-break-inside: avoid; }
-  .decision .type { font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; }
-  .decision .title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 3px 0; }
+  /* Decision cards — navy left border */
+  .decision { border-left: 3px solid #1E3A8A; background: #F8FAFC; padding: 12px 16px; margin: 10px 0; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
+  .decision .type { font-size: 9px; font-weight: 600; color: #1E3A8A; text-transform: uppercase; letter-spacing: 0.08em; }
+  .decision .title { font-size: 13px; font-weight: 600; color: #0F172A; margin: 3px 0; }
   .decision .desc { font-size: 11px; color: #475569; line-height: 1.5; }
 
-  .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 10px 0; page-break-inside: avoid; font-size: 11px; line-height: 1.6; }
-  .callout strong { color: #1e3a8a; }
+  .callout { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 12px 16px; margin: 10px 0; page-break-inside: avoid; font-size: 11px; line-height: 1.6; }
+  .callout strong { color: #1E3A8A; }
 
-  .footer { text-align: center; color: #94a3b8; font-size: 10px; margin-top: 30px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+  .footer { text-align: center; color: #94A3B8; font-size: 10px; margin-top: 30px; padding-top: 16px; border-top: 1px solid #E2E8F0; }
 </style>
 </head>
 <body>
@@ -348,15 +352,16 @@ function buildHTML(d: any): string {
 <!-- COVER PAGE -->
 <div class="cover">
   <h1>ARM</h1>
-  <h2>Agent Resource Management Platform</h2>
+  <h2>Agent Resource Management</h2>
   <div class="company">Acme Manufacturing Corp</div>
-  <p style="font-size: 16px; opacity: 0.9; max-width: 500px;">
-    Enterprise Simulation Report — AI Agent Governance, Metering & Cost Analysis
+  <p style="font-size: 15px; opacity: 0.5; max-width: 480px; font-weight: 300;">
+    Enterprise Simulation Report — AI Agent Governance, Metering &amp; Cost Analysis
   </p>
-  <div style="margin-top: 30px;">
-    <span class="badge">Real LLM Inference (Ollama)</span>
-    <span class="badge">Real Metering (ClickHouse)</span>
-    <span class="badge">10 Agents · 5 Departments</span>
+  <div style="margin-top: 28px;">
+    <span class="badge">Real LLM Inference</span>
+    <span class="badge">Real Metering</span>
+    <span class="badge">10 Agents</span>
+    <span class="badge">5 Departments</span>
   </div>
   <div class="meta">
     Report Date: ${d.today}<br>
@@ -377,7 +382,7 @@ function buildHTML(d: any): string {
 </p>
 
 <div class="kpis">
-  <div class="kpi"><div class="value">${d.totalCalls}</div><div class="label">Total LLM Calls</div></div>
+  <div class="kpi navy"><div class="value">${d.totalCalls}</div><div class="label">Total LLM Calls</div></div>
   <div class="kpi"><div class="value">${fmtLarge(d.totalTokens)}</div><div class="label">Tokens Processed</div></div>
   <div class="kpi green"><div class="value">${fmt(d.savings)}</div><div class="label">Cost Savings</div></div>
   <div class="kpi"><div class="value">${d.successRate}%</div><div class="label">Success Rate</div></div>
