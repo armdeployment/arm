@@ -36,6 +36,8 @@ async function pgQuery(text: string, params?: any[]) {
   finally { c.release(); }
 }
 
+function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)); }
+
 // ── ClickHouse Helpers ─────────────────────────────────────────────────────
 
 async function chInsert(table: string, values: Record<string, string | number>): Promise<void> {
@@ -157,22 +159,32 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
     return sendJSON(res, 429, { error: { message: "Monthly token quota exceeded", type: "quota_error" } });
   }
 
-  // 6. ROUTE TO OLLAMA
-  try {
-    const ollamaRes = await fetch(`${OLLAMA_URL}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(parsed),
-    });
+  // 6. ROUTE TO OLLAMA (with timeout + retry for cold starts)
+  const maxRetries = 2;
+  let lastErr = "";
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const ollamaRes = await fetch(`${OLLAMA_URL}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed),
+        signal: AbortSignal.timeout(60000), // 60s — allows model cold-start
+      });
 
-    if (!ollamaRes.ok) {
-      const errText = await ollamaRes.text();
-      await meterEvent(sa, effectiveModel, "error", errText.slice(0, 100), 0, 0, t0);
-      return sendJSON(res, 502, { error: { message: `Upstream error: ${ollamaRes.status}`, detail: errText.slice(0, 200) } });
-    }
+      if (!ollamaRes.ok) {
+        const errText = await ollamaRes.text();
+        lastErr = `Upstream ${ollamaRes.status}: ${errText.slice(0, 100)}`;
+        // Retry on 503 (model loading) or 500
+        if ((ollamaRes.status === 503 || ollamaRes.status === 500) && attempt < maxRetries) {
+          await sleep(3000 * (attempt + 1)); // backoff: 3s, 6s
+          continue;
+        }
+        await meterEvent(sa, effectiveModel, "error", lastErr, 0, 0, t0);
+        return sendJSON(res, 502, { error: { message: `Upstream error: ${ollamaRes.status}`, detail: errText.slice(0, 200) } });
+      }
 
-    const data = await ollamaRes.json() as any;
-    const usage = data.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+      const data = await ollamaRes.json() as any;
+      const usage = data.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
     // 7. METER — calculate costs and write to ClickHouse
     // Self-hosted models: actual_cost = $0, but cloud_equivalent is tracked for savings
@@ -207,9 +219,17 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
     });
     res.end(JSON.stringify(data));
 
-  } catch (err) {
-    await meterEvent(sa, effectiveModel, "error", String(err), 0, 0, t0);
-    sendJSON(res, 502, { error: { message: "Failed to reach LLM provider" } });
+      return; // success — exit retry loop
+
+    } catch (err) {
+      lastErr = String(err).slice(0, 120);
+      if (attempt < maxRetries) {
+        await sleep(2000 * (attempt + 1)); // backoff: 2s, 4s
+        continue;
+      }
+      await meterEvent(sa, effectiveModel, "error", lastErr, 0, 0, t0);
+      sendJSON(res, 502, { error: { message: "Failed to reach LLM provider after retries" } });
+    }
   }
 }
 

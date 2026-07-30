@@ -16,6 +16,7 @@ const TASK_TYPE = process.env.TASK_TYPE || "code_review";
 const NO_VPN = process.env.NO_VPN === "true";
 const CALL_INTERVAL = parseInt(process.env.CALL_INTERVAL || "8000");
 const MAX_CALLS = parseInt(process.env.MAX_CALLS || "5");
+const START_DELAY = parseInt(process.env.START_DELAY || "0");
 
 const TASKS = {
   code_review: [
@@ -66,6 +67,12 @@ function log(icon, msg) {
 }
 
 async function main() {
+  // Staggered startup delay to avoid thundering herd on Ollama
+  if (START_DELAY > 0) {
+    console.log(`${COLORS.dim}Staggered start: waiting ${START_DELAY}s...${COLORS.reset}\n`);
+    await sleep(START_DELAY * 1000);
+  }
+
   // ── Boot screen ──
   console.log("\n" + "=".repeat(60));
   console.log(`${COLORS.bg_blue}${COLORS.white}  WORKSTATION BOOT  ${COLORS.reset}`);
@@ -119,14 +126,28 @@ async function main() {
 
   // ── Authenticate with ARM ──
   log("🔐", `Authenticating with ARM via ${AGENT_TYPE} plugin...`);
-  await sleep(800);
+  await sleep(500);
 
-  try {
-    const healthRes = await fetch(`${ARM_PROXY}/health`);
-    const health = await healthRes.json();
-    log("📡", `ARM Proxy v${health.version} — features: ${health.features?.join(", ")}`);
-  } catch (e) {
-    log("❌", `Cannot reach ARM proxy at ${ARM_PROXY}`);
+  // Retry health check — ARM server may still be warming models
+  let armReady = false;
+  for (let attempt = 0; attempt < 90; attempt++) {
+    try {
+      const healthRes = await fetch(`${ARM_PROXY}/health`, { signal: AbortSignal.timeout(3000) });
+      if (healthRes.ok) {
+        const health = await healthRes.json();
+        log("📡", `ARM Proxy v${health.version} — features: ${health.features?.join(", ")}`);
+        armReady = true;
+        break;
+      }
+    } catch (e) {
+      if (attempt === 0) log("⏳", `ARM proxy not ready, waiting for model warmup...`);
+      if (attempt % 10 === 9) log("⏳", `Still waiting... (${attempt + 1}s)`);
+    }
+    await sleep(2000);
+  }
+
+  if (!armReady) {
+    log("❌", `Cannot reach ARM proxy at ${ARM_PROXY} after retries`);
     setInterval(() => {}, 1000);
     return;
   }
@@ -142,9 +163,10 @@ async function main() {
   log("🚀", `${COLORS.bold}${EMPLOYEE_NAME}'s ${AGENT_TYPE} agent is now active${COLORS.reset}`);
   console.log("");
 
-  const interval = setInterval(async () => {
+  // Recursive timeout — wait for each call to COMPLETE before scheduling the next.
+  // This prevents request pile-up when Ollama is slow (cold start / queued).
+  async function makeCall() {
     if (callNum >= MAX_CALLS) {
-      clearInterval(interval);
       log("✓", `Session complete — ${callNum} calls processed through ARM governance`);
       return;
     }
@@ -168,6 +190,7 @@ async function main() {
           stream: false,
           max_tokens: 60,
         }),
+        signal: AbortSignal.timeout(120000), // 2 min — generous for self-hosted
       });
 
       const data = await res.json();
@@ -195,7 +218,12 @@ async function main() {
     }
 
     console.log("");
-  }, CALL_INTERVAL);
+    // Schedule next call only AFTER this one completes
+    setTimeout(makeCall, CALL_INTERVAL);
+  }
+
+  // Start the first call
+  makeCall();
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

@@ -35,14 +35,25 @@ echo "▸ Initializing database schema + seed data..."
 node_modules/.bin/tsx src/db-init.ts
 echo ""
 
-# ── Pre-warm Ollama models ──
+# ── Pre-warm Ollama models (using node fetch — curl not in alpine) ──
 echo "▸ Pre-warming Ollama models..."
-for model in minicpm5-1b qwen3.5; do
-  echo -n "  $model... "
-  curl -s "${OLLAMA_URL}/v1/chat/completions" \
-    -H "Content-Type: application/json" \
-    -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"OK\"}],\"max_tokens\":1}" > /dev/null 2>&1 && echo "warm" || echo "skip"
-done
+node -e '
+(async () => {
+  const models = ["minicpm5-1b", "qwen3.5"];
+  for (const m of models) {
+    process.stdout.write("  " + m + "... ");
+    try {
+      const r = await fetch(process.env.OLLAMA_URL + "/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m, messages: [{ role: "user", content: "OK" }], max_tokens: 1 }),
+        signal: AbortSignal.timeout(120000),
+      });
+      console.log(r.ok ? "\u2713 warm" : "error " + r.status);
+    } catch (e) { console.log("skip: " + String(e).slice(0, 50)); }
+  }
+})();
+' 2>&1
 echo ""
 
 # ── Start proxy ──

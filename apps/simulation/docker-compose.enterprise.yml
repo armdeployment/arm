@@ -102,6 +102,7 @@ services:
       MODEL: "minicpm5-1b"
       CALL_INTERVAL: "10000"
       MAX_CALLS: "6"
+      START_DELAY: "0"
 
   emp-mike:
     build:
@@ -119,6 +120,7 @@ services:
       MODEL: "minicpm5-1b"
       CALL_INTERVAL: "12000"
       MAX_CALLS: "5"
+      START_DELAY: "10"
 
   emp-carlos:
     build:
@@ -136,6 +138,7 @@ services:
       MODEL: "qwen3.5"
       CALL_INTERVAL: "15000"
       MAX_CALLS: "4"
+      START_DELAY: "20"
 
   emp-jenny:
     build:
@@ -153,6 +156,7 @@ services:
       MODEL: "qwen3.5"
       CALL_INTERVAL: "18000"
       MAX_CALLS: "3"
+      START_DELAY: "30"
 
   emp-david:
     build:
@@ -170,6 +174,7 @@ services:
       MODEL: "minicpm5-1b"
       CALL_INTERVAL: "11000"
       MAX_CALLS: "5"
+      START_DELAY: "40"
 
   # ── External PC (outside corporate firewall — no VPN) ───────────────────
 
