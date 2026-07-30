@@ -32,33 +32,35 @@ async function chQuery<T = any>(sql: string): Promise<T[]> {
 
 function barChart(data: { label: string; value: number; color: string }[], title: string, unit: string): string {
   const maxVal = Math.max(...data.map(d => d.value), 1);
-  const barWidth = 60;
-  const gap = 30;
-  const chartWidth = data.length * (barWidth + gap) + 60;
-  const chartHeight = 280;
+  const barWidth = 55;
+  const gap = 20;
+  const chartWidth = data.length * (barWidth + gap) + 50;
+  const chartHeight = 260;
   const bars = data.map((d, i) => {
-    const h = (d.value / maxVal) * 200;
-    const x = 50 + i * (barWidth + gap);
+    const h = (d.value / maxVal) * 180;
+    const x = 40 + i * (barWidth + gap);
     const y = chartHeight - 40 - h;
     const valLabel = unit === "$" ? `$${(d.value / 100).toFixed(2)}` : d.value.toLocaleString();
     return `
       <rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="4" fill="${d.color}"/>
-      <text x="${x + barWidth/2}" y="${y - 8}" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">${valLabel}</text>
+      <text x="${x + barWidth/2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">${valLabel}</text>
       <text x="${x + barWidth/2}" y="${chartHeight - 22}" text-anchor="middle" font-size="10" fill="#64748b">${d.label}</text>
     `;
   }).join("");
   return `
-    <svg width="${chartWidth}" height="${chartHeight}" xmlns="http://www.w3.org/2000/svg">
-      <text x="20" y="20" font-size="14" font-weight="700" fill="#0f172a">${title}</text>
-      <line x1="40" y1="${chartHeight - 40}" x2="${chartWidth - 20}" y2="${chartHeight - 40}" stroke="#cbd5e1" stroke-width="1"/>
+    <div class="chart-box">
+    <svg viewBox="0 0 ${chartWidth} ${chartHeight}" width="100%" style="max-width:${chartWidth}px" xmlns="http://www.w3.org/2000/svg">
+      <text x="20" y="20" font-size="13" font-weight="700" fill="#0f172a">${title}</text>
+      <line x1="30" y1="${chartHeight - 40}" x2="${chartWidth - 10}" y2="${chartHeight - 40}" stroke="#cbd5e1" stroke-width="1"/>
       ${bars}
-    </svg>`;
+    </svg>
+    </div>`;
 }
 
 function donutChart(data: { label: string; value: number; color: string }[], title: string): string {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   let cumulativeAngle = -90;
-  const cx = 120, cy = 120, r = 80, innerR = 50;
+  const cx = 100, cy = 110, r = 70, innerR = 42;
 
   const arcs = data.map(d => {
     const angle = (d.value / total) * 360;
@@ -83,23 +85,26 @@ function donutChart(data: { label: string; value: number; color: string }[], tit
 
     return `
       <path d="M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4} Z" fill="${d.color}"/>
-      <text x="${cx + (r + 15) * Math.cos((startRad + endRad) / 2)}" y="${cy + (r + 15) * Math.sin((startRad + endRad) / 2)}" font-size="9" fill="#475569" text-anchor="middle">${pct}%</text>
+      <text x="${cx + (r + 14) * Math.cos((startRad + endRad) / 2)}" y="${cy + (r + 14) * Math.sin((startRad + endRad) / 2)}" font-size="9" fill="#475569" text-anchor="middle">${pct}%</text>
     `;
   }).join("");
 
   const legend = data.map((d, i) => `
-    <rect x="240" y="${30 + i * 20}" width="12" height="12" rx="2" fill="${d.color}"/>
-    <text x="258" y="${40 + i * 20}" font-size="11" fill="#334155">${d.label} (${d.value})</text>
+    <rect x="210" y="${40 + i * 20}" width="12" height="12" rx="2" fill="${d.color}"/>
+    <text x="228" y="${50 + i * 20}" font-size="11" fill="#334155">${d.label} (${d.value})</text>
   `).join("");
 
+  const ch = Math.max(220, 40 + data.length * 20 + 10);
   return `
-    <svg width="420" height="${Math.max(240, 30 + data.length * 20 + 10)}" xmlns="http://www.w3.org/2000/svg">
-      <text x="10" y="20" font-size="14" font-weight="700" fill="#0f172a">${title}</text>
+    <div class="chart-box">
+    <svg viewBox="0 0 400 ${ch}" width="100%" style="max-width:400px" xmlns="http://www.w3.org/2000/svg">
+      <text x="10" y="20" font-size="13" font-weight="700" fill="#0f172a">${title}</text>
       ${arcs}
-      <text x="${cx}" y="${cy}" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">${total}</text>
-      <text x="${cx}" y="${cy + 15}" text-anchor="middle" font-size="10" fill="#64748b">total calls</text>
+      <text x="${cx}" y="${cy - 3}" text-anchor="middle" font-size="20" font-weight="700" fill="#0f172a">${total}</text>
+      <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="9" fill="#64748b">total calls</text>
       ${legend}
-    </svg>`;
+    </svg>
+    </div>`;
 }
 
 // ── Main Report Generation ─────────────────────────────────────────────────
@@ -211,20 +216,24 @@ async function main() {
   // ── Timeline chart ──
   const timelinePoints = timeline.length > 0 ? timeline : [{ minute: "N/A", calls: 0, tokens: 0 }];
   const maxTimelineCalls = Math.max(...timelinePoints.map((t: any) => Number(t.calls)), 1);
-  const timelineWidth = Math.max(timelinePoints.length * 40 + 60, 400);
+  const tlBarWidth = timelinePoints.length > 6 ? 25 : 35;
+  const tlGap = timelinePoints.length > 6 ? 10 : 15;
+  const timelineWidth = Math.max(timelinePoints.length * (tlBarWidth + tlGap) + 50, 400);
   const timelineChart = `
-    <svg width="${timelineWidth}" height="200" xmlns="http://www.w3.org/2000/svg">
-      <text x="20" y="20" font-size="14" font-weight="700" fill="#0f172a">Activity Timeline (calls per minute)</text>
-      <line x1="40" y1="160" x2="${timelineWidth - 20}" y2="160" stroke="#cbd5e1" stroke-width="1"/>
+    <div class="chart-box">
+    <svg viewBox="0 0 ${timelineWidth} 200" width="100%" style="max-width:${timelineWidth}px" xmlns="http://www.w3.org/2000/svg">
+      <text x="20" y="20" font-size="13" font-weight="700" fill="#0f172a">Activity Timeline (calls per minute)</text>
+      <line x1="40" y1="160" x2="${timelineWidth - 10}" y2="160" stroke="#cbd5e1" stroke-width="1"/>
       ${timelinePoints.map((t: any, i: number) => {
         const h = (Number(t.calls) / maxTimelineCalls) * 120;
-        const x = 50 + i * 40;
+        const x = 45 + i * (tlBarWidth + tlGap);
         return `
-          <rect x="${x}" y="${160 - h}" width="25" height="${h}" rx="3" fill="#3b82f6" opacity="${0.5 + (i / timelinePoints.length) * 0.5}"/>
-          <text x="${x + 12}" y="175" text-anchor="middle" font-size="8" fill="#64748b">${String(t.minute).slice(11, 16)}</text>
+          <rect x="${x}" y="${160 - h}" width="${tlBarWidth}" height="${h}" rx="3" fill="#3b82f6" opacity="${0.5 + (i / Math.max(timelinePoints.length,1)) * 0.5}"/>
+          <text x="${x + tlBarWidth/2}" y="175" text-anchor="middle" font-size="8" fill="#64748b">${String(t.minute).slice(11, 16)}</text>
         `;
       }).join("")}
-    </svg>`;
+    </svg>
+    </div>`;
 
   // ── Build HTML ──
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
@@ -254,7 +263,8 @@ async function main() {
     path: outputPath,
     format: "A4",
     printBackground: true,
-    margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+    margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" },
+    preferCSSPageSize: false,
   });
   await browser.close();
   console.log(`  ✓ Report saved: ${outputPath}`);
@@ -269,48 +279,68 @@ function buildHTML(d: any): string {
 <head>
 <meta charset="UTF-8">
 <style>
-  @page { margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; font-size: 13px; }
+  html { -webkit-print-color-adjust: exact; }
+  body { 
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b; line-height: 1.5; font-size: 12px;
+  }
 
-  /* Cover */
-  .cover { height: 100vh; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; display: flex; flex-direction: column; justify-content: center; padding: 60px; page-break-after: always; }
-  .cover h1 { font-size: 42px; font-weight: 800; margin-bottom: 8px; }
-  .cover h2 { font-size: 22px; font-weight: 400; opacity: 0.9; margin-bottom: 40px; }
-  .cover .company { font-size: 28px; font-weight: 700; margin: 20px 0; }
-  .cover .meta { margin-top: 60px; opacity: 0.8; font-size: 14px; }
-  .cover .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 20px; font-size: 12px; margin: 4px 8px 4px 0; }
+  /* Cover — fills full first page */
+  .cover { 
+    position: relative;
+    width: 100vw; height: 100vh;
+    min-height: 250mm;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
+    color: white; display: flex; flex-direction: column; justify-content: center; 
+    padding: 50px; page-break-after: always;
+  }
+  .cover h1 { font-size: 38px; font-weight: 800; margin-bottom: 6px; }
+  .cover h2 { font-size: 20px; font-weight: 400; opacity: 0.9; margin-bottom: 30px; }
+  .cover .company { font-size: 26px; font-weight: 700; margin: 16px 0; }
+  .cover .meta { margin-top: 50px; opacity: 0.8; font-size: 13px; }
+  .cover .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 5px 14px; border-radius: 20px; font-size: 11px; margin: 3px 6px 3px 0; }
 
-  /* Content */
-  .content { padding: 20px 0; }
-  h2.section { font-size: 22px; font-weight: 700; color: #1e3a8a; border-bottom: 3px solid #3b82f6; padding-bottom: 8px; margin: 30px 0 20px; }
-  h3 { font-size: 16px; font-weight: 600; color: #334155; margin: 20px 0 10px; }
+  /* Content sections */
+  .content { padding: 0; }
+  h2.section { font-size: 20px; font-weight: 700; color: #1e3a8a; border-bottom: 3px solid #3b82f6; padding-bottom: 6px; margin: 25px 0 16px; page-break-after: avoid; }
+  h3 { font-size: 15px; font-weight: 600; color: #334155; margin: 16px 0 8px; page-break-after: avoid; }
+  p { margin-bottom: 8px; }
 
   /* KPI cards */
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
-  .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; text-align: center; }
-  .kpi .value { font-size: 24px; font-weight: 800; color: #1e3a8a; }
-  .kpi .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
+  .kpi .value { font-size: 22px; font-weight: 800; color: #1e3a8a; }
+  .kpi .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
   .kpi.green .value { color: #059669; }
   .kpi.red .value { color: #dc2626; }
 
   /* Tables */
-  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
-  th { background: #1e3a8a; color: white; padding: 8px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-  td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; page-break-inside: auto; }
+  th { background: #1e3a8a; color: white; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+  tr { page-break-inside: avoid; }
   tr:nth-child(even) td { background: #f8fafc; }
 
-  /* Decision cards */
-  .decision { border-left: 4px solid #3b82f6; background: #f8fafc; padding: 14px 18px; margin: 12px 0; border-radius: 0 8px 8px 0; }
-  .decision .type { font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; }
-  .decision .title { font-size: 14px; font-weight: 600; color: #1e293b; margin: 4px 0; }
-  .decision .desc { font-size: 12px; color: #475569; }
+  /* Chart containers — responsive, no overflow */
+  .chart-box { 
+    margin: 12px 0; 
+    page-break-inside: avoid; 
+    overflow: hidden;
+  }
+  .chart-box svg { display: block; height: auto; }
+  .chart-row { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; align-items: flex-start; }
 
-  .chart-row { display: flex; gap: 20px; margin: 16px 0; flex-wrap: wrap; align-items: flex-start; }
-  .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  /* Decision cards */
+  .decision { border-left: 4px solid #3b82f6; background: #f8fafc; padding: 12px 16px; margin: 10px 0; border-radius: 0 8px 8px 0; page-break-inside: avoid; }
+  .decision .type { font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; }
+  .decision .title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 3px 0; }
+  .decision .desc { font-size: 11px; color: #475569; line-height: 1.5; }
+
+  .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 10px 0; page-break-inside: avoid; font-size: 11px; line-height: 1.6; }
   .callout strong { color: #1e3a8a; }
 
-  .footer { text-align: center; color: #94a3b8; font-size: 10px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+  .footer { text-align: center; color: #94a3b8; font-size: 10px; margin-top: 30px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
 </style>
 </head>
 <body>
@@ -367,7 +397,7 @@ function buildHTML(d: any): string {
 </div>
 
 <!-- USAGE ANALYTICS -->
-<h2 class="section">Usage Analytics</h2>
+<h2 class="section" style="page-break-before: always;">Usage Analytics</h2>
 
 <h3>Calls by Department</h3>
 ${d.deptChart}
@@ -386,7 +416,7 @@ ${d.timelineChart}
 ${d.taskChart}
 
 <!-- COST ANALYSIS -->
-<h2 class="section">Cost Analysis</h2>
+<h2 class="section" style="page-break-before: always;">Cost Analysis</h2>
 
 <table>
   <tr><th>Department</th><th>Calls</th><th>Tokens</th><th>Cloud-Equiv Cost</th><th>Actual Cost</th><th>Savings</th><th>Policy Blocks</th></tr>
@@ -460,7 +490,7 @@ ${d.policyEvents.length === 0 ? "<p>No policy events recorded during this simula
 </table>`}
 
 <!-- MANAGEMENT DECISIONS -->
-<h2 class="section">Management Decisions</h2>
+<h2 class="section" style="page-break-before: always;">Management Decisions</h2>
 ${d.decisions.rows.map((r: any) => `
   <div class="decision">
     <div class="type">${r.decision_type.replace(/_/g, " ")} · ${r.decided_by === "usr_ceo" ? "Patricia Vance (CEO)" : r.decided_by === "usr_david" ? "David Kim (Supply Chain Head)" : r.decided_by}</div>
@@ -470,7 +500,7 @@ ${d.decisions.rows.map((r: any) => `
 `).join("")}
 
 <!-- AGENT INVENTORY -->
-<h2 class="section">Agent Inventory</h2>
+<h2 class="section" style="page-break-before: always;">Agent Inventory</h2>
 <table>
   <tr><th>Agent</th><th>Type</th><th>Department</th><th>Task</th><th>Clearance</th><th>Tier</th><th>Model</th><th>Stakeholder</th></tr>
   ${d.agents.rows.map((r: any) => `
