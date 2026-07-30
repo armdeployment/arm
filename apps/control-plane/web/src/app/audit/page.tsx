@@ -24,7 +24,7 @@ export default function AuditPage() {
           Audit log viewer
         </div>
         <div className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          Connectors emit <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">access_audit_event</code> records for every resource access decision. Dashboard lands in 1.1 —
+          Connectors emit <code className="rounded bg-[var(--bg-elevated)] px-1.5 py-0.5 font-mono">access_audit_event</code> records for every resource access decision. Dashboard lands in 1.1 —
           lands with 1.1 (LLM Metering &amp; Dashboards)
         </div>
         <div className="mt-5 flex justify-center gap-2">

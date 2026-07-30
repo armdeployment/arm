@@ -3,15 +3,15 @@
 import { trpc } from "../lib/trpc/client";
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: "bg-red-50 text-red-600 ring-1 ring-red-200",
-  warning: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-  info: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
+  critical: "border border-[var(--border)] text-[var(--danger)] ring-1 ring-red-200",
+  warning: "border border-[var(--border)] text-[var(--warning)] ring-1 ring-amber-200",
+  info: "bg-blue-50 text-[var(--accent)] ring-1 ring-blue-200",
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  open: "bg-red-100 text-red-700",
-  reviewing: "bg-amber-100 text-amber-700",
-  acknowledged: "bg-blue-100 text-blue-700",
+  open: "bg-red-100 text-[var(--danger)]",
+  reviewing: "bg-amber-100 text-[var(--warning)]",
+  acknowledged: "bg-blue-100 text-[var(--accent)]",
 };
 
 export function AnomalyPanel() {
@@ -21,7 +21,7 @@ export function AnomalyPanel() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Anomaly Detection</h3>
-        <div className="h-28 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-28 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function AnomalyPanel() {
         {data.anomalies.map((a) => (
           <div key={a.id} className="flex items-start gap-3 px-5 py-3">
             <span className={`mt-0.5 text-[8px] ${
-              a.severity === "critical" ? "text-red-600" : a.severity === "warning" ? "text-amber-600" : "text-blue-600"
+              a.severity === "critical" ? "text-[var(--danger)]" : a.severity === "warning" ? "text-[var(--warning)]" : "text-[var(--accent)]"
             }`}>●</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">

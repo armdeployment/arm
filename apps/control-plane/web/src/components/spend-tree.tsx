@@ -105,7 +105,7 @@ export function SpendTreemap() {
   if (isLoading || !data) {
     return (
       <ChartCard title="Spend by Org Tree (Treemap)">
-        <div className="h-64 animate-pulse rounded-xl bg-slate-100" />
+        <div className="h-64 animate-pulse rounded-xl bg-[var(--bg-elevated)]" />
       </ChartCard>
     );
   }
@@ -243,7 +243,7 @@ export function SpendTreeView() {
       <ChartCard title="Spend Tree">
         <div className="space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-8 animate-pulse rounded bg-slate-100" />
+            <div key={i} className="h-8 animate-pulse rounded bg-[var(--bg-elevated)]" />
           ))}
         </div>
       </ChartCard>

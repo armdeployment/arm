@@ -8,9 +8,9 @@ const ALERTS = [
 ];
 
 const SEVERITY_ICONS: Record<string, { icon: string; bg: string; text: string }> = {
-  critical: { icon: "●", bg: "bg-red-50", text: "text-red-600" },
-  warning: { icon: "●", bg: "bg-amber-50", text: "text-amber-600" },
-  info: { icon: "●", bg: "bg-blue-50", text: "text-blue-600" },
+  critical: { icon: "●", bg: "border border-[var(--border)]", text: "text-[var(--danger)]" },
+  warning: { icon: "●", bg: "border border-[var(--border)]", text: "text-[var(--warning)]" },
+  info: { icon: "●", bg: "bg-blue-50", text: "text-[var(--accent)]" },
 };
 
 export function NotificationCenter() {

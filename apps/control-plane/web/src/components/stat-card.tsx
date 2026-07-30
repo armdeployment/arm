@@ -15,7 +15,7 @@ export function StatCard({ label, value, sub, tone = "default", icon }: StatCard
   }[tone];
 
   const toneBg = {
-    default: "var(--bg-elevated)",
+    default: "rgba(255,255,255,0.04)",
     success: "var(--success-soft)",
     warning: "var(--warning-soft)",
     danger: "var(--danger-soft)",
@@ -23,15 +23,11 @@ export function StatCard({ label, value, sub, tone = "default", icon }: StatCard
 
   return (
     <div
-      className="rounded-2xl border p-5 transition-shadow hover:shadow-md"
-      style={{
-        borderColor: "var(--border)",
-        backgroundColor: "var(--bg-surface)",
-        boxShadow: "var(--shadow-sm)",
-      }}
+      className="glass-card group p-5 transition-all duration-300 hover:border-[rgba(255,255,255,0.14)]"
+      style={{ boxShadow: "var(--shadow-sm)" }}
     >
-      <div className="flex items-start justify-between">
-        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+      <div className="relative flex items-start justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
           {label}
         </div>
         {icon && (
@@ -43,11 +39,19 @@ export function StatCard({ label, value, sub, tone = "default", icon }: StatCard
           </div>
         )}
       </div>
-      <div className="mt-3 text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+      <div
+        className="relative mt-3 text-[28px] font-bold tracking-tight tabular"
+        style={{ color: "var(--text-primary)" }}
+      >
         {value}
       </div>
       {sub && (
-        <div className="mt-1.5 text-xs font-medium" style={{ color: toneColor }}>
+        <div className="relative mt-1.5 flex items-center gap-1.5 text-[11px] font-medium" style={{ color: toneColor }}>
+          {tone === "success" && (
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 18m0 0l7.5-7.5M12 18V4" />
+            </svg>
+          )}
           {sub}
         </div>
       )}

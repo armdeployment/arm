@@ -44,13 +44,16 @@ function DashboardContent() {
       <div>
         <ScopeBreadcrumb scope={scope} />
         <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{s.scope.name}</h1>
-          <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium capitalize text-blue-600">
+          <h1 className="text-[28px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{s.scope.name}</h1>
+          <span
+            className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize"
+            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--border-accent)" }}
+          >
             {s.scope.type}
           </span>
         </div>
         <div className="mt-1.5 flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="accent-dot animate-pulse-glow" />
           Live via tRPC · {s.tenantId}
         </div>
       </div>
@@ -107,10 +110,10 @@ function DashboardContent() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+      <div className="h-4 w-32 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />
+          <div key={i} className="h-28 animate-pulse rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }} />
         ))}
       </div>
     </div>

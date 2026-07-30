@@ -11,20 +11,20 @@ import type { AgentRow } from "../lib/mock-data";
 const columnHelper = createColumnHelper<AgentRow>();
 
 const CLEARANCE_STYLES: Record<string, string> = {
-  public: "bg-green-50 text-green-600 ring-1 ring-green-200",
-  internal: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
-  confidential: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-  restricted: "bg-rose-50 text-rose-600 ring-1 ring-rose-200",
+  public: "border border-[var(--border)] text-[var(--success)] ring-1 ring-green-200",
+  internal: "bg-blue-50 text-[var(--accent)] ring-1 ring-blue-200",
+  confidential: "border border-[var(--border)] text-[var(--warning)] ring-1 ring-amber-200",
+  restricted: "bg-rose-50 text-[var(--danger)] ring-1 ring-rose-200",
 };
 
 const TIER_STYLES: Record<string, string> = {
-  critical: "bg-rose-50 text-rose-600 ring-1 ring-rose-200",
-  standard: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
-  background: "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+  critical: "bg-rose-50 text-[var(--danger)] ring-1 ring-rose-200",
+  standard: "bg-blue-50 text-[var(--accent)] ring-1 ring-blue-200",
+  background: "bg-[var(--bg-elevated)] text-[var(--text-secondary)] ring-1 ring-slate-200",
 };
 
 const STATUS_DOT: Record<string, string> = {
-  active: "bg-emerald-500",
+  active: "bg-[var(--success)]",
   throttled: "bg-amber-500",
   disabled: "bg-slate-400",
 };
@@ -104,7 +104,7 @@ export function AgentsTable({ data }: { data: AgentRow[] }) {
     >
       <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Top Agents by Spend</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+        <span className="rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           {data.length} agents
         </span>
       </div>

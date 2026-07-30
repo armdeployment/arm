@@ -3,9 +3,9 @@
 import { trpc } from "../lib/trpc/client";
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: "bg-red-50 text-red-600 ring-1 ring-red-200",
-  warning: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-  info: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
+  critical: "border border-[var(--border)] text-[var(--danger)] ring-1 ring-red-200",
+  warning: "border border-[var(--border)] text-[var(--warning)] ring-1 ring-amber-200",
+  info: "bg-blue-50 text-[var(--accent)] ring-1 ring-blue-200",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -17,9 +17,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-red-100 text-red-700",
-  acknowledged: "bg-amber-100 text-amber-700",
-  reviewed: "bg-green-100 text-green-700",
+  pending: "bg-red-100 text-[var(--danger)]",
+  acknowledged: "bg-amber-100 text-[var(--warning)]",
+  reviewed: "bg-green-100 text-[var(--success)]",
 };
 
 export function SecurityFlags() {
@@ -29,7 +29,7 @@ export function SecurityFlags() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Security Flags</h3>
-        <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-32 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }

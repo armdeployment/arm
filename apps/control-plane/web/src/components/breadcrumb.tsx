@@ -30,7 +30,7 @@ export function ScopeBreadcrumb({ scope }: { scope: ScopeRef }) {
             ) : (
               <a
                 href={scopeUrl(childScope)}
-                className="transition-colors hover:text-blue-600"
+                className="transition-colors hover:text-[var(--accent)]"
                 style={{ color: "var(--text-secondary)" }}
               >
                 {node.name}

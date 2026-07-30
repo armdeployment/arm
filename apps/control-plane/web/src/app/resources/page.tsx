@@ -14,8 +14,8 @@ const RESOURCES = [
   { id: "r6", name: "R&D Research Data", type: "gcs", connector: "gcs-mint", externalRef: "gs://rnd-research/", classification: "restricted", tags: ["r&d", "research"], grants: 3 },
 ];
 
-const TYPE_STYLES: Record<string, string> = { s3: "bg-amber-50 text-amber-600", gcs: "bg-blue-50 text-blue-600", db: "bg-purple-50 text-purple-600", sharepoint: "bg-cyan-50 text-cyan-600" };
-const CLASS_STYLES: Record<string, string> = { public: "bg-green-50 text-green-600", internal: "bg-blue-50 text-blue-600", confidential: "bg-amber-50 text-amber-600", restricted: "bg-rose-50 text-rose-600" };
+const TYPE_STYLES: Record<string, string> = { s3: "border border-[var(--border)] text-[var(--warning)]", gcs: "bg-blue-50 text-[var(--accent)]", db: "bg-purple-50 text-purple-600", sharepoint: "bg-cyan-50 text-cyan-600" };
+const CLASS_STYLES: Record<string, string> = { public: "border border-[var(--border)] text-[var(--success)]", internal: "bg-blue-50 text-[var(--accent)]", confidential: "border border-[var(--border)] text-[var(--warning)]", restricted: "bg-rose-50 text-[var(--danger)]" };
 
 export default function ResourcesPage() {
   return (
@@ -53,7 +53,7 @@ export default function ResourcesPage() {
                 <td className="px-5 py-3.5">
                   <div className="flex flex-wrap gap-1">
                     {r.tags.map((t) => (
-                      <span key={t} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px]" style={{ color: "var(--text-secondary)" }}>{t}</span>
+                      <span key={t} className="rounded bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px]" style={{ color: "var(--text-secondary)" }}>{t}</span>
                     ))}
                   </div>
                 </td>

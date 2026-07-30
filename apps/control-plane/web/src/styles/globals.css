@@ -1,61 +1,149 @@
 @import "tailwindcss";
 
 /*
- * ARM Design System — premium white-and-blue management theme.
- * Inspired by Linear, Vercel, and Stripe dashboards.
- * Light, spacious, with crisp blue accents and subtle depth.
+ * ARM Design System — Dark Premium
+ * Inspired by fitxlab.com: near-black surfaces, electric cyan accents,
+ * semi-transparent borders, Inter Tight typography.
+ * Designed for enterprise AI governance dashboards.
  */
 
 :root {
-  /* Surfaces */
-  --bg-app: #f8fafc;           /* app background — slate-50 */
-  --bg-surface: #ffffff;       /* card background — white */
-  --bg-elevated: #f1f5f9;      /* hover/active — slate-100 */
-  --bg-sidebar: #ffffff;
+  /* ── Surfaces (zinc scale, dark-first) ── */
+  --bg-app: #09090b;            /* zinc-950 — app background */
+  --bg-surface: #111113;        /* card background */
+  --bg-elevated: #18181b;       /* hover/active — zinc-900 */
+  --bg-sidebar: #0c0c0e;        /* sidebar — slightly darker than app */
+  --bg-input: #18181b;          /* input fields */
 
-  /* Borders */
-  --border: #e2e8f0;           /* slate-200 */
-  --border-strong: #cbd5e1;    /* slate-300 */
+  /* ── Borders (semi-transparent white) ── */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(0, 243, 255, 0.25);
 
-  /* Text */
-  --text-primary: #0f172a;     /* slate-900 */
-  --text-secondary: #475569;   /* slate-600 */
-  --text-muted: #94a3b8;       /* slate-400 */
+  /* ── Text ── */
+  --text-primary: #fafafa;      /* zinc-50 */
+  --text-secondary: #a1a1aa;    /* zinc-400 */
+  --text-muted: #71717a;        /* zinc-500 */
+  --text-dim: #52525b;          /* zinc-600 */
 
-  /* Brand — blue */
-  --accent: #2563eb;           /* blue-600 */
-  --accent-hover: #1d4ed8;     /* blue-700 */
-  --accent-soft: #eff6ff;      /* blue-50 */
-  --accent-border: #bfdbfe;    /* blue-200 */
+  /* ── Brand — Electric Cyan (fitxlab-inspired) ── */
+  --accent: #00f3ff;            /* electric cyan */
+  --accent-hover: #00d4dd;      /* slightly darker on hover */
+  --accent-soft: rgba(0, 243, 255, 0.08);
+  --accent-glow: rgba(0, 243, 255, 0.15);
+  --accent-text: #00f3ff;
 
-  /* Semantic */
-  --success: #16a34a;          /* green-600 */
-  --success-soft: #f0fdf4;     /* green-50 */
-  --warning: #d97706;          /* amber-600 */
-  --warning-soft: #fffbeb;     /* amber-50 */
-  --danger: #dc2626;           /* red-600 */
-  --danger-soft: #fef2f2;      /* red-50 */
+  /* ── Semantic ── */
+  --success: #22c55e;           /* green-500 */
+  --success-soft: rgba(34, 197, 94, 0.1);
+  --warning: #f59e0b;           /* amber-500 */
+  --warning-soft: rgba(245, 158, 11, 0.1);
+  --danger: #ef4444;            /* red-500 */
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --info: #818cf8;              /* indigo-400 */
+  --info-soft: rgba(129, 140, 248, 0.1);
 
-  /* Tier colors */
-  --tier-critical: #e11d48;    /* rose-600 */
-  --tier-standard: #2563eb;    /* blue-600 */
-  --tier-background: #64748b;  /* slate-500 */
+  /* ── Tier colors ── */
+  --tier-critical: #f43f5e;     /* rose-500 */
+  --tier-standard: #00f3ff;     /* cyan */
+  --tier-background: #71717a;   /* zinc-500 */
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  /* ── Effects ── */
+  --glow-accent: 0 0 20px rgba(0, 243, 255, 0.15);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+  --shadow-glow: 0 0 24px -4px rgba(0, 243, 255, 0.2);
+
+  /* ── Gradients ── */
+  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
+  --gradient-accent: linear-gradient(135deg, #00f3ff 0%, #00b4d8 100%);
 }
 
+/* ── Base ── */
 body {
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: -0.011em;
 }
 
-/* Custom scrollbar — subtle, matches theme */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+/* ── Premium scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Selection ── */
+::selection {
+  background: rgba(0, 243, 255, 0.2);
+  color: #fff;
+}
+
+/* ── Focus ring ── */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Utility: glass card ── */
+.glass-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-surface);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── Utility: glow text ── */
+.glow-text {
+  text-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+}
+
+/* ── Utility: accent dot ── */
+.accent-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ── Tabular numbers for data ── */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── Subtle entrance animation ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.4s ease-out forwards;
+}
+
+/* ── Pulse for live indicators ── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+  50% { box-shadow: 0 0 16px var(--accent-glow); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-pulse-glow { animation: none; }
+}

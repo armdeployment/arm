@@ -4,10 +4,10 @@ import { trpc } from "../lib/trpc/client";
 import { scopeUrl } from "../lib/use-scope";
 
 const CLEARANCE_STYLES: Record<string, string> = {
-  public: "bg-green-50 text-green-600 ring-1 ring-green-200",
-  internal: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",
-  confidential: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-  restricted: "bg-rose-50 text-rose-600 ring-1 ring-rose-200",
+  public: "border border-[var(--border)] text-[var(--success)] ring-1 ring-green-200",
+  internal: "bg-blue-50 text-[var(--accent)] ring-1 ring-blue-200",
+  confidential: "border border-[var(--border)] text-[var(--warning)] ring-1 ring-amber-200",
+  restricted: "bg-rose-50 text-[var(--danger)] ring-1 ring-rose-200",
 };
 
 const CLEARANCE_DESC: Record<string, string> = {
@@ -26,7 +26,7 @@ export function WorkClassificationPanel() {
         <h3 className="mb-4 text-sm font-semibold">Work Classification by Department</h3>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
           ))}
         </div>
       </div>

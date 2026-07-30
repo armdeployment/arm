@@ -14,7 +14,7 @@ export function GPUBrokeringPanel() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">GPU Capacity</h3>
-        <div className="h-28 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-28 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }

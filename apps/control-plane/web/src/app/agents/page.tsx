@@ -11,7 +11,7 @@ const STATUS_FILTERS = ["all", "active", "disabled"] as const;
 
 export default function AgentsPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
       <AgentsPageContent />
     </Suspense>
   );
@@ -50,7 +50,7 @@ function AgentsPageContent() {
       </div>
 
       {isLoading || !data ? (
-        <div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />
+        <div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
       ) : data.agents.length === 0 ? (
         <div
           className="rounded-2xl border px-5 py-16 text-center text-sm"

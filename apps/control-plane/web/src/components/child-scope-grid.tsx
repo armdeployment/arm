@@ -21,7 +21,7 @@ export function ChildScopeGrid({ scope }: ChildScopeGridProps) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-36 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />
+          <div key={i} className="h-36 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
         ))}
       </div>
     );

@@ -11,7 +11,7 @@ export function SavingsEstimator() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Savings Estimator</h3>
-        <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-24 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }
@@ -20,7 +20,7 @@ export function SavingsEstimator() {
     <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Savings Opportunity</h3>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600">
+        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--success)]">
           {data.scope.name}
         </span>
       </div>
@@ -30,11 +30,11 @@ export function SavingsEstimator() {
       </p>
 
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-3xl font-bold tabular-nums text-emerald-600">
+        <span className="text-3xl font-bold tabular-nums text-[var(--success)]">
           ${data.potentialSavings.toLocaleString()}
         </span>
         <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>/mo</span>
-        <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
+        <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-[var(--success)]">
           -{data.savingsPct}%
         </span>
       </div>
@@ -50,11 +50,11 @@ export function SavingsEstimator() {
         </div>
         <div className="flex items-center justify-between text-[10px]">
           <span style={{ color: "var(--text-muted)" }}>After switch</span>
-          <span className="font-semibold text-emerald-600">${data.openModelMonthlyEstimate.toLocaleString()}/mo</span>
+          <span className="font-semibold text-[var(--success)]">${data.openModelMonthlyEstimate.toLocaleString()}/mo</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--bg-elevated)" }}>
           <div
-            className="h-full rounded-full bg-emerald-500 transition-all"
+            className="h-full rounded-full bg-[var(--success)] transition-all"
             style={{ width: `${Math.round((data.openModelMonthlyEstimate / data.currentMonthlySpend) * 100)}%` }}
           />
         </div>

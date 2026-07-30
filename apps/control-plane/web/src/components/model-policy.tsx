@@ -10,7 +10,7 @@ export function ModelPolicyPanel() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Model Access Policy</h3>
-        <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-20 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }
@@ -22,7 +22,7 @@ export function ModelPolicyPanel() {
     >
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Model Access Policy (DLP Gate §6.5)</h3>
-        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-600">
+        <span className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--warning)]">
           {compliance.restrictedAgents} restricted agents
         </span>
       </div>
@@ -42,7 +42,7 @@ export function ModelPolicyPanel() {
               </span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                  rule.allowedKinds.length === 1 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                  rule.allowedKinds.length === 1 ? "bg-amber-100 text-[var(--warning)]" : "bg-green-100 text-[var(--success)]"
                 }`}
               >
                 {rule.allowedKinds.length === 1 ? "RESTRICTED" : "OPEN"}
@@ -62,7 +62,7 @@ export function ModelPolicyPanel() {
           {compliance.blockedModels.map((m) => (
             <div
               key={m.model}
-              className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-1.5 ring-1 ring-red-200"
+              className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-1.5 ring-1 ring-red-200"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{m.model}</span>
@@ -81,7 +81,7 @@ export function ModelPolicyPanel() {
               key={m.model}
               className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 ring-1 ring-emerald-200"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
               <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{m.model}</span>
               <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>({m.provider})</span>
             </div>

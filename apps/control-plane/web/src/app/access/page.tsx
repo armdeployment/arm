@@ -7,14 +7,14 @@ import { trpc } from "../../lib/trpc/client";
 import { PolicySimulator } from "../../components/policy-simulator";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-600 ring-1 ring-amber-200",
-  approved: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200",
-  denied: "bg-red-50 text-red-600 ring-1 ring-red-200",
+  pending: "border border-[var(--border)] text-[var(--warning)] ring-1 ring-amber-200",
+  approved: "bg-emerald-50 text-[var(--success)] ring-1 ring-emerald-200",
+  denied: "border border-[var(--border)] text-[var(--danger)] ring-1 ring-red-200",
 };
 
 export default function AccessPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
       <AccessPageContent />
     </Suspense>
   );
@@ -37,7 +37,7 @@ function AccessPageContent() {
       </div>
 
       {isLoading || !data ? (
-        <div className="h-64 animate-pulse rounded-2xl border bg-slate-100" style={{ borderColor: "var(--border)" }} />
+        <div className="h-64 animate-pulse rounded-2xl border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
       ) : (
         <div
           className="overflow-hidden rounded-2xl border"
@@ -67,7 +67,7 @@ function AccessPageContent() {
                   <tr key={req.id} className="transition-colors hover:bg-slate-50" style={{ borderBottom: "1px solid var(--border)" }}>
                     <td className="px-5 py-3.5 font-semibold" style={{ color: "var(--text-primary)" }}>{req.agentId}</td>
                     <td className="px-5 py-3.5 font-mono text-xs" style={{ color: "var(--text-secondary)" }}>{req.resourceId}</td>
-                    <td className="px-5 py-3.5"><code className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{req.action}</code></td>
+                    <td className="px-5 py-3.5"><code className="rounded-md bg-[var(--bg-elevated)] px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{req.action}</code></td>
                     <td className="px-5 py-3.5 text-xs" style={{ color: "var(--text-secondary)" }}>{req.reason}</td>
                     <td className="px-5 py-3.5"><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[req.status] ?? ""}`}>{req.status}</span></td>
                     <td className="px-3 py-3.5">

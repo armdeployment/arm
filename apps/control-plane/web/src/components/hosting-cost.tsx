@@ -9,7 +9,7 @@ export function HostingCost() {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
         <h3 className="mb-4 text-sm font-semibold">Hosting Cost Model</h3>
-        <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-20 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
       </div>
     );
   }
@@ -18,7 +18,7 @@ export function HostingCost() {
     <div className="rounded-2xl border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
       <div className="flex items-center justify-between border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Self-Hosted Inference Cost</h3>
-        <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-600">
+        <span style={{backgroundColor:"var(--accent-soft)"}} className="rounded-full  px-2.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
           GPU hours
         </span>
       </div>
@@ -54,7 +54,7 @@ export function HostingCost() {
         </div>
 
         <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
           <span className="text-xs font-medium text-emerald-700">
             If all traffic self-hosted: ${data.savingsVsApi.toLocaleString()}/mo saved vs API pricing
           </span>
