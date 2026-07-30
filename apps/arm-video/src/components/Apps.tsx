@@ -52,7 +52,7 @@ export const VSCOdeEditor: React.FC<{ frame: number }> = ({ frame }) => (
           { text: "}", color: "#DCDCAA" },
         ].map((l, i) => {
           const o = interpolate(frame, [15 + i * 3, 20 + i * 3], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-          return <div key={i} style={{ opacity: l.dim ? o * 0.5 : o, color: l.color, height: 14 }}>{l.text || "\u00A0"}</div>;
+          return <div key={i} style={{ opacity: l.dim ? o * 0.5 : o, color: l.color, height: 22 }}>{l.text || "\u00A0"}</div>;
         })}
       </div>
       <div style={{ width: 200, background: "#252526", padding: "8px 12px", flexShrink: 0 }}>
@@ -94,7 +94,7 @@ export const Terminal: React.FC<{ frame: number }> = ({ frame }) => (
         { text: "  → All checks passed", color: "#7EE787" },
       ].map((l, i) => {
         const o = interpolate(frame, [8 + i * 5, 13 + i * 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-        return <div key={i} style={{ opacity: o, color: l.color, height: 15 }}>{l.text || "\u00A0"}</div>;
+        return <div key={i} style={{ opacity: o, color: l.color, height: 25 }}>{l.text || "\u00A0"}</div>;
       })}
     </div>
   </WindowChrome>
