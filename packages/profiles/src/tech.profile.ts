@@ -5,7 +5,7 @@
  * values become per-tenant config rows — runtime code never reads `id: "tech"`.
  */
 
-import type { IndustryProfilePreset } from "./types.js";
+import type { IndustryProfilePreset } from "./types";
 
 export const techProfile: IndustryProfilePreset = {
   id: "tech",

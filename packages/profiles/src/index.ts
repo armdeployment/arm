@@ -12,18 +12,24 @@
  * The `guardrails/no-profile-branching` check enforces this.
  */
 
-import type { IndustryProfilePreset, ProfileId } from "./types.js";
-import { techProfile } from "./tech.profile.js";
-import { manufacturingProfile } from "./manufacturing.profile.js";
+import type { IndustryProfilePreset, ProfileId } from "./types";
+import { techProfile } from "./tech.profile";
+import { manufacturingProfile } from "./manufacturing.profile";
+import { financeProfile } from "./finance.profile";
+import { holdingProfile } from "./holding.profile";
 
-export { techProfile } from "./tech.profile.js";
-export { manufacturingProfile } from "./manufacturing.profile.js";
-export * from "./types.js";
+export { techProfile } from "./tech.profile";
+export { manufacturingProfile } from "./manufacturing.profile";
+export { financeProfile } from "./finance.profile";
+export { holdingProfile } from "./holding.profile";
+export * from "./types";
 
 /** All built-in profiles. "custom" is the à-la-carte escape hatch (empty preset). */
 const REGISTRY: Record<ProfileId, IndustryProfilePreset | undefined> = {
   tech: techProfile,
   manufacturing: manufacturingProfile,
+  finance: financeProfile,
+  holding: holdingProfile,
   custom: undefined, // Custom is computed per-tenant, not a static preset
 };
 
@@ -35,6 +41,16 @@ export function listProfiles(): { id: ProfileId; label: string; description: str
       id: "manufacturing",
       label: manufacturingProfile.label,
       description: manufacturingProfile.description,
+    },
+    {
+      id: "finance",
+      label: financeProfile.label,
+      description: financeProfile.description,
+    },
+    {
+      id: "holding",
+      label: holdingProfile.label,
+      description: holdingProfile.description,
     },
     { id: "custom", label: "Custom", description: "À-la-carte: start empty, configure every capability individually." },
   ];
@@ -114,5 +130,11 @@ export function compileDLPPatterns(
 
 /** Validate that a profile id is a known preset. */
 export function isValidProfileId(id: string): id is ProfileId {
-  return id === "tech" || id === "manufacturing" || id === "custom";
+  return (
+    id === "tech" ||
+    id === "manufacturing" ||
+    id === "finance" ||
+    id === "holding" ||
+    id === "custom"
+  );
 }

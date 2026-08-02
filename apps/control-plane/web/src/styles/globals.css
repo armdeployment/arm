@@ -55,6 +55,13 @@
   --danger-soft: #FEF2F2;
   --info: #1E3A8A;               /* maps to navy */
 
+  /* ── Aliases used by provisioning UI ── */
+  --green: var(--success);
+  --critical: var(--danger);
+  --critical-bg: var(--danger-soft);
+  --warning-bg: var(--warning-soft);
+  --bg-hover: #F1F5F9;          /* slate-100 */
+
   /* ── Tier colors ── */
   --tier-critical: #B91C1C;
   --tier-standard: var(--navy);

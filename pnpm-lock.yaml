@@ -118,6 +118,9 @@ importers:
       '@arm/config':
         specifier: workspace:*
         version: link:../../../packages/config
+      '@arm/profiles':
+        specifier: workspace:*
+        version: link:../../../packages/profiles
       '@arm/proto':
         specifier: workspace:*
         version: link:../../../packages/proto

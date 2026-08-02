@@ -14,6 +14,8 @@ import { describe, it, expect } from "vitest";
 import {
   techProfile,
   manufacturingProfile,
+  financeProfile,
+  holdingProfile,
   getProfile,
   listProfiles,
   compileDLPPatterns,
@@ -132,11 +134,124 @@ describe("Industry Profile presets", () => {
   });
 });
 
+describe("Finance profile", () => {
+  it("has all required dimensions", () => {
+    for (const key of REQUIRED_KEYS) {
+      expect(financeProfile[key]).toBeDefined();
+    }
+    expect(financeProfile.id).toBe("finance");
+  });
+
+  it("has financial regulatory flags (SOX/GLBA/PCI)", () => {
+    expect(financeProfile.classification.axes).toContain("regulatory");
+    const restricted = financeProfile.classification.levels.find(
+      (l) => l.name === "restricted",
+    );
+    expect(restricted?.regulatoryFlags).toContain("SOX");
+    expect(restricted?.regulatoryFlags).toContain("GLBA");
+    expect(restricted?.regulatoryFlags).toContain("PCI-DSS");
+  });
+
+  it("has financial DLP patterns (SWIFT, insider/MNPI)", () => {
+    const dlpNames = financeProfile.dlpPatterns.map((p) => p.name);
+    expect(dlpNames.some((n) => n.includes("SWIFT"))).toBe(true);
+    expect(dlpNames.some((n) => n.includes("Insider"))).toBe(true);
+  });
+
+  it("uses quarterly budget periods", () => {
+    expect(financeProfile.budgetPeriods).toContain("quarterly");
+  });
+
+  it("uses on-prem model routing", () => {
+    expect(financeProfile.modelRouting.strategy).toBe("edge-onprep-first");
+  });
+
+  it("has finance personas (trader, compliance, quant)", () => {
+    const keys = financeProfile.personas.map((p) => p.key);
+    expect(keys).toContain("trader");
+    expect(keys).toContain("compliance_officer");
+    expect(keys).toContain("quant");
+  });
+
+  it("has finance-specific UI panels (risk, compliance, trade)", () => {
+    const panelKeys = financeProfile.uiPanels.map((p) => p.key);
+    expect(panelKeys).toContain("risk_exposure");
+    expect(panelKeys).toContain("compliance_status");
+    expect(panelKeys).toContain("trade_volume");
+  });
+});
+
+describe("Holding company profile", () => {
+  it("has all required dimensions", () => {
+    for (const key of REQUIRED_KEYS) {
+      expect(holdingProfile[key]).toBeDefined();
+    }
+    expect(holdingProfile.id).toBe("holding");
+  });
+
+  it("has subsidiary org structure (multi-org)", () => {
+    const deptNames = holdingProfile.orgTree.defaultDepartments.map((d) => d.name);
+    expect(deptNames.some((n) => n.includes("Subsidiary"))).toBe(true);
+    expect(deptNames.some((n) => n.includes("Corporate"))).toBe(true);
+  });
+
+  it("has superset resource types (OT + finance + standard)", () => {
+    const types = holdingProfile.resourceTypes.enabled;
+    // OT (manufacturing subsidiary)
+    expect(types).toContain("mes");
+    expect(types).toContain("scada");
+    // Finance subsidiary
+    expect(types).toContain("trading_system");
+    expect(types).toContain("bloomberg");
+    // Standard
+    expect(types).toContain("s3");
+    expect(types).toContain("db");
+  });
+
+  it("has cross-entity regulatory flags", () => {
+    const restricted = holdingProfile.classification.levels.find(
+      (l) => l.name === "restricted",
+    );
+    expect(restricted?.regulatoryFlags).toContain("SOX");
+    expect(restricted?.regulatoryFlags).toContain("ITAR");
+    expect(restricted?.regulatoryFlags).toContain("GLBA");
+  });
+
+  it("has cross-entity DLP patterns (M&A, pre-earnings)", () => {
+    const dlpNames = holdingProfile.dlpPatterns.map((p) => p.name);
+    expect(dlpNames.some((n) => n.includes("M&A") || n.includes("Cross-Entity"))).toBe(true);
+    expect(dlpNames.some((n) => n.includes("Pre-Earnings"))).toBe(true);
+  });
+
+  it("has holding-company personas (portfolio manager, board reporter)", () => {
+    const keys = holdingProfile.personas.map((p) => p.key);
+    expect(keys).toContain("portfolio_manager");
+    expect(keys).toContain("board_reporter");
+    expect(keys).toContain("consolidation_analyst");
+  });
+
+  it("has consolidated / cross-entity UI panels", () => {
+    const panelKeys = holdingProfile.uiPanels.map((p) => p.key);
+    expect(panelKeys).toContain("subsidiary_overview");
+    expect(panelKeys).toContain("consolidated_spend");
+    expect(panelKeys).toContain("cross_entity_audit");
+    expect(panelKeys).toContain("portfolio_health");
+  });
+
+  it("has agents across multiple subsidiaries", () => {
+    const depts = holdingProfile.seedAgents.map((a) => a.departmentName);
+    const uniqueDepts = new Set(depts);
+    expect(uniqueDepts.size).toBeGreaterThanOrEqual(4); // spread across subsidiaries
+  });
+});
+
 describe("Profile registry", () => {
-  it("listProfiles returns tech + manufacturing + custom", () => {
+  it("listProfiles returns tech + manufacturing + finance + holding + custom", () => {
     const ids = listProfiles().map((p) => p.id);
     expect(ids).toContain("tech");
     expect(ids).toContain("manufacturing");
+    expect(ids).toContain("finance");
+    expect(ids).toContain("holding");
     expect(ids).toContain("custom");
   });
 
@@ -156,6 +271,8 @@ describe("Profile registry", () => {
   it("isValidProfileId validates known ids", () => {
     expect(isValidProfileId("tech")).toBe(true);
     expect(isValidProfileId("manufacturing")).toBe(true);
+    expect(isValidProfileId("finance")).toBe(true);
+    expect(isValidProfileId("holding")).toBe(true);
     expect(isValidProfileId("custom")).toBe(true);
     expect(isValidProfileId("healthcare")).toBe(false);
   });
@@ -196,7 +313,7 @@ describe("D6 governing rule: profiles are pure data", () => {
   it("presets contain no function values in top-level dimensions", () => {
     // The profile preset should be serializable (JSON-safe) — no functions,
     // no class instances, no symbols. This is what makes it "data, not code."
-    for (const profile of [techProfile, manufacturingProfile]) {
+    for (const profile of [techProfile, manufacturingProfile, financeProfile, holdingProfile]) {
       const serialized = JSON.parse(JSON.stringify(profile));
       expect(serialized.id).toBe(profile.id);
       expect(serialized.seedAgents.length).toBe(profile.seedAgents.length);

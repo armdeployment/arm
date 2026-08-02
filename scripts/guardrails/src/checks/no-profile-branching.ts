@@ -52,10 +52,12 @@ const BRANCH_PATTERNS = [
   /\bgetProfile\s*\(/,
   /\btechProfile\b/,
   /\bmanufacturingProfile\b/,
+  /\bfinanceProfile\b/,
+  /\bholdingProfile\b/,
   /\bprofileId\b/,
   // `if (profile === "manufacturing")` or similar
-  /profile\s*===?\s*["'](tech|manufacturing|custom)["']/,
-  /["'](tech|manufacturing|custom)["']\s*===?\s*profile/,
+  /profile\s*===?\s*["'](tech|manufacturing|finance|holding|custom)["']/,
+  /["'](tech|manufacturing|finance|holding|custom)["']\s*===?\s*profile/,
 ];
 
 /** Directories to scan for violations. */

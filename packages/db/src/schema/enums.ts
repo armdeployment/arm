@@ -19,6 +19,8 @@ export const deploymentEnum = pgEnum("deployment", ["saas", "self_hosted"]);
 export const industryProfileEnum = pgEnum("industry_profile", [
   "tech",
   "manufacturing",
+  "finance",
+  "holding",
   "custom",
 ]);
 

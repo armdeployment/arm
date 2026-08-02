@@ -16,7 +16,7 @@
  * defaults.
  */
 
-import type { IndustryProfilePreset } from "./types.js";
+import type { IndustryProfilePreset } from "./types";
 
 export const manufacturingProfile: IndustryProfilePreset = {
   id: "manufacturing",

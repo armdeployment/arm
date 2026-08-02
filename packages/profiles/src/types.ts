@@ -168,7 +168,7 @@ export interface ResourceTypeAllowlist {
 
 // ── The full profile preset ────────────────────────────────────────────────
 
-export type ProfileId = "tech" | "manufacturing" | "custom";
+export type ProfileId = "tech" | "manufacturing" | "finance" | "holding" | "custom";
 
 export interface IndustryProfilePreset {
   /** Stable profile id. */
