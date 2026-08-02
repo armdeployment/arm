@@ -10,7 +10,7 @@ ARM (Agent Resource Management) is an HR-style platform for AI agents: identity,
 
 ## Status
 
-**1.0 foundation landed** (branch `scaffold-1.0`). Monorepo, Drizzle schema (22 tables), ClickHouse event ledger, 4 executable guardrails (mutation-proofed), CI workflows, and a Next.js dashboard UI with mock data. All 43 tests green; full workspace typecheck green.
+**1.0 foundation landed** (branch `scaffold-1.0`). Monorepo, Drizzle schema (22 tables), ClickHouse event ledger, 7 executable guardrails (mutation-proofed), CI workflows, and a Next.js dashboard UI with mock data. Industry Profile system (D6) with Tech + Manufacturing presets. All tests green; full workspace typecheck green.
 
 ## Repository Map
 
@@ -77,7 +77,7 @@ packages/proto → packages/config → packages/{db,clickhouse,policy,billing,au
 pnpm install
 pnpm dev             # control-plane web (Next.js dashboard, port 3100)
 make dev:data-plane  # docker-compose data plane (lands 1.2)
-pnpm test            # unit/integration (43 tests across db/guardrails/web)
+pnpm test            # unit/integration (db/guardrails/web/profiles)
 pnpm guardrails      # executable invariant checks
 pnpm --filter @arm/db db:generate   # regenerate Drizzle migrations
 ```

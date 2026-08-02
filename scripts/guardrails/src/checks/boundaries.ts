@@ -16,6 +16,7 @@ import { register, type CheckResult } from "../types.js";
 /** Layer rank: a package may only import packages at a STRICTLY LOWER rank. */
 const LAYER: Record<string, number> = {
   proto: 0,
+  profiles: 0,
   config: 1,
   db: 2,
   clickhouse: 2,

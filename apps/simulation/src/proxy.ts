@@ -56,18 +56,42 @@ async function chInsert(table: string, values: Record<string, string | number>):
   });
 }
 
-// ── DLP Hooks ──────────────────────────────────────────────────────────────
+// ── DLP Hooks (loaded from tenant config — seeded from profile, D6) ───────
 
-const DLP_PATTERNS = [
-  { name: "SSN", pattern: /\b\d{3}-\d{2}-\d{4}\b/, severity: "critical" as const },
-  { name: "API Key (sk-ant-)", pattern: /sk-ant-[a-zA-Z0-9_-]{10,}/, severity: "critical" as const },
-  { name: "API Key (sk-proj-)", pattern: /sk-proj-[a-zA-Z0-9_-]{10,}/, severity: "critical" as const },
-  { name: "Credit Card", pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/, severity: "warning" as const },
-];
+interface DLPRule {
+  name: string;
+  regex: RegExp;
+  severity: string;
+}
 
-function scanDLP(text: string): { matched: boolean; pattern?: string; severity?: string } {
-  for (const p of DLP_PATTERNS) {
-    if (p.pattern.test(text)) return { matched: true, pattern: p.name, severity: p.severity };
+// Cached DLP patterns from the dlp_patterns table (per-tenant config).
+// The profile seeds these at provisioning time; runtime reads the DB, never
+// the profile id. This is the D6 pattern in action.
+let dlpCache: { rules: DLPRule[]; loadedAt: number } | null = null;
+const DLP_CACHE_TTL_MS = 60_000; // refresh every 60s
+
+async function loadDLPPatterns(): Promise<DLPRule[]> {
+  const now = Date.now();
+  if (dlpCache && now - dlpCache.loadedAt < DLP_CACHE_TTL_MS) {
+    return dlpCache.rules;
+  }
+  await ensurePg();
+  const result = await pgQuery(
+    `SELECT name, pattern, flags, severity FROM dlp_patterns WHERE enabled = TRUE`
+  );
+  const rules: DLPRule[] = result.rows.map((r: any) => ({
+    name: r.name,
+    regex: new RegExp(r.pattern, r.flags || ""),
+    severity: r.severity,
+  }));
+  dlpCache = { rules, loadedAt: now };
+  return rules;
+}
+
+async function scanDLP(text: string): Promise<{ matched: boolean; pattern?: string; severity?: string }> {
+  const rules = await loadDLPPatterns();
+  for (const p of rules) {
+    if (p.regex.test(text)) return { matched: true, pattern: p.name, severity: p.severity };
   }
   return { matched: false };
 }
@@ -123,9 +147,9 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
     }
   }
 
-  // 3. DLP SCAN — check prompt for sensitive data
+  // 3. DLP SCAN — check prompt for sensitive data (patterns from tenant config)
   const promptText = JSON.stringify(parsed.messages ?? "");
-  const dlpResult = scanDLP(promptText);
+  const dlpResult = await scanDLP(promptText);
   if (dlpResult.matched) {
     await logPolicy(sa.agent_id, "deny", `DLP: ${dlpResult.pattern}`, `severity=${dlpResult.severity}`);
     await meterEvent(sa, effectiveModel, "denied", `DLP:${dlpResult.pattern}`, 0, 0, t0);

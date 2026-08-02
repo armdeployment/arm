@@ -7,7 +7,7 @@
  */
 
 import { pgTable, uuid, text, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { deploymentEnum } from "./enums.js";
+import { deploymentEnum, industryProfileEnum } from "./enums.js";
 
 /** Tenant — root of multi-tenancy. Every multi-tenant table FKs here (Invariant 6). */
 export const tenantTable = pgTable("tenant", {
@@ -15,6 +15,13 @@ export const tenantTable = pgTable("tenant", {
   name: text("name").notNull(),
   tier: text("tier"), // commercial tier label, opaque to schema
   deployment: deploymentEnum("deployment").notNull().default("saas"),
+  /**
+   * Industry profile applied at provisioning (D6). DEFAULT-SOURCE ONLY — never
+   * branched on at runtime. After provisioning, the profile manifests as normal
+   * per-tenant config rows. The guardrail `no-profile-branching` enforces this.
+   */
+  industryProfile: industryProfileEnum("industry_profile").notNull().default("tech"),
+  profileAppliedAt: timestamp("profile_applied_at", { withTimezone: true }),
   licenseJson: jsonb("license_json").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

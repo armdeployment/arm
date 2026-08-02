@@ -98,7 +98,21 @@ The mandatory pre-confirmation summary for any mutation with spend/access impact
 
 The UI-stability rule for async dashboard content: a footprint-matched skeleton occupies a panel's exact grid slot from the first layout pass, and arriving content replaces the shell in place — grid geometry never changes when data lands (adopted from worldmonitor's layout-shift lessons). Panels also carry explicit loading/empty/error states and a stale-data badge when ledger freshness exceeds threshold. See also: Spec Travel Rule.
 
+### Industry Profile
+
+A **provisioning-time bundle of default config** (D6) that shapes a tenant's initial setup — departments, personas, classification taxonomy, DLP patterns, resource types, budget periods, UI panels. Selected once in an onboarding wizard at tenant creation; materialized as normal per-tenant config rows. The governing rule: **the profile only sets defaults, never gates a capability** — everything that makes ARM good for manufacturing is a capability any tenant could enable. Orthogonal to delivery model (SaaS/self-hosted) and commercial tier. Shipped presets: Tech, Manufacturing, Custom. Enforced by `guardrails/no-profile-branching`. See also: Preset, Capability Toggle.
+
+### Preset
+
+A named, shipped Industry Profile bundle (Tech, Manufacturing, Custom). Pure data — no functions, no code branches. Stored in `packages/profiles` and applied at tenant provisioning time.
+
+### Capability Toggle vs Profile Default
+
+The distinction that keeps hybrid companies first-class. A **profile default** is what the preset seeds (e.g. manufacturing seeds OT resource types as enabled). A **capability toggle** is what a tenant can turn on/off independently (e.g. a tech tenant can enable OT resources without switching to the manufacturing preset). The profile never gates a capability — it only sets the starting state. `guardrails/no-profile-branching` enforces that runtime code never branches on `industryProfile`.
+
 ## Repo Governance
+
+### Guardrail
 
 ### Guardrail
 

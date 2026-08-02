@@ -13,6 +13,7 @@ import { checkNoSecretDumps } from "../src/checks/no-secret-dumps.js";
 import { checkBoundaries } from "../src/checks/boundaries.js";
 import { checkSafeRender } from "../src/checks/safe-render.js";
 import { checkCISync, parseTableWorkflows } from "../src/checks/ci-sync.js";
+import { checkNoProfileBranching } from "../src/checks/no-profile-branching.js";
 import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -202,5 +203,74 @@ describe("mutation proof: ci-sync (§14.3)", () => {
     const r = checkCISync([], []);
     expect(r.scanned).toBe(0);
     expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: no-profile-branching (D6)", () => {
+  const clean = [
+    { path: "packages/policy/src/index.ts", content: "export function checkPolicy() { return true; }" },
+    { path: "apps/data-plane/proxy/src/index.ts", content: "export function proxy() { return null; }" },
+    { path: "apps/simulation/src/proxy.ts", content: "export function handle() { return null; }" },
+    // Allowed path — should never trigger
+    { path: "packages/profiles/src/index.ts", content: "export const manufacturingProfile = getProfile('manufacturing');" },
+  ];
+
+  it("FAILS when a policy file branches on industryProfile", () => {
+    const broken = [
+      ...clean,
+      {
+        path: "packages/policy/src/index.ts",
+        content: "if (industryProfile === 'manufacturing') { applyOTPolicy(); }", // mutation
+      },
+    ];
+    const r = checkNoProfileBranching(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("industryProfile");
+  });
+
+  it("FAILS when a proxy file reads industryProfile", () => {
+    const broken = [
+      ...clean,
+      {
+        path: "apps/data-plane/proxy/src/index.ts",
+        content: "const profile = tenant.industryProfile;", // mutation
+      },
+    ];
+    const r = checkNoProfileBranching(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("industryProfile");
+  });
+
+  it("FAILS when enforcement code calls getProfile()", () => {
+    const broken = [
+      ...clean,
+      {
+        path: "apps/simulation/src/proxy.ts",
+        content: "const p = getProfile(tenant.profile);", // mutation
+      },
+    ];
+    const r = checkNoProfileBranching(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("getProfile");
+  });
+
+  it("does NOT flag allowed paths (profiles package, db-init, control-plane web)", () => {
+    const allowed = [
+      { path: "packages/profiles/src/index.ts", content: "export function getProfile(id) { return manufacturingProfile; }" },
+      { path: "apps/simulation/src/db-init.ts", content: "const profile = getProfile('manufacturing');" },
+      { path: "apps/control-plane/web/src/app/page.tsx", content: "const profileId = tenant.industryProfile;" },
+    ];
+    const r = checkNoProfileBranching(allowed);
+    expect(r.status).toBe("pass");
+  });
+
+  it("PASSES on clean enforcement code (no profile references)", () => {
+    expect(checkNoProfileBranching(clean).status).toBe("pass");
+  });
+
+  it("asserts a negative (subject to vacuous-guard rule)", () => {
+    const r = checkNoProfileBranching(clean);
+    expect(r.assertsNegative).toBe(true);
+    expect(r.scanned).toBe(clean.length);
   });
 });

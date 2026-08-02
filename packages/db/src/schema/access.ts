@@ -72,12 +72,18 @@ export const permissionGrantTable = pgTable("permission_grant", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
 });
 
-/** ClassificationLevel — ordered sensitivity rank for DLP gating (§6.5). */
+/**
+ * ClassificationLevel — ordered sensitivity rank for DLP gating (§6.5).
+ * Dual-axis classification (D6): sensitivity rank + regulatory flags (ITAR/EAR/GxP).
+ * The regulatory axis is a manufacturing capability — any tenant can enable it.
+ */
 export const classificationLevelTable = pgTable("classification_level", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
   rank: integer("rank").notNull(),
   name: text("name").notNull().unique(), // public, internal, confidential, restricted
+  /** Regulatory flags for dual-axis classification (D6). Empty array = single-axis. */
+  regulatoryFlags: jsonb("regulatory_flags").$type<string[]>().notNull().default([]),
 });
 
 /** AccessRequest — JIT elevation request (§6.4). */

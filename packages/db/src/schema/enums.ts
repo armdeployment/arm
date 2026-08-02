@@ -11,13 +11,33 @@ import { pgEnum } from "drizzle-orm/pg-core";
 /** Tenant deployment mode. SaaS = hosted control plane; self_hosted = single-tenant on-prem (§3.4, D1-b). */
 export const deploymentEnum = pgEnum("deployment", ["saas", "self_hosted"]);
 
-/** Org-tree node type — the scope a principal/agent/budget/policy attaches to. */
+/**
+ * Industry profile applied at provisioning (D6). DEFAULT-SOURCE ONLY — never
+ * branched on at runtime. The guardrail `no-profile-branching` enforces that
+ * proxy/policy/enforcement code never reads this value.
+ */
+export const industryProfileEnum = pgEnum("industry_profile", [
+  "tech",
+  "manufacturing",
+  "custom",
+]);
+
+/**
+ * Org-tree node type — the scope a principal/agent/budget/policy attaches to.
+ * Manufacturing presets use plant/line/station for deep hierarchies (D6).
+ * These are capabilities any tenant can use; profile only sets defaults.
+ */
 export const scopeTypeEnum = pgEnum("scope_type", [
   "org",
   "department",
   "group",
   "team",
   "workstream",
+  // Manufacturing capabilities (D6) — tenant-toggleable, not mode-gated
+  "plant",
+  "line",
+  "cell",
+  "station",
 ]);
 
 /** Agent priority tier (§6.6). Assignment is POLICY, not self-declared (Invariant 8). */
@@ -33,7 +53,11 @@ export const spawnedByEnum = pgEnum("spawned_by", ["user", "automation", "templa
 /** LLM model custody: closed (provider-hosted) vs self_hosted (in-VPC). Drives DLP gate (§6.5). */
 export const modelKindEnum = pgEnum("model_kind", ["closed", "self_hosted"]);
 
-/** Resource type (spec §4.1 Resource). `files` is laptop-local — out of scope except classification tag. */
+/**
+ * Resource type (spec §4.1 Resource). `files` is laptop-local — out of scope
+ * except classification tag. OT (operational technology) types are manufacturing
+ * capabilities (D6) — tenant-toggleable, not mode-gated.
+ */
 export const resourceTypeEnum = pgEnum("resource_type", [
   "db",
   "sharepoint",
@@ -42,6 +66,14 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   "onedrive",
   "files",
   "internal",
+  // OT capabilities (D6) — any tenant can enable via resource type allowlist
+  "mes",
+  "erp",
+  "scada",
+  "historian",
+  "plm",
+  "cmms",
+  "iot",
 ]);
 
 /** Vending strategy for a resource connector (spec §6.2). */

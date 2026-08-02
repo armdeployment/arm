@@ -9,6 +9,7 @@ import "./checks/no-secret-dumps.js";
 import "./checks/boundaries.js";
 import "./checks/safe-render.js";
 import "./checks/ci-sync.js";
+import "./checks/no-profile-branching.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -17,3 +18,4 @@ export { checkNoSecretDumps } from "./checks/no-secret-dumps.js";
 export { checkBoundaries } from "./checks/boundaries.js";
 export { checkSafeRender } from "./checks/safe-render.js";
 export { checkCISync, parseTableWorkflows } from "./checks/ci-sync.js";
+export { checkNoProfileBranching } from "./checks/no-profile-branching.js";

@@ -2,13 +2,27 @@
  * ARM Simulation — Database Initialization
  *
  * Creates schema in Postgres (control plane) and ClickHouse (event ledger),
- * then seeds Acme Manufacturing Corp with 5 departments, 6 users, 10 agents.
+ * then seeds a tenant from the selected Industry Profile (D6).
+ *
+ * Profile selection: SIM_PROFILE env var ("tech" | "manufacturing" | "custom").
+ * Default: "manufacturing" (Acme Manufacturing Corp).
+ *
+ * All seed data — departments, agents, DLP patterns, classification levels —
+ * is sourced from @arm/profiles. Nothing is hardcoded here. This demonstrates
+ * the D6 pattern: the profile provides defaults, the provisioning step
+ * materializes them as tenant config rows.
  *
  * Run: pnpm --filter @arm-app/simulation db:init
  */
 
 import pg from "pg";
 const { Client } = pg;
+import {
+  getProfile,
+  compileDLPPatterns,
+  isValidProfileId,
+  type ProfileId,
+} from "@arm/profiles";
 
 // ── Connection Config ──────────────────────────────────────────────────────
 
@@ -20,14 +34,35 @@ const CH_AUTH = "arm:arm_dev_password";
 
 const PG_SCHEMA = `
 -- Clean slate
-DROP TABLE IF EXISTS management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, tenants CASCADE;
+DROP TABLE IF EXISTS management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, dlp_patterns, classification_levels, tenants CASCADE;
 
 CREATE TABLE tenants (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   plan TEXT DEFAULT 'enterprise',
+  industry_profile TEXT NOT NULL DEFAULT 'tech',
+  profile_applied_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE classification_levels (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  rank INTEGER NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  regulatory_flags TEXT[] NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE dlp_patterns (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  name TEXT NOT NULL,
+  pattern TEXT NOT NULL,
+  flags TEXT DEFAULT '',
+  severity TEXT NOT NULL,
+  category TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE departments (
@@ -149,79 +184,150 @@ PARTITION BY (tenant_id, toYYYYMM(ts))
 ORDER BY ts;
 `;
 
-// ── Seed Data: Acme Manufacturing Corp ────────────────────────────────────
+// ── Profile Selection (D6) ───────────────────────────────────────────────
 
-interface AgentSeed {
-  id: string; name: string; type: string; stakeholder: string; dept: string;
-  taskType: string; clearance: string; tier: string; model: string; apiKey: string;
+const PROFILE_ID: ProfileId = (() => {
+  const requested = process.env.SIM_PROFILE ?? "manufacturing";
+  return isValidProfileId(requested) ? requested : "manufacturing";
+})();
+
+const profile = getProfile(PROFILE_ID);
+
+// Tenant name/identifier differ by profile
+const TENANT_ID = "tn_acme";
+const TENANT_SLUG = PROFILE_ID === "manufacturing" ? "acme" : "acme-tech";
+const TENANT_NAME =
+  PROFILE_ID === "manufacturing"
+    ? "Acme Manufacturing Corp"
+    : "Acme Tech Corp";
+
+// ── Provisioning: materialize profile defaults into tenant config rows ─────
+
+/**
+ * Assign deterministic IDs to departments based on profile seed.
+ * Mapping: department name → dept_<slug>
+ */
+function deptIdFromName(name: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+  return `dept_${slug}`;
 }
 
-const SEED_AGENTS: AgentSeed[] = [
-  // Engineering — heavy LLM users, internal clearance
-  { id: "agt_eng_code_review", name: "CodeReview-Bot", type: "claude_code", stakeholder: "usr_sarah", dept: "dept_eng", taskType: "code_review", clearance: "internal", tier: "critical", model: "qwen3.5", apiKey: "arm_sk_eng_review_x1a2b3" },
-  { id: "agt_eng_docs", name: "DocGen-Agent", type: "opencode", stakeholder: "usr_sarah", dept: "dept_eng", taskType: "documentation", clearance: "internal", tier: "standard", model: "minicpm5-1b", apiKey: "arm_sk_eng_docs_m4n5o6" },
-  { id: "agt_eng_arch", name: "ArchDesign-Agent", type: "pi", stakeholder: "usr_mike", dept: "dept_eng", taskType: "architecture_design", clearance: "internal", tier: "standard", model: "qwen3.5", apiKey: "arm_sk_eng_arch_p7q8r9" },
+/** Deterministic API key per agent. */
+function apiKeyForAgent(agentName: string, index: number): string {
+  const slug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  return `arm_sk_${slug}_${index.toString(36).padStart(6, "x")}`;
+}
 
-  // Manufacturing — confidential clearance, self-hosted only
-  { id: "agt_mfg_toolpath", name: "ToolPath-Optimizer", type: "opencode", stakeholder: "usr_carlos", dept: "dept_mfg", taskType: "cnc_toolpath_optimization", clearance: "confidential", tier: "critical", model: "qwen3.5", apiKey: "arm_sk_mfg_tool_s0t1u2" },
-  { id: "agt_mfg_quality", name: "QualityAnalysis-Agent", type: "claude_code", stakeholder: "usr_carlos", dept: "dept_mfg", taskType: "defect_analysis", clearance: "confidential", tier: "standard", model: "minicpm5-1b", apiKey: "arm_sk_mfg_qual_v3w4x5" },
+interface ProvisionedAgent {
+  id: string;
+  name: string;
+  type: string;
+  stakeholder: string;
+  dept: string;
+  taskType: string;
+  clearance: string;
+  tier: string;
+  model: string;
+  apiKey: string;
+}
 
-  // QA — mixed clearance
-  { id: "agt_qa_test", name: "TestGen-Agent", type: "copilot", stakeholder: "usr_jenny", dept: "dept_qa", taskType: "test_generation", clearance: "internal", tier: "standard", model: "minicpm5-1b", apiKey: "arm_sk_qa_test_y6z7a8" },
-  { id: "agt_qa_security", name: "SecurityScan-Agent", type: "claude_code", stakeholder: "usr_jenny", dept: "dept_qa", taskType: "security_scan", clearance: "restricted", tier: "critical", model: "qwen3.5", apiKey: "arm_sk_qa_sec_b9c0d1" },
+/**
+ * Provision agents from the profile.
+ * Assigns one stakeholder per department (the dept_head), distributes agents
+ * across departments per the profile's seedAgents.
+ */
+function provisionAgents(): ProvisionedAgent[] {
+  // Build department → stakeholder mapping
+  const deptStakeholders: Record<string, string> = {};
+  for (const dept of profile.orgTree.defaultDepartments) {
+    const deptId = deptIdFromName(dept.name);
+    const slug = dept.name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+    deptStakeholders[deptId] = `usr_${slug}`;
+  }
 
-  // Supply Chain — internal, cost-sensitive
-  { id: "agt_sc_forecast", name: "DemandForecast-Agent", type: "opencode", stakeholder: "usr_david", dept: "dept_sc", taskType: "demand_forecasting", clearance: "internal", tier: "standard", model: "minicpm5-1b", apiKey: "arm_sk_sc_fore_e2f3g4" },
-  { id: "agt_sc_logistics", name: "LogisticsOpt-Agent", type: "copilot", stakeholder: "usr_david", dept: "dept_sc", taskType: "route_optimization", clearance: "internal", tier: "background", model: "minicpm5-1b", apiKey: "arm_sk_sc_log_h5i6j7" },
+  return profile.seedAgents.map((agent, i) => {
+    const deptId = deptIdFromName(agent.departmentName);
+    return {
+      id: `agt_seed_${i}`,
+      name: agent.name,
+      type: agent.type,
+      stakeholder: deptStakeholders[deptId] ?? Object.values(deptStakeholders)[0]!,
+      dept: deptId,
+      taskType: agent.taskType,
+      clearance: agent.clearance,
+      tier: agent.tier,
+      model: agent.preferredModel,
+      apiKey: apiKeyForAgent(agent.name, i),
+    };
+  });
+}
 
-  // R&D — internal, experimental
-  { id: "agt_rd_research", name: "ResearchAssist-Agent", type: "pi", stakeholder: "usr_alex", dept: "dept_rd", taskType: "research_synthesis", clearance: "internal", tier: "standard", model: "qwen3.5", apiKey: "arm_sk_rd_res_k8l9m0" },
-];
+const SEED_AGENTS = provisionAgents();
 
 async function main() {
   // ── Init Postgres ──
-  console.log("▸ Initializing Postgres...");
+  console.log(`▸ Initializing Postgres (profile: ${PROFILE_ID})...`);
   const pgClient = new Client({ connectionString: PG_URL });
   await pgClient.connect();
   await pgClient.query(PG_SCHEMA);
 
-  // Tenant
+  // Tenant — seeded with industry_profile (D6)
   await pgClient.query(`
-    INSERT INTO tenants (id, name, slug) VALUES ('tn_acme', 'Acme Manufacturing Corp', 'acme')
+    INSERT INTO tenants (id, name, slug, industry_profile, profile_applied_at)
+    VALUES ($1, $2, $3, $4, NOW())
     ON CONFLICT (id) DO NOTHING
-  `);
+  `, [TENANT_ID, TENANT_NAME, TENANT_SLUG, PROFILE_ID]);
 
-  // Departments with monthly budgets (cents)
-  const depts = [
-    ["dept_eng", "Engineering", null, 8000_00],
-    ["dept_mfg", "Manufacturing", null, 6000_00],
-    ["dept_qa", "Quality Assurance", null, 4000_00],
-    ["dept_sc", "Supply Chain", null, 3000_00],
-    ["dept_rd", "Research & Development", null, 5000_00],
-  ];
-  for (const [id, name, parent, budget] of depts) {
+  // ── Classification levels (from profile, D6 dual-axis) ──
+  for (const level of profile.classification.levels) {
+    const id = `cls_${level.name}`;
     await pgClient.query(
-      `INSERT INTO departments (id, tenant_id, name, parent_id, budget_monthly_cents) VALUES ($1,'tn_acme',$2,$3,$4) ON CONFLICT (id) DO NOTHING`,
-      [id, name, parent, budget]
+      `INSERT INTO classification_levels (id, tenant_id, rank, name, regulatory_flags)
+       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+      [id, TENANT_ID, level.rank, level.name, level.regulatoryFlags]
     );
   }
 
-  // Users
-  const users = [
-    ["usr_sarah", "sarah.chen@acme.com", "Sarah Chen", "dept_eng", "dept_head"],
-    ["usr_mike", "mike.rodriguez@acme.com", "Mike Rodriguez", "dept_eng", "senior_engineer"],
-    ["usr_carlos", "carlos.mendes@acme.com", "Carlos Mendes", "dept_mfg", "dept_head"],
-    ["usr_jenny", "jenny.park@acme.com", "Jenny Park", "dept_qa", "dept_head"],
-    ["usr_david", "david.kim@acme.com", "David Kim", "dept_sc", "dept_head"],
-    ["usr_alex", "alex.thompson@acme.com", "Alex Thompson", "dept_rd", "dept_head"],
-    ["usr_ceo", "ceo@acme.com", "Patricia Vance (CEO)", null, "ceo"],
-  ];
-  for (const [id, email, name, dept, role] of users) {
+  // ── DLP patterns (from profile — promoted from hardcoded, D6) ──
+  for (const [i, pattern] of profile.dlpPatterns.entries()) {
+    const id = `dlp_${i}`;
     await pgClient.query(
-      `INSERT INTO users (id, tenant_id, email, display_name, department_id, role) VALUES ($1,'tn_acme',$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
-      [id, email, name, dept, role]
+      `INSERT INTO dlp_patterns (id, tenant_id, name, pattern, flags, severity, category, enabled)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) ON CONFLICT (id) DO NOTHING`,
+      [id, TENANT_ID, pattern.name, pattern.pattern, pattern.flags ?? "", pattern.severity, pattern.category]
     );
   }
+
+  // ── Departments (from profile orgTree defaults) ──
+  for (const dept of profile.orgTree.defaultDepartments) {
+    const id = deptIdFromName(dept.name);
+    await pgClient.query(
+      `INSERT INTO departments (id, tenant_id, name, parent_id, budget_monthly_cents)
+       VALUES ($1, $2, $3, NULL, $4) ON CONFLICT (id) DO NOTHING`,
+      [id, TENANT_ID, dept.name, dept.budgetMonthlyCents]
+    );
+  }
+
+  // ── Users (one dept_head per department + a CEO) ──
+  const deptNames = profile.orgTree.defaultDepartments.map(d => d.name);
+  for (const deptName of deptNames) {
+    const deptId = deptIdFromName(deptName);
+    const slug = deptName.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+    const userId = `usr_${slug}`;
+    const email = `${slug}.head@${TENANT_SLUG}.com`;
+    const displayName = deptName + " Lead";
+    await pgClient.query(
+      `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
+       VALUES ($1, $2, $3, $4, $5, 'dept_head') ON CONFLICT (id) DO NOTHING`,
+      [userId, TENANT_ID, email, displayName, deptId]
+    );
+  }
+  // CEO
+  await pgClient.query(
+    `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
+     VALUES ('usr_ceo', $1, 'ceo@${TENANT_SLUG}.com', 'CEO', NULL, 'ceo') ON CONFLICT (id) DO NOTHING`,
+    [TENANT_ID]
+  );
 
   // Models
   const models = [
@@ -239,12 +345,12 @@ async function main() {
     );
   }
 
-  // Agents
+  // ── Agents (from profile seedAgents) ──
   for (const a of SEED_AGENTS) {
     await pgClient.query(
       `INSERT INTO agents (id, tenant_id, name, agent_type, stakeholder_user_id, department_id, task_type, classification_clearance, priority_tier, preferred_model, status)
-       VALUES ($1,'tn_acme',$2,$3,$4,$5,$6,$7,$8,$9,'active') ON CONFLICT (id) DO NOTHING`,
-      [a.id, a.name, a.type, a.stakeholder, a.dept, a.taskType, a.clearance, a.tier, a.model]
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active') ON CONFLICT (id) DO NOTHING`,
+      [a.id, TENANT_ID, a.name, a.type, a.stakeholder, a.dept, a.taskType, a.clearance, a.tier, a.model]
     );
     // Sub-account
     const saId = `sa_${a.id}`;
@@ -257,7 +363,9 @@ async function main() {
 
   // Verify
   const agentCount = await pgClient.query("SELECT count(*) as c FROM agents");
-  console.log(`  ✓ Postgres: 1 tenant, 5 departments, 7 users, 4 models, ${agentCount.rows[0].c} agents`);
+  const deptCount = await pgClient.query("SELECT count(*) as c FROM departments");
+  const dlpCount = await pgClient.query("SELECT count(*) as c FROM dlp_patterns");
+  console.log(`  ✓ Postgres: 1 tenant (${PROFILE_ID}), ${deptCount.rows[0].c} depts, ${agentCount.rows[0].c} agents, ${dlpCount.rows[0].c} DLP patterns`);
 
   await pgClient.end();
 
