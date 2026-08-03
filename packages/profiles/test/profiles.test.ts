@@ -20,6 +20,9 @@ import {
   listProfiles,
   compileDLPPatterns,
   isValidProfileId,
+  flattenOrgTree,
+  countOrgNodes,
+  countOrgNodesByType,
   type IndustryProfilePreset,
 } from "../src/index.js";
 
@@ -306,6 +309,81 @@ describe("compileDLPPatterns", () => {
     const itarPattern = compiled.find((c) => c.name === "Export-Controlled (ITAR/EAR)");
     expect(itarPattern?.regex.test("This part is ITAR controlled")).toBe(true);
     expect(itarPattern?.regex.test("This is a normal part")).toBe(false);
+  });
+});
+
+describe("Org tree structure (D6/D7 restructure)", () => {
+  it("manufacturing has multiple plants in different locations", () => {
+    const plants = flattenOrgTree(manufacturingProfile.orgTree.nodes).filter(
+      (n) => n.node.type === "plant",
+    );
+    expect(plants.length).toBeGreaterThanOrEqual(3);
+    const locations = plants.map((p) => p.node.location);
+    expect(locations).toContain("Detroit, MI, USA");
+    expect(locations).toContain("Stuttgart, Germany");
+    expect(locations).toContain("Shenzhen, China");
+  });
+
+  it("manufacturing has HQ + plant departments in the tree", () => {
+    const types = flattenOrgTree(manufacturingProfile.orgTree.nodes).map((n) => n.node.type);
+    expect(types).toContain("hq");
+    expect(types).toContain("plant");
+    expect(types).toContain("department");
+    expect(types).toContain("line");
+  });
+
+  it("manufacturing plant Detroit has production lines", () => {
+    const detroit = flattenOrgTree(manufacturingProfile.orgTree.nodes).find(
+      (n) => n.node.name === "Plant Detroit",
+    );
+    expect(detroit).toBeDefined();
+    const production = detroit!.node.children?.find((c) => c.name === "Production");
+    expect(production).toBeDefined();
+    const lines = production!.children?.filter((c) => c.type === "line");
+    expect(lines!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("holding company has subsidiaries as organizations", () => {
+    const orgs = flattenOrgTree(holdingProfile.orgTree.nodes).filter(
+      (n) => n.node.type === "organization",
+    );
+    expect(orgs.length).toBeGreaterThanOrEqual(3);
+    const names = orgs.map((o) => o.node.name);
+    expect(names.some((n) => n.includes("Corporate"))).toBe(true);
+    expect(names.some((n) => n.includes("Manufacturing"))).toBe(true);
+    expect(names.some((n) => n.includes("Finance"))).toBe(true);
+  });
+
+  it("holding company manufacturing subsidiary has plants", () => {
+    const mfgSub = flattenOrgTree(holdingProfile.orgTree.nodes).find(
+      (n) => n.node.name === "Subsidiary: Manufacturing Division",
+    );
+    expect(mfgSub).toBeDefined();
+    const plants = mfgSub!.node.children?.filter((c) => c.type === "plant");
+    expect(plants!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("flattenOrgTree preserves parent-child depth", () => {
+    const flat = flattenOrgTree(manufacturingProfile.orgTree.nodes);
+    const hq = flat.find((f) => f.node.type === "hq");
+    expect(hq?.depth).toBe(0);
+    const plant = flat.find((f) => f.node.type === "plant");
+    expect(plant?.depth).toBe(0);
+    const line = flat.find((f) => f.node.type === "line");
+    expect(line?.depth).toBeGreaterThanOrEqual(2);
+  });
+
+  it("countOrgNodesByType counts correctly", () => {
+    expect(countOrgNodesByType(manufacturingProfile.orgTree.nodes, "plant")).toBe(3);
+    expect(countOrgNodesByType(manufacturingProfile.orgTree.nodes, "hq")).toBe(1);
+    expect(countOrgNodesByType(holdingProfile.orgTree.nodes, "organization")).toBeGreaterThanOrEqual(3);
+  });
+
+  it("countOrgNodes counts all nodes recursively", () => {
+    const mfgCount = countOrgNodes(manufacturingProfile.orgTree.nodes);
+    expect(mfgCount).toBeGreaterThanOrEqual(20);
+    const holdingCount = countOrgNodes(holdingProfile.orgTree.nodes);
+    expect(holdingCount).toBeGreaterThanOrEqual(15);
   });
 });
 

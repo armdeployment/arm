@@ -19,18 +19,44 @@
 
 // ── Org-tree convention ────────────────────────────────────────────────────
 
+/**
+ * A node in the organization tree seed (D6/D7 restructure).
+ * Recursive — models HQ + plants + lines, or subsidiaries + their orgs.
+ * Pure data; the provisioning step materializes this into org-tree rows.
+ */
+export interface OrgNodeSeed {
+  /** Node type — determines scoping and UI presentation, NOT runtime branching. */
+  type: "organization" | "hq" | "plant" | "department" | "group" | "line" | "cell";
+  /** Display name, e.g. "Plant Detroit", "Corporate HQ", "Production Line A". */
+  name: string;
+  /** Physical location (primarily for plants). */
+  location?: string;
+  /** Monthly budget for this node in cents. */
+  budgetMonthlyCents?: number;
+  /** Children nodes (recursive). */
+  children?: OrgNodeSeed[];
+  /** Metadata tags (e.g. regulatory: ITAR, shift_pattern: 3x12). */
+  tags?: Record<string, string>;
+}
+
+/**
+ * Legacy flat department seed — kept for backward compat, but new profiles
+ * should use the recursive OrgNodeSeed tree via `nodes`.
+ */
 export interface DepartmentSeed {
   name: string;
-  parentName?: string; // null/undefined = top-level
+  parentName?: string;
   budgetMonthlyCents: number;
 }
 
 export interface OrgTreeConvention {
-  /** "flat" (tech) or "deep" (manufacturing: Plant → Line/Cell → Station + shift). */
+  /** "flat" (tech) or "deep" (manufacturing: HQ + Plants → Lines). */
   style: "flat" | "deep";
   /** Human-readable description for the onboarding wizard. */
   description: string;
-  /** Default departments to seed. */
+  /** Recursive org tree nodes (new format — models HQ + plants + lines). */
+  nodes: OrgNodeSeed[];
+  /** Flat default departments (legacy — used by code that hasn't migrated). */
   defaultDepartments: DepartmentSeed[];
 }
 

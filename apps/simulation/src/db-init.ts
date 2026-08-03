@@ -21,6 +21,7 @@ import {
   getProfile,
   compileDLPPatterns,
   isValidProfileId,
+  flattenOrgTree,
   type ProfileId,
 } from "@arm/profiles";
 
@@ -81,6 +82,8 @@ CREATE TABLE departments (
   tenant_id TEXT NOT NULL REFERENCES tenants(id),
   name TEXT NOT NULL,
   parent_id TEXT REFERENCES departments(id),
+  node_type TEXT DEFAULT 'department',
+  location TEXT,
   budget_monthly_cents BIGINT NOT NULL DEFAULT 0,
   spend_monthly_cents BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -325,19 +328,21 @@ async function main() {
     );
   }
 
-  // ── Departments (from profile orgTree defaults) ──
-  for (const dept of profile.orgTree.defaultDepartments) {
-    const id = deptIdFromName(dept.name);
+  // ── Departments (from profile orgTree — recursive tree) ──
+  const flatNodes = flattenOrgTree(profile.orgTree.nodes);
+  for (const { node, path } of flatNodes) {
+    const id = deptIdFromName(path.join(" / "));
+    const parentId = path.length > 1 ? deptIdFromName(path.slice(0, -1).join(" / ")) : null;
     await pgClient.query(
-      `INSERT INTO departments (id, tenant_id, name, parent_id, budget_monthly_cents)
-       VALUES ($1, $2, $3, NULL, $4) ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, dept.name, dept.budgetMonthlyCents]
+      `INSERT INTO departments (id, tenant_id, name, parent_id, node_type, location, budget_monthly_cents)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
+      [id, TENANT_ID, node.name, parentId, node.type, node.location ?? null, node.budgetMonthlyCents ?? 0]
     );
   }
 
-  // ── Users (one dept_head per department + a CEO) ──
-  const deptNames = profile.orgTree.defaultDepartments.map(d => d.name);
-  for (const deptName of deptNames) {
+  // ── Users (one lead per top-level node + a CEO) ──
+  const topNames = profile.orgTree.nodes.map(n => n.name);
+  for (const deptName of topNames) {
     const deptId = deptIdFromName(deptName);
     const slug = deptName.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
     const userId = `usr_${slug}`;

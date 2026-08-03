@@ -24,17 +24,85 @@ export const manufacturingProfile: IndustryProfilePreset = {
   description:
     "Manufacturer: deep org tree (Plant → Line/Cell → Station + shift), OT resources, dual-axis classification (ITAR/EAR/GxP), edge/on-prem GPU first.",
 
-  // ── Org-tree: deep (Plant → Line/Cell → Station + shift dimension) ───────
+  // ── Org-tree: HQ + multiple plants (real manufacturing structure) ──────
   orgTree: {
     style: "deep",
     description:
-      "Deep hierarchy: Organization → Plant → Line/Cell → Station, plus a shift dimension for scheduling and stakeholder routing.",
+      "Corporate HQ + multiple plants, each with Production/Quality/Maintenance departments. Per-plant budgets, locations, and regulatory tags.",
+    nodes: [
+      // ── Corporate Headquarters ──
+      {
+        type: "hq",
+        name: "Corporate Headquarters",
+        location: "Detroit, MI",
+        budgetMonthlyCents: 6000_00,
+        children: [
+          { type: "department", name: "Engineering", budgetMonthlyCents: 3000_00 },
+          { type: "department", name: "Research & Development", budgetMonthlyCents: 1500_00 },
+          { type: "department", name: "IT & OT-Security", budgetMonthlyCents: 800_00 },
+          { type: "department", name: "Procurement & Supply Chain", budgetMonthlyCents: 700_00 },
+        ],
+      },
+      // ── Plant Detroit (Michigan) — primary CNC + assembly ──
+      {
+        type: "plant",
+        name: "Plant Detroit",
+        location: "Detroit, MI, USA",
+        budgetMonthlyCents: 8000_00,
+        tags: { regulatory: "ITAR", shift_pattern: "3x12" },
+        children: [
+          {
+            type: "department", name: "Production", budgetMonthlyCents: 4500_00,
+            children: [
+              { type: "line", name: "Line A — CNC Machining", budgetMonthlyCents: 2500_00 },
+              { type: "line", name: "Line B — Assembly", budgetMonthlyCents: 2000_00 },
+            ],
+          },
+          { type: "department", name: "Quality Control", budgetMonthlyCents: 1500_00 },
+          { type: "department", name: "Maintenance", budgetMonthlyCents: 2000_00 },
+        ],
+      },
+      // ── Plant Stuttgart (Germany) — precision engineering ──
+      {
+        type: "plant",
+        name: "Plant Stuttgart",
+        location: "Stuttgart, Germany",
+        budgetMonthlyCents: 6000_00,
+        tags: { regulatory: "EAR", shift_pattern: "3x8" },
+        children: [
+          {
+            type: "department", name: "Production", budgetMonthlyCents: 3500_00,
+            children: [
+              { type: "line", name: "Line 1 — Precision Machining", budgetMonthlyCents: 2000_00 },
+              { type: "line", name: "Line 2 — Testing", budgetMonthlyCents: 1500_00 },
+            ],
+          },
+          { type: "department", name: "Quality Control", budgetMonthlyCents: 1500_00 },
+          { type: "department", name: "Maintenance", budgetMonthlyCents: 1000_00 },
+        ],
+      },
+      // ── Plant Shenzhen (China) — high-volume assembly ──
+      {
+        type: "plant",
+        name: "Plant Shenzhen",
+        location: "Shenzhen, China",
+        budgetMonthlyCents: 4000_00,
+        tags: { shift_pattern: "2x12" },
+        children: [
+          { type: "department", name: "Production", budgetMonthlyCents: 2500_00 },
+          { type: "department", name: "Quality Control", budgetMonthlyCents: 1000_00 },
+          { type: "department", name: "Logistics", budgetMonthlyCents: 500_00 },
+        ],
+      },
+    ],
+    // Legacy flat list (for backward compat with existing code)
     defaultDepartments: [
-      { name: "Engineering", budgetMonthlyCents: 8000_00 },
-      { name: "Manufacturing", budgetMonthlyCents: 6000_00 },
-      { name: "Quality Assurance", budgetMonthlyCents: 4000_00 },
-      { name: "Supply Chain", budgetMonthlyCents: 3000_00 },
-      { name: "Research & Development", budgetMonthlyCents: 5000_00 },
+      { name: "Engineering", budgetMonthlyCents: 3000_00 },
+      { name: "Research & Development", budgetMonthlyCents: 1500_00 },
+      { name: "Plant Detroit — Production", budgetMonthlyCents: 4500_00 },
+      { name: "Plant Detroit — QC", budgetMonthlyCents: 1500_00 },
+      { name: "Plant Stuttgart — Production", budgetMonthlyCents: 3500_00 },
+      { name: "Plant Shenzhen — Production", budgetMonthlyCents: 2500_00 },
     ],
   },
 

@@ -17,6 +17,13 @@ export const techProfile: IndustryProfilePreset = {
   orgTree: {
     style: "flat",
     description: "Flat hierarchy: Organization → Department → Team → Workstream.",
+    nodes: [
+      { type: "department", name: "Engineering", budgetMonthlyCents: 8000_00 },
+      { type: "department", name: "Product", budgetMonthlyCents: 4000_00 },
+      { type: "department", name: "Sales", budgetMonthlyCents: 3000_00 },
+      { type: "department", name: "Customer Success", budgetMonthlyCents: 2000_00 },
+      { type: "department", name: "Marketing", budgetMonthlyCents: 2000_00 },
+    ],
     defaultDepartments: [
       { name: "Engineering", budgetMonthlyCents: 8000_00 },
       { name: "Product", budgetMonthlyCents: 4000_00 },

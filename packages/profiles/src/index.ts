@@ -13,6 +13,7 @@
  */
 
 import type { IndustryProfilePreset, ProfileId } from "./types";
+import type { OrgNodeSeed } from "./types";
 import { techProfile } from "./tech.profile";
 import { manufacturingProfile } from "./manufacturing.profile";
 import { financeProfile } from "./finance.profile";
@@ -74,6 +75,7 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
     orgTree: {
       style: "flat",
       description: "No default org tree — configure manually.",
+      nodes: [],
       defaultDepartments: [],
     },
     personas: [],
@@ -138,4 +140,58 @@ export function isValidProfileId(id: string): id is ProfileId {
     id === "holding" ||
     id === "custom"
   );
+}
+
+// ── Org tree utilities (D6/D7 restructure) ─────────────────────────────────
+
+/**
+ * Flatten the org tree into a list of nodes with parent paths.
+ * Used by the provisioning step to seed hierarchical department rows.
+ */
+export function flattenOrgTree(
+  nodes: OrgNodeSeed[],
+): { node: OrgNodeSeed; path: string[]; depth: number }[] {
+  const result: { node: OrgNodeSeed; path: string[]; depth: number }[] = [];
+  function walk(ns: OrgNodeSeed[], path: string[], depth: number) {
+    for (const n of ns) {
+      result.push({ node: n, path: [...path, n.name], depth });
+      if (n.children) walk(n.children, [...path, n.name], depth + 1);
+    }
+  }
+  walk(nodes, [], 0);
+  return result;
+}
+
+/** Count all nodes in the tree (recursive). */
+export function countOrgNodes(nodes: OrgNodeSeed[]): number {
+  let count = 0;
+  for (const n of nodes) {
+    count += 1;
+    if (n.children) count += countOrgNodes(n.children);
+  }
+  return count;
+}
+
+/** Count nodes of a specific type (e.g. "plant", "organization"). */
+export function countOrgNodesByType(
+  nodes: OrgNodeSeed[],
+  type: OrgNodeSeed["type"],
+): number {
+  let count = 0;
+  for (const n of nodes) {
+    if (n.type === type) count += 1;
+    if (n.children) count += countOrgNodesByType(n.children, type);
+  }
+  return count;
+}
+
+/** Sum all budgetMonthlyCents values in the tree. */
+export function sumOrgBudgets(nodes: OrgNodeSeed[]): number {
+  let total = 0;
+  for (const n of nodes) {
+    if (n.budgetMonthlyCents) total += n.budgetMonthlyCents;
+    // Note: we sum ALL nodes, not just leaves — parent budgets may be aggregate.
+    // The provisioning step decides whether to use parent or leaf budgets.
+  }
+  return total;
 }

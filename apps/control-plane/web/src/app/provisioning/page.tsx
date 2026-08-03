@@ -6,8 +6,12 @@ import {
   manufacturingProfile,
   financeProfile,
   holdingProfile,
+  flattenOrgTree,
+  countOrgNodes,
+  countOrgNodesByType,
   type IndustryProfilePreset,
   type ProfileId,
+  type OrgNodeSeed,
 } from "@arm/profiles";
 
 const PROFILES: Record<string, IndustryProfilePreset> = {
@@ -169,7 +173,7 @@ function ProfileSelector({
               {profile.description}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Tag>{profile.orgTree.defaultDepartments.length} departments</Tag>
+              <Tag>{countOrgNodes(profile.orgTree.nodes)} org nodes</Tag>
               <Tag>{profile.seedAgents.length} seed agents</Tag>
               <Tag>{profile.dlpPatterns.length} DLP patterns</Tag>
               <Tag>
@@ -230,17 +234,21 @@ function ProfileReview({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Departments / Org Tree */}
+        {/* Departments / Org Tree (recursive tree view) */}
         <Section title="Organization Structure" subtitle={profile.orgTree.description}>
-          <div className="space-y-1.5">
-            {profile.orgTree.defaultDepartments.map((d) => (
-              <div key={d.name} className="flex items-center justify-between text-[13px]">
-                <span style={{ color: "var(--text-primary)" }}>{d.name}</span>
-                <span className="font-mono text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                  ${(d.budgetMonthlyCents / 100).toLocaleString()}/mo
-                </span>
-              </div>
+          <div className="space-y-0.5">
+            {profile.orgTree.nodes.map((node, i) => (
+              <OrgTreeNode key={i} node={node} depth={0} />
             ))}
+          </div>
+          <div className="mt-3 flex gap-3 text-[10px]" style={{ color: "var(--text-secondary)" }}>
+            {countOrgNodesByType(profile.orgTree.nodes, "plant") > 0 && (
+              <span>📍 {countOrgNodesByType(profile.orgTree.nodes, "plant")} plants</span>
+            )}
+            {countOrgNodesByType(profile.orgTree.nodes, "organization") > 0 && (
+              <span>🏛️ {countOrgNodesByType(profile.orgTree.nodes, "organization")} subsidiaries</span>
+            )}
+            <span>📊 {countOrgNodes(profile.orgTree.nodes)} total nodes</span>
           </div>
         </Section>
 
@@ -414,7 +422,7 @@ function ProvisionedSummary({ profile, tenantName }: { profile: IndustryProfileP
       </div>
 
       <div className="grid grid-cols-4 gap-3">
-        <StatBox value={profile.orgTree.defaultDepartments.length} label="Departments" />
+        <StatBox value={countOrgNodes(profile.orgTree.nodes)} label="Org Nodes" />
         <StatBox value={profile.seedAgents.length} label="Seed Agents" />
         <StatBox value={profile.dlpPatterns.length} label="DLP Patterns" />
         <StatBox value={profile.resourceTypes.enabled.length} label="Resource Types" />
@@ -444,6 +452,67 @@ function ProvisionedSummary({ profile, tenantName }: { profile: IndustryProfileP
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+// ── Recursive Org Tree Node ─────────────────────────────────────────────────
+
+const NODE_ICONS: Record<string, string> = {
+  organization: "🏛️",
+  hq: "🏢",
+  plant: "🏭",
+  department: "▸",
+  group: "·",
+  line: "─",
+  cell: "⋅",
+};
+
+const NODE_COLORS: Record<string, string> = {
+  organization: "var(--navy)",
+  hq: "var(--gold)",
+  plant: "var(--green)",
+  department: "var(--text-primary)",
+};
+
+function OrgTreeNode({ node, depth }: { node: OrgNodeSeed; depth: number }) {
+  const icon = NODE_ICONS[node.type] ?? "·";
+  const color = NODE_COLORS[node.type] ?? "var(--text-primary)";
+  const isContainer = node.type === "organization" || node.type === "hq" || node.type === "plant";
+  const budget = node.budgetMonthlyCents ? `$${(node.budgetMonthlyCents / 100).toLocaleString()}/mo` : "";
+
+  return (
+    <>
+      <div
+        className="flex items-center justify-between text-[12px]"
+        style={{ paddingLeft: `${depth * 16}px`, fontWeight: isContainer ? 600 : 400 }}
+      >
+        <span style={{ color }}>
+          <span className="mr-1">{icon}</span>
+          {node.name}
+          {node.location && (
+            <span className="ml-1.5 text-[10px]" style={{ color: "var(--text-secondary)" }}>
+              📍 {node.location}
+            </span>
+          )}
+          {node.tags?.regulatory && (
+            <span
+              className="ml-1.5 rounded px-1 py-0.5 text-[9px] font-mono"
+              style={{ backgroundColor: "var(--critical-bg)", color: "var(--critical)" }}
+            >
+              {node.tags.regulatory}
+            </span>
+          )}
+        </span>
+        {budget && (
+          <span className="font-mono text-[10px]" style={{ color: "var(--text-secondary)" }}>
+            {budget}
+          </span>
+        )}
+      </div>
+      {node.children?.map((child, i) => (
+        <OrgTreeNode key={i} node={child} depth={depth + 1} />
+      ))}
+    </>
+  );
+}
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (

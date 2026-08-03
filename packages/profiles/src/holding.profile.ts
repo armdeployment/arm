@@ -26,14 +26,75 @@ export const holdingProfile: IndustryProfilePreset = {
   orgTree: {
     style: "deep",
     description:
-      "Multi-org: Tenant → multiple Organizations (subsidiaries) → Departments. Each subsidiary may run a different industry profile. Cross-subsidiary access is isolated by default (Chinese walls).",
-    // Seed subsidiaries — each becomes an Organization under the Tenant
+      "Multi-org: Tenant → multiple Organizations (subsidiaries) → Departments/Plants. Each subsidiary runs a different industry profile. Cross-subsidiary access is isolated by default (Chinese walls).",
+    nodes: [
+      // ── Parent / Corporate ──
+      {
+        type: "organization",
+        name: "Corporate (Parent)",
+        budgetMonthlyCents: 5000_00,
+        children: [
+          { type: "department", name: "M&A / Legal", budgetMonthlyCents: 1500_00 },
+          { type: "department", name: "Treasury", budgetMonthlyCents: 1000_00 },
+          { type: "department", name: "Investor Relations", budgetMonthlyCents: 800_00 },
+          { type: "department", name: "Shared IT Services", budgetMonthlyCents: 1700_00 },
+        ],
+      },
+      // ── Subsidiary: Tech Division ──
+      {
+        type: "organization",
+        name: "Subsidiary: Tech Division",
+        budgetMonthlyCents: 8000_00,
+        children: [
+          { type: "department", name: "Engineering", budgetMonthlyCents: 5000_00 },
+          { type: "department", name: "Product", budgetMonthlyCents: 2000_00 },
+          { type: "department", name: "DevOps", budgetMonthlyCents: 1000_00 },
+        ],
+      },
+      // ── Subsidiary: Manufacturing Division (with plants!) ──
+      {
+        type: "organization",
+        name: "Subsidiary: Manufacturing Division",
+        budgetMonthlyCents: 10000_00,
+        children: [
+          {
+            type: "plant", name: "Plant Detroit", location: "Detroit, MI, USA",
+            budgetMonthlyCents: 5000_00, tags: { regulatory: "ITAR" },
+            children: [
+              { type: "department", name: "Production", budgetMonthlyCents: 3000_00 },
+              { type: "department", name: "Quality Control", budgetMonthlyCents: 1000_00 },
+              { type: "department", name: "Maintenance", budgetMonthlyCents: 1000_00 },
+            ],
+          },
+          {
+            type: "plant", name: "Plant Shenzhen", location: "Shenzhen, China",
+            budgetMonthlyCents: 5000_00,
+            children: [
+              { type: "department", name: "Production", budgetMonthlyCents: 3000_00 },
+              { type: "department", name: "Quality Control", budgetMonthlyCents: 1000_00 },
+              { type: "department", name: "Logistics", budgetMonthlyCents: 1000_00 },
+            ],
+          },
+        ],
+      },
+      // ── Subsidiary: Finance Division ──
+      {
+        type: "organization",
+        name: "Subsidiary: Finance Division",
+        budgetMonthlyCents: 7000_00,
+        children: [
+          { type: "department", name: "Trading", budgetMonthlyCents: 3000_00 },
+          { type: "department", name: "Risk Management", budgetMonthlyCents: 2000_00 },
+          { type: "department", name: "Compliance", budgetMonthlyCents: 2000_00 },
+        ],
+      },
+    ],
+    // Legacy flat list
     defaultDepartments: [
       { name: "Corporate (Parent)", budgetMonthlyCents: 5000_00 },
       { name: "Subsidiary: Tech Division", budgetMonthlyCents: 8000_00 },
-      { name: "Subsidiary: Manufacturing Division", budgetMonthlyCents: 6000_00 },
+      { name: "Subsidiary: Manufacturing Division", budgetMonthlyCents: 10000_00 },
       { name: "Subsidiary: Finance Division", budgetMonthlyCents: 7000_00 },
-      { name: "Shared Services", budgetMonthlyCents: 3000_00 },
     ],
   },
 

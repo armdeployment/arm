@@ -20,6 +20,14 @@ export const financeProfile: IndustryProfilePreset = {
   orgTree: {
     style: "flat",
     description: "Flat hierarchy with strong cross-team isolation (Chinese walls). Organization → Department → Desk → Workstream.",
+    nodes: [
+      { type: "department", name: "Trading", budgetMonthlyCents: 12000_00 },
+      { type: "department", name: "Risk Management", budgetMonthlyCents: 6000_00 },
+      { type: "department", name: "Compliance", budgetMonthlyCents: 4000_00 },
+      { type: "department", name: "Quantitative Research", budgetMonthlyCents: 8000_00 },
+      { type: "department", name: "Operations", budgetMonthlyCents: 3000_00 },
+      { type: "department", name: "Audit", budgetMonthlyCents: 2000_00 },
+    ],
     defaultDepartments: [
       { name: "Trading", budgetMonthlyCents: 12000_00 },
       { name: "Risk Management", budgetMonthlyCents: 6000_00 },

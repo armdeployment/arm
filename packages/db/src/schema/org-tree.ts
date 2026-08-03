@@ -35,11 +35,19 @@ export const organizationTable = pgTable("organization", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Department. */
+/**
+ * Department — supports hierarchical nesting (HQ → Plant → Department → Line).
+ * `parentDepartmentId` enables the recursive org tree (D6/D7 restructure).
+ * `nodeType` distinguishes HQ / Plant / Functional departments.
+ * `location` carries physical location for plants.
+ */
 export const departmentTable = pgTable("department", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").notNull().references(() => organizationTable.id),
   tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
+  parentDepartmentId: uuid("parent_department_id"), // self-reference for hierarchical nesting (D6/D7)
+  nodeType: text("node_type"), // "hq" | "plant" | "department" | "line" — for UI presentation only
+  location: text("location"), // physical location (e.g. "Detroit, MI")
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
