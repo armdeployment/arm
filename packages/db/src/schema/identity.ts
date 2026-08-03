@@ -43,6 +43,12 @@ export const roleTable = pgTable("role", {
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id").notNull(),
   name: text("name").notNull(),
+  /** D8: links this role to its seeding profile preset (e.g. "org_admin", "plant_manager").
+   *  NULL for custom roles created by the org_admin via /admin/roles.
+   *  Used by the UI to badge seeded-vs-custom; runtime permission resolution
+   *  NEVER reads this column (only `permissions` + scope) — enforced by guardrail. */
+  presetKey: text("preset_key"),
+  description: text("description"),
   permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

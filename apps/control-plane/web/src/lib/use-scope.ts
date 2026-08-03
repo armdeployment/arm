@@ -3,7 +3,14 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
-export type ScopeRef = { type: "org" | "department" | "group" | "team"; id: string } | null;
+/** All scope types matching the DB enum (D6/D7/D8 widening). */
+export const SCOPE_TYPES = [
+  "org", "organization", "hq", "plant",
+  "department", "group", "line", "cell", "team",
+] as const;
+export type ScopeType = (typeof SCOPE_TYPES)[number];
+
+export type ScopeRef = { type: ScopeType; id: string } | null;
 
 /** Reads the current scope from the URL query param `?scope=type:id`.
  *  Returns null when no scope is set (org-root / CEO view). */
@@ -14,8 +21,8 @@ export function useScope(): ScopeRef {
     if (!raw) return null;
     const [type, id] = raw.split(":");
     if (!type || !id) return null;
-    if (!["org", "department", "group", "team"].includes(type)) return null;
-    return { type: type as ScopeRef extends null ? never : NonNullable<ScopeRef>["type"], id };
+    if (!SCOPE_TYPES.includes(type as ScopeType)) return null;
+    return { type: type as ScopeType, id };
   }, [searchParams]);
 }
 

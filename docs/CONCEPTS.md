@@ -60,6 +60,18 @@ The divergence between ARM's recorded sync-strategy grants and the external syst
 
 The single bidirectional link between the LLM-policy and access-policy domains: a resource's classification restricts which LLM may receive its content (confidential+ never routes to closed external models). The Phase 1 enforcement point is an open decision (open-decisions.md D2) because content DLP is Phase 2 — the gate must fire in the data plane without inspecting content. See also: Deny-Override, Metadata-Only Boundary.
 
+### Work-Type Tag
+
+The per-prompt usage label computed by the Classification Cascade for every metered LLM call: one primary `work_type` (from the agent's department/plant taxonomy, e.g. "bug-fix", "test", "CNC toolpath optimization") plus up to ~5 secondary `usage_tags` (structural, e.g. `tool:web_search`). A tag is never a guess — `unknown` is stored as-is. Distinct from the static per-agent `taskType` (what an agent *is*) and from §6.5 `classification_context` (data *sensitivity* of resources); the three compose: `work_type` × clearance × sensitivity. Tags are enforcement-ready: events carry `classifier_version` + `confidence` + `stage`, so work-type gates (Phase 1.4+) are deterministic and re-labelable. See also: Classification Cascade, Unknown-Is-Not-Guessed, D7.
+
+### Classification Cascade
+
+The zero-LLM-call pipeline that computes Work-Type Tags in the data plane: (1) structural freebies (model_id, agent type, tool-call names, file paths, tier) → (2) prompt-hash label cache (repeats are free) → (3) fastText/linear classifier, one tiny model per taxonomy (µs–1ms, F1 ~0.85–0.92) → (4) embedding-centroid fallback only on low confidence → (5) async sampled LLM judge (1–5%, batch cron) for QA and taxonomy-drift detection — the only LLM spend. Stage 4 is off the §5.2 hot-path budget by design. See also: Work-Type Tag, Unknown-Is-Not-Guessed.
+
+### Unknown-Is-Not-Guessed
+
+The rule that classification never fabricates a label: any prompt the cascade cannot resolve with confidence is tagged `unknown` (or `classifier_stage='unknown'`) and stored as-is. At labeling time this fails open (the call proceeds, the event carries no work_type); at gate time (Phase 1.4+) the policy engine decides `unknown`'s outcome — default fail-closed — rather than trusting a coerced label. Drift detection monitors the `unknown` rate per taxonomy; a taxonomy whose traffic is overwhelmingly unknown is red, not tuned. See also: Work-Type Tag, Classification Cascade.
+
 ## Priority & Budget
 
 ### Priority Tier

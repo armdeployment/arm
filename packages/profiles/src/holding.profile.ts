@@ -266,6 +266,34 @@ export const holdingProfile: IndustryProfilePreset = {
     { key: "idp", label: "Identity Providers", order: 9 },
   ],
 
+  // ── Role presets (D8) — cross-subsidiary org authority ──
+  rolePresets: [
+    {
+      key: "org_admin", label: "Org Admin",
+      description: "Parent-company level authority: restructure any subsidiary, add new subsidiaries, reparent across the whole tree.",
+      scopeType: "org", singleton: true,
+      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+    },
+    {
+      key: "subsidiary_admin", label: "Subsidiary Admin",
+      description: "Restructure WITHIN their subsidiary only: add plants, departments, lines. Cannot reparent across subsidiaries.",
+      scopeType: "organization",
+      permissions: ["org_node:create", "org_node:rename"]
+    },
+    {
+      key: "portfolio_manager", label: "Portfolio Manager",
+      description: "Read-only view across all subsidiaries. No org-tree edits.",
+      scopeType: "org", singleton: true,
+      permissions: []
+    },
+    {
+      key: "viewer", label: "Viewer",
+      description: "Read-only within their own subsidiary.",
+      scopeType: "organization",
+      permissions: []
+    },
+  ],
+
   // ── Work-type taxonomies (D7) — per-subsidiary label sets ──
   workTypeTaxonomies: [
     {

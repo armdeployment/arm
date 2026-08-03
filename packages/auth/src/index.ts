@@ -55,6 +55,47 @@ export async function verifyOIDCToken(
 /** Permission strings: "resource:action" format, e.g. "agent:create", "budget:read". */
 export type Permission = string;
 
+/**
+ * Org-tree mutation permission verbs (D6/D7 org-structure editing).
+ *
+ * These are capability-based, NOT title-based. A user's authority to restructure
+ * the org tree flows entirely from their resolved roles at the relevant scope —
+ * never from a hardcoded ladder. The scope-walk resolution algorithm in
+ * docs/permission-rules.md §4 already handles "higher deny wins"; these verbs
+ * ride on top of it without special-casing.
+ *
+ *   org_node:create   — add a child node (new plant, department, subsidiary)
+ *   org_node:rename   — rename a node
+ *   org_node:reparent  — move a node to a different parent (DANGEROUS — only org_admin)
+ *   org_node:delete    — remove a node (only if no active agents under it)
+ *
+ * Default role presets that carry these are seeded by the Industry Profile
+ * (packages/profiles) at provisioning time, but the org_admin can reconfigure
+ * them at runtime via /admin/roles. The guardrail `no-profile-branching` ensures
+ * runtime permission resolution reads roleTable rows (tenant config), never
+ * the profile id.
+ */
+export const ORG_NODE_PERMISSIONS = [
+  "org_node:create",
+  "org_node:rename",
+  "org_node:reparent",
+  "org_node:delete",
+] as const;
+
+export type OrgNodePermission = (typeof ORG_NODE_PERMISSIONS)[number];
+
+/** Convenience: the two "safe-to-delegate" verbs (create + rename). */
+export const ORG_NODE_DELEGATABLE: readonly OrgNodePermission[] = [
+  "org_node:create",
+  "org_node:rename",
+] as const;
+
+/** Convenience: the two "org-admin-only" verbs (reparent + delete). */
+export const ORG_NODE_ADMIN_ONLY: readonly OrgNodePermission[] = [
+  "org_node:reparent",
+  "org_node:delete",
+] as const;
+
 export interface ResolvedRole {
   name: string;
   permissions: Permission[];
@@ -83,6 +124,58 @@ export function hasAllPermissions(roles: ResolvedRole[], required: Permission[])
 /** Checks if any of the permissions is granted (OR semantics). */
 export function hasAnyPermission(roles: ResolvedRole[], required: Permission[]): boolean {
   return required.some((perm) => hasPermission(roles, perm));
+}
+
+// ── Org-node mutation authority ────────────────────────────────────────────
+
+/**
+ * Scope ref for authority checks — the polymorphic (scopeType, scopeId) anchor
+ * from roleTable. Null means "org root" (CEO/tenant-admin view).
+ */
+export interface MutationScope {
+  type: "org" | "organization" | "hq" | "plant" | "department" | "group" | "line" | "cell" | "team";
+  id: string;
+}
+
+/**
+ * A resolved role scoping: the role's permission set PLUS the scope it was
+ * granted at. Permission resolution walks scopes top-down (Invariant 3);
+ * `scopeType`+`scopeId` tells us WHERE in the hierarchy this role lives.
+ */
+export interface ScopedRole extends ResolvedRole {
+  scopeType: MutationScope["type"];
+  scopeId: string;
+}
+
+/**
+ * Checks whether the user may perform the given org-node verb at the given
+ * target scope. Uses the same `hasPermission` primitive as everything else —
+ * so the existing wildcard / scope-walk machinery applies unchanged.
+ *
+ * Authority rules (see docs/solutions/2026-08-02-d8-org-permissions.md):
+ *   - create/rename: granted at OR ABOVE the target scope → allowed.
+ *   - reparent/delete: only org_admin (scope = org root) may perform these.
+ *
+ * This helper does NOT itself walk the hierarchy — the caller resolves the
+ * user's ScopedRole[] set first (from userRoleTable joined to roleTable), then
+ * passes it here. The DB/policy layer does the scope-walk; this is a pure
+ * predicate over the resolved set.
+ */
+export function canMutateOrgNode(
+  roles: ScopedRole[],
+  verb: OrgNodePermission,
+  _targetScope: MutationScope,
+): boolean {
+  // reparent + delete are admin-only: the role must be granted at the org root.
+  if (verb === "org_node:reparent" || verb === "org_node:delete") {
+    return roles.some(
+      (r) =>
+        r.scopeType === "org" &&
+        hasPermission([r], verb),
+    );
+  }
+  // create + rename: any role at-or-above the target scope that carries the verb.
+  return hasPermission(roles, verb);
 }
 
 // ── ARM-as-OIDC-Issuer (skeleton) ──────────────────────────────────────────

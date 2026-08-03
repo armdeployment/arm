@@ -246,12 +246,12 @@ export const manufacturingProfile: IndustryProfilePreset = {
     { name: "CodeReview-Bot", type: "claude_code", departmentName: "Engineering", taskType: "code_review", clearance: "internal", tier: "critical", preferredModel: "qwen3.5" },
     { name: "DocGen-Agent", type: "opencode", departmentName: "Engineering", taskType: "documentation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
     { name: "ArchDesign-Agent", type: "pi", departmentName: "Engineering", taskType: "architecture_design", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
-    // Manufacturing — confidential clearance, self-hosted only
-    { name: "ToolPath-Optimizer", type: "opencode", departmentName: "Manufacturing", taskType: "cnc_toolpath_optimization", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "QualityAnalysis-Agent", type: "claude_code", departmentName: "Manufacturing", taskType: "defect_analysis", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
-    // QA — mixed clearance
-    { name: "TestGen-Agent", type: "copilot", departmentName: "Quality Assurance", taskType: "test_generation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "SecurityScan-Agent", type: "claude_code", departmentName: "Quality Assurance", taskType: "security_scan", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
+    // Plant Detroit — Production (confidential clearance, self-hosted only)
+    { name: "ToolPath-Optimizer", type: "opencode", departmentName: "Production", taskType: "cnc_toolpath_optimization", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
+    { name: "QualityAnalysis-Agent", type: "claude_code", departmentName: "Quality Control", taskType: "defect_analysis", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
+    // Quality Control / Maintenance — mixed clearance
+    { name: "TestGen-Agent", type: "copilot", departmentName: "Quality Control", taskType: "test_generation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
+    { name: "SecurityScan-Agent", type: "claude_code", departmentName: "Maintenance", taskType: "security_scan", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
     // Supply Chain — internal, cost-sensitive
     { name: "DemandForecast-Agent", type: "opencode", departmentName: "Supply Chain", taskType: "demand_forecasting", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
     { name: "LogisticsOpt-Agent", type: "copilot", departmentName: "Supply Chain", taskType: "route_optimization", clearance: "internal", tier: "background", preferredModel: "minicpm5-1b" },
@@ -272,6 +272,35 @@ export const manufacturingProfile: IndustryProfilePreset = {
     { key: "audit", label: "Audit Trail", order: 8 },
     { key: "resources", label: "Resources", order: 9 },
     { key: "idp", label: "Identity Providers", order: 10 },
+    { key: "plant_overview", label: "Plant Overview", order: 11 },
+  ],
+
+  // ── Role presets (D8) — who can restructure the org tree ──
+  rolePresets: [
+    {
+      key: "org_admin", label: "Org Admin",
+      description: "Full org-tree authority: create, rename, reparent, delete any node. Typically the Tenant admin / VP-Operations.",
+      scopeType: "org", singleton: true,
+      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+    },
+    {
+      key: "plant_manager", label: "Plant Manager",
+      description: "Rename own plant; create + rename lines/teams within own plant. Cannot re-parent or delete.",
+      scopeType: "plant",
+      permissions: ["org_node:create", "org_node:rename"]
+    },
+    {
+      key: "dept_head", label: "Department Head",
+      description: "Rename own department; view-only elsewhere. Adept for VP/Director escalated to dept-head scope.",
+      scopeType: "department",
+      permissions: ["org_node:rename"]
+    },
+    {
+      key: "viewer", label: "Viewer",
+      description: "Read-only access to dashboards. No org-tree edits.",
+      scopeType: "department",
+      permissions: []
+    },
   ],
 
   // ── Work-type taxonomies (D7) — per-department/per-plant label sets ──
@@ -284,7 +313,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
     },
     {
-      departmentName: "Manufacturing",
+      departmentName: "Production",
       labels: [
         "cnc_toolpath_optimization", "defect_analysis", "process_recipe_optimization",
         "predictive_maintenance", "line_balance_analysis", "spc_analysis",
@@ -293,7 +322,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       secondaryTagPresets: ["resource:mes", "resource:scada", "resource:plm"],
     },
     {
-      departmentName: "Quality Assurance",
+      departmentName: "Quality Control",
       labels: ["test_generation", "defect_analysis", "cybersecurity_scan", "compliance_review", "spc_analysis"],
     },
     {

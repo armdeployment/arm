@@ -180,6 +180,36 @@ export interface UIPanelDef {
   order: number;
 }
 
+// ── Role presets (D8) ────────────────────────────────────────────────────
+
+/**
+ * A seeded role preset — a title-to-permission mapping attached to a scope,
+ * provisioned by the profile at onboarding time, then editable by the
+ * org_admin at runtime via /admin/roles.
+ *
+ * Governed by D6's rule unchanged: the profile seeds DEFAULTS, never gates a
+ * capability. A tech tenant can define a `plant_manager` role too — they just
+ * don't get it seeded. The guardrail `no-profile-branching` covers this: runtime
+ * permission resolution reads roleTable rows (tenant config), never the profile.
+ *
+ * The two-step: profile → roleTable rows (seeded), then roleTable rows → permission
+ * decisions (runtime). Step one is profile-driven; step two is not.
+ */
+export interface RolePresetDef {
+  /** Stable key, e.g. "org_admin", "subsidiary_admin", "plant_manager". */
+  key: string;
+  /** Display name shown in /admin/roles — e.g. "Org Admin", "Plant Manager". */
+  label: string;
+  /** Human description of what this role can do. */
+  description: string;
+  /** Org-node-type the role is scoped to ("org" = tenant root). */
+  scopeType: "org" | "organization" | "hq" | "plant" | "department" | "group" | "line";
+  /** Permissions granted — "org_node:*" verbs + standard "resource:action" strings. */
+  permissions: string[];
+  /** True if seeded at the org root (single instance); false if per-node (multi-install). */
+  singleton?: boolean;
+}
+
 // ── Work-type taxonomies (D7) ───────────────────────────────────────────────
 
 /**
@@ -232,6 +262,10 @@ export interface IndustryProfilePreset {
   stakeholderRouting: StakeholderRouting;
   seedAgents: SeedAgentDef[];
   uiPanels: UIPanelDef[];
+
+  /** Role presets (D8) — title → permission bundle → scope mappings seeded
+   *  at provisioning time, editable afterwards via /admin/roles. */
+  rolePresets: RolePresetDef[];
   /** Per-department work-type taxonomies (D7). */
   workTypeTaxonomies: WorkTypeTaxonomySeed[];
 }

@@ -55,6 +55,10 @@ const BRANCH_PATTERNS = [
   /\bfinanceProfile\b/,
   /\bholdingProfile\b/,
   /\bprofileId\b/,
+  // D8: permission resolution must never branch on whether a role is
+  // seeded (preset_key) vs custom — that would be profile-branching in disguise.
+  /\bpresetKey\b/,
+  /\bpreset_key\b/,
   // `if (profile === "manufacturing")` or similar
   /profile\s*===?\s*["'](tech|manufacturing|finance|holding|custom)["']/,
   /["'](tech|manufacturing|finance|holding|custom)["']\s*===?\s*profile/,

@@ -176,6 +176,34 @@ export const financeProfile: IndustryProfilePreset = {
     { key: "idp", label: "Identity Providers", order: 8 },
   ],
 
+  // ── Role presets (D8) — with Chinese-wall awareness ──
+  rolePresets: [
+    {
+      key: "org_admin", label: "Org Admin",
+      description: "Full authority: restructure any desk. Chief Compliance Officer equivalent.",
+      scopeType: "org", singleton: true,
+      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+    },
+    {
+      key: "desk_head", label: "Desk Head",
+      description: "Rename own desk; create + rename teams within own desk. Cannot cross Chinese walls.",
+      scopeType: "department",
+      permissions: ["org_node:create", "org_node:rename"]
+    },
+    {
+      key: "compliance_officer", label: "Compliance Officer",
+      description: "Read-only across all desks (audit authority). No org-tree edits.",
+      scopeType: "org", singleton: true,
+      permissions: []
+    },
+    {
+      key: "viewer", label: "Viewer",
+      description: "Read-only within own desk.",
+      scopeType: "department",
+      permissions: []
+    },
+  ],
+
   // ── Work-type taxonomies (D7) — per-desk label sets ──
   workTypeTaxonomies: [
     {

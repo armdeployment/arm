@@ -150,6 +150,28 @@ export const techProfile: IndustryProfilePreset = {
     { key: "idp", label: "Identity Providers", order: 6 },
   ],
 
+  // ── Role presets (D8) — simpler flat-org authority ──
+  rolePresets: [
+    {
+      key: "org_admin", label: "Org Admin",
+      description: "Full authority: add, rename, reparent, delete any department or team.",
+      scopeType: "org", singleton: true,
+      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+    },
+    {
+      key: "dept_head", label: "Department Head",
+      description: "Rename own department; create + rename teams within own department.",
+      scopeType: "department",
+      permissions: ["org_node:create", "org_node:rename"]
+    },
+    {
+      key: "viewer", label: "Viewer",
+      description: "Read-only access to dashboards.",
+      scopeType: "department",
+      permissions: []
+    },
+  ],
+
   // ── Work-type taxonomies (D7) — per-department label sets ──
   workTypeTaxonomies: [
     {

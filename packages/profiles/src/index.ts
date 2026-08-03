@@ -111,6 +111,14 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
       { key: "spend", label: "Spend Overview", order: 0 },
       { key: "agents", label: "Agent Fleet", order: 1 },
     ],
+    rolePresets: [
+      {
+        key: "org_admin", label: "Org Admin",
+        description: "Full authority — configure every role afterwards.",
+        scopeType: "org", singleton: true,
+        permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+      },
+    ],
     workTypeTaxonomies: [],
   };
 }

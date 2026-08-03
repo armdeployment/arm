@@ -99,6 +99,44 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- D8: roles (named permission bundles scoped to an org node) + grants
+CREATE TABLE roles (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  scope_type TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  preset_key TEXT,
+  description TEXT,
+  permissions JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_roles (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  role_id TEXT NOT NULL REFERENCES roles(id),
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, role_id)
+);
+
+-- D8: audit log for every org-tree mutation
+CREATE TABLE org_mutation_log (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  actor_user_id TEXT NOT NULL REFERENCES users(id),
+  verb TEXT NOT NULL,
+  node_id TEXT NOT NULL,
+  node_name TEXT NOT NULL,
+  node_type TEXT NOT NULL,
+  old_parent_id TEXT,
+  new_parent_id TEXT,
+  new_name TEXT,
+  reason TEXT,
+  auth_snapshot JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE models (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -256,21 +294,40 @@ interface ProvisionedAgent {
  * across departments per the profile's seedAgents.
  */
 function provisionAgents(): ProvisionedAgent[] {
-  // Build department → stakeholder mapping
-  const deptStakeholders: Record<string, string> = {};
-  for (const dept of profile.orgTree.defaultDepartments) {
-    const deptId = deptIdFromName(dept.name);
-    const slug = dept.name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
-    deptStakeholders[deptId] = `usr_${slug}`;
+  // Build flattened node map from the recursive org tree.
+  const flat = flattenOrgTree(profile.orgTree.nodes);
+  const allNodes = flat.map((f) => ({
+    id: deptIdFromName(f.path.join(" / ")),
+    name: f.node.name,
+    path: f.path,
+    leaf: !f.node.children?.length,
+  }));
+
+  // Build stakeholder user-id map: every node has a usr_<slug> user.
+  const userIdFor = (deptId: string) => `usr_${deptId.replace(/^dept_/, "")}`;
+
+  // Match an agent's departmentName to the best leaf node.
+  function findDeptId(deptName: string): string | null {
+    // 1. Exact name match on a leaf.
+    let hit = allNodes.find((n) => n.leaf && n.name.toLowerCase() === deptName.toLowerCase());
+    if (hit) return hit.id;
+    // 2. Exact name match on any node.
+    hit = allNodes.find((n) => n.name.toLowerCase() === deptName.toLowerCase());
+    if (hit) return hit.id;
+    // 3. Partial match: deptName appears in a path segment.
+    hit = allNodes.find((n) => n.path.some((p) => p.toLowerCase().includes(deptName.toLowerCase())));
+    if (hit) return hit.id;
+    // 4. Fallback: first leaf node.
+    return allNodes.find((n) => n.leaf)?.id ?? allNodes[0]!.id;
   }
 
   return profile.seedAgents.map((agent, i) => {
-    const deptId = deptIdFromName(agent.departmentName);
+    const deptId = findDeptId(agent.departmentName) ?? allNodes[0]!.id;
     return {
       id: `agt_seed_${i}`,
       name: agent.name,
       type: agent.type,
-      stakeholder: deptStakeholders[deptId] ?? Object.values(deptStakeholders)[0]!,
+      stakeholder: userIdFor(deptId),
       dept: deptId,
       taskType: agent.taskType,
       clearance: agent.clearance,
@@ -330,24 +387,25 @@ async function main() {
 
   // ── Departments (from profile orgTree — recursive tree) ──
   const flatNodes = flattenOrgTree(profile.orgTree.nodes);
-  for (const { node, path } of flatNodes) {
-    const id = deptIdFromName(path.join(" / "));
-    const parentId = path.length > 1 ? deptIdFromName(path.slice(0, -1).join(" / ")) : null;
+  const nodeById = new Map<string, typeof flatNodes[number]>();
+  for (const item of flatNodes) {
+    const id = deptIdFromName(item.path.join(" / "));
+    const parentId = item.path.length > 1 ? deptIdFromName(item.path.slice(0, -1).join(" / ")) : null;
+    nodeById.set(id, item);
     await pgClient.query(
       `INSERT INTO departments (id, tenant_id, name, parent_id, node_type, location, budget_monthly_cents)
        VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, node.name, parentId, node.type, node.location ?? null, node.budgetMonthlyCents ?? 0]
+      [id, TENANT_ID, item.node.name, parentId, item.node.type, item.node.location ?? null, item.node.budgetMonthlyCents ?? 0]
     );
   }
 
-  // ── Users (one lead per top-level node + a CEO) ──
-  const topNames = profile.orgTree.nodes.map(n => n.name);
-  for (const deptName of topNames) {
-    const deptId = deptIdFromName(deptName);
-    const slug = deptName.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+  // ── Users (one lead per node in the tree + a CEO) ──
+  // Every node gets a dept_head so agents always have a valid stakeholder.
+  for (const [deptId, { node }] of nodeById) {
+    const slug = deptId.replace(/^dept_/, "");
     const userId = `usr_${slug}`;
-    const email = `${slug}.head@${TENANT_SLUG}.com`;
-    const displayName = deptName + " Lead";
+    const email = `${slug}@${TENANT_SLUG}.com`;
+    const displayName = node.name + " Lead";
     await pgClient.query(
       `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
        VALUES ($1, $2, $3, $4, $5, 'dept_head') ON CONFLICT (id) DO NOTHING`,
@@ -358,6 +416,30 @@ async function main() {
   await pgClient.query(
     `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
      VALUES ('usr_ceo', $1, 'ceo@${TENANT_SLUG}.com', 'CEO', NULL, 'ceo') ON CONFLICT (id) DO NOTHING`,
+    [TENANT_ID]
+  );
+
+  // ── D8: Seed role presets from the profile + grant CEO org_admin ──
+  // Every preset in profile.rolePresets becomes a role row scoped to the org root.
+  // (Per-node roles like plant_manager would be created by /admin/roles at runtime.)
+  for (const preset of profile.rolePresets) {
+    const roleId = `role_${preset.key}`;
+    await pgClient.query(
+      `INSERT INTO roles (id, tenant_id, scope_type, scope_id, name, preset_key, description, permissions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (id) DO UPDATE SET permissions = EXCLUDED.permissions`,
+      [
+        roleId, TENANT_ID, preset.scopeType, TENANT_ID,
+        preset.label, preset.key, preset.description,
+        JSON.stringify(preset.permissions),
+      ]
+    );
+  }
+
+  // Grant CEO the org_admin role (full authority over org tree)
+  await pgClient.query(
+    `INSERT INTO user_roles (user_id, role_id, tenant_id)
+     VALUES ('usr_ceo', 'role_org_admin', $1) ON CONFLICT DO NOTHING`,
     [TENANT_ID]
   );
 

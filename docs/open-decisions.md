@@ -1,8 +1,8 @@
-# Decision Log — D1/D2/D5 locked 2026-07-26
+# Decision Log — D1/D2/D5 locked 2026-07-26; D6/D7 proposed 2026-08-02
 
-Captured from the v0.1 spec review (`docs/arm-spec.md`). These are design-level decisions that ripple across components and cannot be patched with prose alone; they need a sign-off. Each item lists the blocking phase, why it matters, and the decision frame.
+Captured from spec reviews (`docs/arm-spec.md`). These are design-level decisions that ripple across components and cannot be patched with prose alone; they need a sign-off. Each item lists the blocking phase, why it matters, and the decision frame.
 
-**Status: all three decisions LOCKED on 2026-07-26** (resolutions inline). Spec v0.3 reflects them (§3.4, §4.1, §5.1, §6.5).
+**Status: D1/D2/D5 LOCKED on 2026-07-26** (resolutions inline; spec v0.3 reflects them — §3.4, §4.1, §5.1, §6.5). **D6 PROPOSED 2026-08-02** — pending architecture + product sign-off; full write-up in `docs/solutions/2026-08-02-d6-industry-profile.md`. **D7 PROPOSED 2026-08-02** — requester answers locked (per-department/plant taxonomies, enforcement-ready, per-prompt); full write-up in `docs/solutions/2026-08-02-d7-work-type-classification.md`.
 
 ## D1 — Multi-tenant isolation model [blocks 1.0 schema] ✅ DECIDED (2026-07-26): option (b)
 
@@ -66,6 +66,49 @@ So **where does the gate fire in Phase 1?** Without content inspection, nothing 
 **Update (2026-07-26):** freshness monitoring is now planned either way — the data plane reports `policy_version` + `last_refresh` on every pull, and a control-plane health surface flags caches stale beyond SLA (spec §14.1, adopted from worldmonitor's seed-metadata freshness pattern).
 
 **Resolution (2026-07-26): option (b) pull-first, (a) push deferred to Phase 2+ — recorded as a reasoned pushback on the initial (a) preference.** The reliability intuition inverts under analysis: push's worst case is *unbounded* — a missed invalidation (dropped long-lived stream, NAT timeout, customer proxy killing idle connections) leaves stale policy in force indefinitely, and any robust push design needs a pull backstop anyway. Pull's worst case is *bounded* — staleness can never exceed TTL + pull latency, and it self-heals every cycle. Operational surface also favors pull: the data plane already maintains outbound mTLS to the control plane for metering, so pull adds zero inbound connectivity into customer VPCs (a real advantage in enterprise security review), while push requires a fleet of per-tenant long-lived streams to monitor and fail over. Where push genuinely wins is latency, not reliability — so it is kept as a Phase 2+ optimization layered on the same channel, never replacing the pull. **Contract:** 10 s pull interval; monotonic `policy_version`; DENY-class propagation SLA ≤15 s; ALLOW/quota ≤60 s; past-SLA + unreachable control plane → fail-closed for DENY-class (Open Item 3). Spec §5.1 updated. Revisit if Phase 1 field data shows 15 s deny propagation is too slow.
+
+---
+
+## D6 — Industry profile: preset vs runtime mode [blocks tenant onboarding + manufacturing-fit] 🔶 PROPOSED (2026-08-02)
+
+**Problem.** The seed tenant is already manufacturing-flavored (Acme Manufacturing Corp; CNC toolpath / defect / demand-forecast agents), and the governance engine is industry-neutral — yet several dimensions that differ between a tech company and a manufacturer are *hardcoded*: DLP patterns in `apps/simulation/src/proxy.ts`, personas in spec §2, demo data in `apps/control-plane/web/src/lib/mock-data.ts`, classification ranks as a single axis. The natural product ask is a user-facing selector: "Manufacturing mode" vs "Tech mode." The question is the right *shape*: a runtime `mode` enum that branches behavior, or a provisioning preset of defaults.
+
+**Why it matters.** This sets the pattern for all vertical expansion. A runtime mode creates `if (mode === …)` across proxy/policy/UI, couples behavior to tenant identity, doesn't scale past two industries (healthcare/finance are already on the roadmap — `docs/solutions/competitive-analysis.md`), and forces hybrid companies (tech + hardware, manufacturer + software org) to lose one flavor's defaults. The decision also implies a data-model change (`tenant.industryProfile`) and a guardrail to prevent drift — wrong here means a refactor across every enforcement path.
+
+**Decision frame — pick one:**
+- **(a) Runtime `mode` enum on Tenant**, branches in code. Simple to conceptualize; single switch.
+- **(b) Industry Profile — declarative preset applied at provisioning (data, not code).** A bundle of default config (role catalog, classification taxonomy, resource-type allowlist, DLP patterns, tier display names, budget-period presets, persona→home-panel mapping, seed agents). Selected in an onboarding wizard at tenant creation; materialized as per-tenant config rows. Runtime reads config, never `mode`; UI may *display* the profile. **(recommended)**
+- **(c) Hybrid** — (b) for behavioral config + a registry-driven `uiExperience` label for presentation only. Specialization of (b).
+
+The governing rule under (b): **everything that makes ARM good for manufacturing is a capability every tenant could have; the profile only sets defaults, never gates a capability.** This keeps hybrid companies first-class and scales to N industries with no new branching. Orthogonal to existing axes (any profile × any delivery model §3.4 × any tier). Manufacturing becomes the first preset to exercise OT resource types, plant/line/shift scoping, dual-axis classification (sensitivity + regulatory flag), shift-aware stakeholder routing, and offline policy TTL.
+
+**Sub-decisions to lock with the main one:** (1) switchable after provisioning? → recommend no (re-seed + migration), use Custom for à-la-carte; (2) does profile gate capabilities? → no; (3) first-preset set → Tech + Manufacturing + Custom only; (4) selector location → tenant-creation onboarding wizard, one-time; (5) N>2 industries → mechanism scales, do not pre-build.
+
+**Decision needed by:** start of tenant-onboarding work / manufacturing-fit slice.
+**Owner:** architecture + product.
+
+**Resolution (2026-08-02): PROPOSED — option (b), not yet locked.** Full rationale, comparison table (the ~10 dimensions that differ), phased plan (quick-win preset chooser → clean target with capabilities fully decoupled), consequences, the `guardrails/no-profile-branching` mutation-proofed guard, and doc-update obligations live in `docs/solutions/2026-08-02-d6-industry-profile.md`. Sign-off pending.
+
+---
+
+## D7 — Work-type usage classification: per-prompt tagging for gating + governance [blocks 1.1 dashboard + work-type gate] 🔶 PROPOSED (2026-08-02)
+
+**Problem.** ARM classifies *data sensitivity* per resource (§6.5, D2) and assigns each agent a *static* `taskType` (§1.3) — but nothing classifies what each prompt actually *does*. Management can't answer "how are agents being used, by work category, per department/plant?", and future work-type-aware routing/governance has no substrate. Naive fixes fail the requirements: an LLM judge per call costs tokens on 100% of traffic (forbidden) and blows the §5.2 latency budget; rules-only covers ~60% and misses free-text intent.
+
+**Why it matters.** This is a spec §1.3 differentiator (department-level work-type classification) that today exists only as static agent metadata, and research (2026-08-02) confirms no production gateway does free server-side per-request work-type tagging. It also sets the schema for `token_usage_event` — the enforcement path (gating) is Phase 1.4+, so the event model must be built enforcement-ready now or a migration is needed later.
+
+**Decision frame — pick the classification mechanism + locking the three requester answers:**
+- **(a) LLM-as-judge per prompt** — rejected: token cost on 100% of traffic, 200–500 ms added latency, drift makes future gating undeterministic.
+- **(b) Rules/regex only** — rejected as sole mechanism (~60% coverage); kept as cascade stage 1.
+- **(c) Zero-LLM cascade (recommended): structural freebies → prompt-hash label cache → fastText/linear classifier (µs–1ms, F1 0.85–0.92) → embedding centroid only on low confidence → async sampled LLM judge for QA (1–5%, batch).**
+- **(d) Session-level classification (Codex TaskKind)** — rejected as the unit: per-prompt is required (a session spans many work types; gating needs the prompt label). Sessions remain a rollup dimension only.
+
+**Requester answers (locked 2026-08-02):** (1) taxonomy is **per-department/per-plant presets + custom labels from day 1** (one tiny model per taxonomy, selected by the agent's scope — follows the D6 preset-never-gates rule); (2) **enforcement-ready** — the tag stream feeds work-type gating + governance later; events carry `classifier_version`/`confidence`/`stage` and `unknown` is stored as-is (fail-closed per policy at gate time, never guessed); (3) **per-prompt** granularity — every metered LLM call gets its own tag.
+
+**Decision needed by:** start of 1.1 dashboard work (tag emission) / 1.4 (gating rules).
+**Owner:** architecture + product + InfoSec (for the gate contract).
+
+**Resolution (2026-08-02): PROPOSED — option (c), requester answers locked, not yet signed off.** Full mechanism, cost/latency table, `token_usage_event` column deltas, `WorkTypeTaxonomy` table, guardrails, phased plan (1.0: tagging only; 1.4+: gating), sub-decisions (label cardinality, taxonomy edit policy, confidence thresholds, cache placement, QA rate), and doc-update obligations live in `docs/solutions/2026-08-02-d7-work-type-classification.md`.
 
 ---
 

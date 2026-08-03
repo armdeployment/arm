@@ -42,6 +42,8 @@ const REQUIRED_KEYS: (keyof IndustryProfilePreset)[] = [
   "stakeholderRouting",
   "seedAgents",
   "uiPanels",
+  "rolePresets",
+  "workTypeTaxonomies",
 ];
 
 describe("Industry Profile presets", () => {
@@ -309,6 +311,68 @@ describe("compileDLPPatterns", () => {
     const itarPattern = compiled.find((c) => c.name === "Export-Controlled (ITAR/EAR)");
     expect(itarPattern?.regex.test("This part is ITAR controlled")).toBe(true);
     expect(itarPattern?.regex.test("This is a normal part")).toBe(false);
+  });
+});
+
+describe("Role presets (D8 — org-tree mutation authority)", () => {
+  it("every profile seeds org_admin with all four verbs", () => {
+    for (const profile of [techProfile, manufacturingProfile, financeProfile, holdingProfile]) {
+      const admin = profile.rolePresets.find((r) => r.key === "org_admin");
+      expect(admin).toBeDefined();
+      expect(admin!.scopeType).toBe("org");
+      expect(admin!.singleton).toBe(true);
+      for (const verb of ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete"]) {
+        expect(admin!.permissions).toContain(verb);
+      }
+    }
+  });
+
+  it("non-admin roles never have reparent or delete", () => {
+    for (const profile of [techProfile, manufacturingProfile, financeProfile, holdingProfile]) {
+      for (const role of profile.rolePresets) {
+        if (role.key === "org_admin") continue;
+        expect(role.permissions).not.toContain("org_node:reparent");
+        expect(role.permissions).not.toContain("org_node:delete");
+      }
+    }
+  });
+
+  it("manufacturing has plant_manager at plant scope", () => {
+    const pm = manufacturingProfile.rolePresets.find((r) => r.key === "plant_manager");
+    expect(pm).toBeDefined();
+    expect(pm!.scopeType).toBe("plant");
+    expect(pm!.permissions).toContain("org_node:create");
+    expect(pm!.permissions).toContain("org_node:rename");
+  });
+
+  it("holding has subsidiary_admin at organization scope", () => {
+    const sa = holdingProfile.rolePresets.find((r) => r.key === "subsidiary_admin");
+    expect(sa).toBeDefined();
+    expect(sa!.scopeType).toBe("organization");
+    expect(sa!.permissions).toContain("org_node:create");
+    // subsidiary_admin CANNOT reparent across entities
+    expect(sa!.permissions).not.toContain("org_node:reparent");
+  });
+
+  it("viewer role has empty permissions everywhere", () => {
+    for (const profile of [techProfile, manufacturingProfile, financeProfile, holdingProfile]) {
+      const viewer = profile.rolePresets.find((r) => r.key === "viewer");
+      if (viewer) {
+        expect(viewer.permissions.filter((p) => p.startsWith("org_node:"))).toEqual([]);
+      }
+    }
+  });
+
+  it("every preset has key, label, description, scopeType, permissions", () => {
+    for (const profile of [techProfile, manufacturingProfile, financeProfile, holdingProfile]) {
+      for (const role of profile.rolePresets) {
+        expect(role.key).toBeTruthy();
+        expect(role.label).toBeTruthy();
+        expect(role.description).toBeTruthy();
+        expect(role.scopeType).toBeTruthy();
+        expect(Array.isArray(role.permissions)).toBe(true);
+      }
+    }
   });
 });
 
