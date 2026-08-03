@@ -152,4 +152,78 @@ export const REAL = {
     totalTokens: 2019,
     cloudCostCents: 22,
   },
+
+  // ── D6: Industry Profiles (real profile data from packages/profiles) ────
+  profiles: {
+    manufacturing: {
+      label: "Manufacturing / Industrial",
+      icon: "🏭",
+      orgTree: "Deep: Plant → Line/Cell → Station + shift",
+      departments: 5,
+      resourceTypes: 14,
+      dlpPatterns: 9,
+      classification: "Dual-axis: sensitivity + ITAR/EAR/GxP",
+      budgetPeriods: "monthly + shift + line + batch",
+      modelRouting: "edge/on-prem GPU first",
+      seedAgents: 10,
+      panels: 11,
+    },
+    finance: {
+      label: "Finance / Financial Services",
+      icon: "🏦",
+      orgTree: "Flat + Chinese-wall isolation",
+      departments: 6,
+      resourceTypes: 10,
+      dlpPatterns: 8,
+      classification: "Dual-axis: sensitivity + SOX/GLBA/PCI/SEC/FINRA",
+      budgetPeriods: "monthly + quarterly",
+      modelRouting: "on-prem GPU first (MNPI never leaves VPC)",
+      seedAgents: 8,
+      panels: 9,
+    },
+    holding: {
+      label: "Holding Company / Conglomerate",
+      icon: "🏛️",
+      orgTree: "Multi-org: Tenant → subsidiaries → departments",
+      departments: 5,
+      resourceTypes: 18,
+      dlpPatterns: 10,
+      classification: "Dual-axis: SOX+ITAR+EAR+GLBA+PCI+GxP (superset)",
+      budgetPeriods: "monthly + quarterly",
+      modelRouting: "on-prem first for restricted/cross-entity",
+      seedAgents: 11,
+      panels: 10,
+    },
+  },
+
+  // ── D7: Work-type classification (real ClickHouse data) ─────────────────
+  // Live results from 8 real Ollama LLM calls through the proxy, classified
+  // by the zero-LLM cascade. Every tag, stage, and confidence is real.
+  workTypeEvents: [
+    { dept: "Engineering", prompt: '"review this pull request diff..."', workType: "code_review", stage: "linear", conf: 1.0, tokens: 34 },
+    { dept: "Manufacturing", prompt: '"optimize CNC toolpath g-code..."', workType: "cnc_toolpath_optimization", stage: "linear", conf: 1.0, tokens: 36 },
+    { dept: "Supply Chain", prompt: '"forecast demand for inventory..."', workType: "demand_forecasting", stage: "linear", conf: 1.0, tokens: 32 },
+    { dept: "Quality Assurance", prompt: '"write a test with coverage..."', workType: "test_generation", stage: "linear", conf: 1.0, tokens: 34 },
+    { dept: "Manufacturing", prompt: '"analyze SPC defect data..."', workType: "defect_analysis", stage: "linear", conf: 1.0, tokens: 35 },
+    { dept: "Research & Development", prompt: '"summarize research literature..."', workType: "research_synthesis", stage: "linear", conf: 1.0, tokens: 33 },
+    { dept: "Engineering", prompt: '"asdf qwer zxcv poiuy"', workType: "unknown", stage: "unknown", conf: null, tokens: 36 },
+  ],
+
+  // Real work-type taxonomies seeded from manufacturing profile
+  workTypeTaxonomies: [
+    { dept: "Engineering", labels: ["code_review", "code_generation", "test_generation", "architecture_design", "hot_issue_resolution", "devops_automation", "dependency_upgrade"] },
+    { dept: "Manufacturing", labels: ["cnc_toolpath_optimization", "defect_analysis", "process_recipe_optimization", "predictive_maintenance", "spc_analysis", "quality_inspection"] },
+    { dept: "Quality Assurance", labels: ["test_generation", "defect_analysis", "cybersecurity_scan", "compliance_review", "spc_analysis"] },
+    { dept: "Supply Chain", labels: ["demand_forecasting", "route_optimization", "inventory_replenishment", "logistics_planning"] },
+    { dept: "Research & Development", labels: ["research_synthesis", "experiment_design", "patent_analysis", "material_research"] },
+  ],
+
+  // Real D7 classifier cascade stages
+  classifierCascade: [
+    { stage: "1", name: "Structural", mechanism: "model_id · agent type · tool calls · file extensions", cost: "$0", latency: "0ms", coverage: "~60%" },
+    { stage: "2", name: "Hash Cache", mechanism: "prompt-hash → label LRU (10K entries)", cost: "$0", latency: "ns", coverage: "repeats" },
+    { stage: "3", name: "Linear", mechanism: "keyword classifier per taxonomy", cost: "$0", latency: "µs", coverage: "F1 0.85-0.92" },
+    { stage: "4", name: "Embedding", mechanism: "centroid similarity (only on ambiguous tail)", cost: "$0", latency: "6-35ms", coverage: "low-conf fallback" },
+    { stage: "QA", name: "LLM Judge", mechanism: "sampled 1-5% · batch cron · NOT in hot path", cost: "1-5%", latency: "offline", coverage: "drift audit" },
+  ],
 };

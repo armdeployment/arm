@@ -1,6 +1,8 @@
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { slide } from "@remotion/transitions/slide";
 import { SceneIntro } from "./Scenes/SceneIntro";
+import { SceneProfiles } from "./Scenes/SceneProfiles";
+import { SceneWorkType } from "./Scenes/SceneWorkType";
 import { SceneNetwork } from "./Scenes/SceneNetwork";
 import { SceneWorkstations } from "./Scenes/SceneWorkstations";
 import { SceneServer } from "./Scenes/SceneServer";
@@ -16,6 +18,20 @@ export const ArmVideo: React.FC = () => {
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={3 * FPS} name="Intro">
         <SceneIntro />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
+      <TransitionSeries.Sequence durationInFrames={6 * FPS} name="Profiles">
+        <SceneProfiles />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
+      <TransitionSeries.Sequence durationInFrames={6 * FPS} name="WorkType">
+        <SceneWorkType />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
         presentation={slide({ direction: "from-left" })}
