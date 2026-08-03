@@ -205,4 +205,36 @@ export const manufacturingProfile: IndustryProfilePreset = {
     { key: "resources", label: "Resources", order: 9 },
     { key: "idp", label: "Identity Providers", order: 10 },
   ],
+
+  // ── Work-type taxonomies (D7) — per-department/per-plant label sets ──
+  workTypeTaxonomies: [
+    {
+      departmentName: "Engineering",
+      labels: [
+        "code_review", "code_generation", "test_generation", "architecture_design",
+        "hot_issue_resolution", "devops_automation", "dependency_upgrade",
+      ],
+    },
+    {
+      departmentName: "Manufacturing",
+      labels: [
+        "cnc_toolpath_optimization", "defect_analysis", "process_recipe_optimization",
+        "predictive_maintenance", "line_balance_analysis", "spc_analysis",
+        "cad_geometry_review", "quality_inspection",
+      ],
+      secondaryTagPresets: ["resource:mes", "resource:scada", "resource:plm"],
+    },
+    {
+      departmentName: "Quality Assurance",
+      labels: ["test_generation", "defect_analysis", "cybersecurity_scan", "compliance_review", "spc_analysis"],
+    },
+    {
+      departmentName: "Supply Chain",
+      labels: ["demand_forecasting", "route_optimization", "inventory_replenishment", "supplier_evaluation", "logistics_planning"],
+    },
+    {
+      departmentName: "Research & Development",
+      labels: ["research_synthesis", "experiment_design", "patent_analysis", "material_research"],
+    },
+  ],
 };

@@ -109,3 +109,16 @@ export const agentStatusEnum = pgEnum("agent_status", [
   "retired",
   "throttled",
 ]);
+
+/**
+ * Work-type classifier stage (D7). Tracks which cascade stage resolved the
+ * work-type tag for a prompt — enables re-labeling and gate-audit forensics.
+ * `unknown` is a first-class label: stored as-is, never guessed.
+ */
+export const workTypeStageEnum = pgEnum("work_type_stage", [
+  "structural",
+  "cache",
+  "linear",
+  "embedding",
+  "unknown",
+]);

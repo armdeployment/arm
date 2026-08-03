@@ -14,6 +14,15 @@ import { checkBoundaries } from "../src/checks/boundaries.js";
 import { checkSafeRender } from "../src/checks/safe-render.js";
 import { checkCISync, parseTableWorkflows } from "../src/checks/ci-sync.js";
 import { checkNoProfileBranching } from "../src/checks/no-profile-branching.js";
+import {
+  checkTaxonomyScope,
+  type TaxonomyRow,
+} from "../src/checks/taxonomy-scope.js";
+import {
+  checkWorkTypeUnknown,
+  UNKNOWN_THRESHOLD_PCT,
+  type ClassificationStats,
+} from "../src/checks/work-type-unknown.js";
 import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -272,5 +281,74 @@ describe("mutation proof: no-profile-branching (D6)", () => {
     const r = checkNoProfileBranching(clean);
     expect(r.assertsNegative).toBe(true);
     expect(r.scanned).toBe(clean.length);
+  });
+});
+
+describe("mutation proof: taxonomy-scope (D7)", () => {
+  const clean: TaxonomyRow[] = [
+    { tenantId: "tn1", scopeType: "department", scopeId: "dept_eng", labels: ["code_review", "test_gen"] },
+    { tenantId: "tn1", scopeType: "department", scopeId: "dept_mfg", labels: ["cnc_toolpath", "defect_analysis"] },
+  ];
+
+  it("FAILS when a WorkTypeTaxonomy row misses tenant_id", () => {
+    const broken: TaxonomyRow[] = [
+      ...clean,
+      { tenantId: null, scopeType: "department", scopeId: "dept_x", labels: ["x"] }, // mutation
+    ];
+    const r = checkTaxonomyScope(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("tenant_id");
+  });
+
+  it("FAILS when scope_type is null", () => {
+    const broken: TaxonomyRow[] = [
+      { tenantId: "tn1", scopeType: null, scopeId: "dept_x", labels: ["x"] }, // mutation
+    ];
+    const r = checkTaxonomyScope(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("scope_type");
+  });
+
+  it("FAILS when labels is empty", () => {
+    const broken: TaxonomyRow[] = [
+      { tenantId: "tn1", scopeType: "department", scopeId: "dept_x", labels: [] }, // mutation
+    ];
+    const r = checkTaxonomyScope(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("empty label set");
+  });
+
+  it("PASSES on clean taxonomy rows", () => {
+    expect(checkTaxonomyScope(clean).status).toBe("pass");
+  });
+});
+
+describe("mutation proof: work-type-unknown (D7)", () => {
+  const clean: ClassificationStats = {
+    labelCounts: { code_review: 60, test_generation: 30, hot_issue_resolution: 10 },
+    unknownCount: 5,
+  };
+
+  it("FAILS when unknown rate exceeds threshold", () => {
+    const broken: ClassificationStats = {
+      labelCounts: { code_review: 30, test_generation: 20 },
+      unknownCount: 40, // mutation — 44% unknown, ≥ threshold
+    };
+    const r = checkWorkTypeUnknown(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("unknown");
+  });
+
+  it("PASSES when unknown rate is below threshold", () => {
+    const r = checkWorkTypeUnknown(clean);
+    expect(r.status).toBe("pass");
+    expect(clean.unknownCount / (60 + 30 + 10 + 5)).toBeLessThan(UNKNOWN_THRESHOLD_PCT);
+  });
+
+  it("FAILS as VACUOUS when zero prompts observed (empty input = red)", () => {
+    const empty: ClassificationStats = { labelCounts: {}, unknownCount: 0 };
+    const r = checkWorkTypeUnknown(empty);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("vacuous");
   });
 });

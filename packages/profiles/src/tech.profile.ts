@@ -142,4 +142,24 @@ export const techProfile: IndustryProfilePreset = {
     { key: "resources", label: "Resources", order: 5 },
     { key: "idp", label: "Identity Providers", order: 6 },
   ],
+
+  // ── Work-type taxonomies (D7) — per-department label sets ──
+  workTypeTaxonomies: [
+    {
+      departmentName: "Engineering",
+      labels: [
+        "code_review", "code_generation", "test_generation", "hot_issue_resolution",
+        "incident_triage", "architecture_design", "devops_automation",
+        "dependency_upgrade", "pipeline_monitoring", "cybersecurity_scan",
+      ],
+      secondaryTagPresets: ["tool:web_search", "tool:code_search", "model:claude-sonnet"],
+    },
+    {
+      departmentName: "Product",
+      labels: ["documentation", "ux_optimization", "product_spec", "user_research", "roadmap_planning"],
+    },
+    { departmentName: "Sales", labels: ["outreach_drafting", "crm_update", "lead_research"] },
+    { departmentName: "Customer Success", labels: ["support_reply", "onboarding_guide", "ticket_triage"] },
+    { departmentName: "Marketing", labels: ["content_drafting", "seo_research", "campaign_analysis"] },
+  ],
 };

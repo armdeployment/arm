@@ -17,6 +17,7 @@ import { register, type CheckResult } from "../types.js";
 const LAYER: Record<string, number> = {
   proto: 0,
   profiles: 0,
+  classifier: 1, // depends on proto only (leaf, beside config)
   config: 1,
   db: 2,
   clickhouse: 2,

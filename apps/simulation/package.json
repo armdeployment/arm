@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "pg": "^8.13.0",
-    "@arm/profiles": "workspace:*"
+    "@arm/profiles": "workspace:*",
+    "@arm/classifier": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

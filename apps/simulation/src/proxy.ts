@@ -11,6 +11,7 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import pg from "pg";
 const { Client } = pg;
+import { classifyPrompt, type WorkTypeTaxonomy, type PromptFeatures } from "@arm/classifier";
 
 const PORT = parseInt(process.env.PROXY_PORT ?? "8787");
 const PG_URL = process.env.DATABASE_URL ?? "postgresql://arm:arm_dev_password@localhost:5432/arm";
@@ -40,10 +41,14 @@ function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)); }
 
 // ── ClickHouse Helpers ─────────────────────────────────────────────────────
 
-async function chInsert(table: string, values: Record<string, string | number>): Promise<void> {
+async function chInsert(table: string, values: Record<string, string | number | string[]>): Promise<void> {
   const cols = Object.keys(values).join(", ");
   const vals = Object.values(values).map(v => {
     if (typeof v === "number") return v;
+    if (Array.isArray(v)) {
+      // ClickHouse Array(String) format: ['tag1','tag2']
+      return `[${v.map(t => `'${String(t).replace(/'/g, "\\'")}'`).join(",")}]`;
+    }
     return `'${String(v).replace(/'/g, "\\'")}'`;
   }).join(", ");
   await fetch(`${CH_URL}/?query=${encodeURIComponent(`INSERT INTO ${table} (${cols}) VALUES`)}`, {
@@ -210,7 +215,10 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
       const data = await ollamaRes.json() as any;
       const usage = data.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
-    // 7. METER — calculate costs and write to ClickHouse
+    // 7. WORK-TYPE CLASSIFICATION (D7) — zero-LLM cascade, never blocks
+    const workType = await classifyWorkType(sa, effectiveModel, promptText);
+
+    // 8. METER — calculate costs and write to ClickHouse
     // Self-hosted models: actual_cost = $0, but cloud_equivalent is tracked for savings
     const modelInfo = await getModelCost(effectiveModel);
     const cloudCostCents = Math.ceil(
@@ -223,6 +231,10 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
       promptTokens: usage.prompt_tokens,
       completionTokens: usage.completion_tokens,
       actualCostCents,
+      workType: workType.workType,
+      usageTags: workType.usageTags,
+      classifierStage: workType.stage,
+      classifierConfidence: workType.confidence,
     });
 
     // Update department spend in Postgres (track cloud-equivalent cost
@@ -270,10 +282,70 @@ async function getModelCost(model: string): Promise<{ cloud_input: number; cloud
   return costs[model] ?? { cloud_input: 50, cloud_output: 150, kind: "self-hosted" };
 }
 
+// ── D7: Work-type classifier integration ─────────────────────────────────
+
+// Cached taxonomies: department name → WorkTypeTaxonomy. Loaded from the DB
+// `work_type_taxonomies` table (seeded by the profile at provisioning).
+let taxonomyCache: { map: Map<string, WorkTypeTaxonomy>; loadedAt: number } | null = null;
+const TAXONOMY_TTL_MS = 60_000;
+
+async function loadTaxonomies(): Promise<Map<string, WorkTypeTaxonomy>> {
+  const now = Date.now();
+  if (taxonomyCache && now - taxonomyCache.loadedAt < TAXONOMY_TTL_MS) {
+    return taxonomyCache.map;
+  }
+  await ensurePg();
+  const result = await pgQuery(
+    `SELECT name, labels, classifier_version FROM work_type_taxonomies WHERE tenant_id = 'tn_acme'`
+  );
+  const map = new Map<string, WorkTypeTaxonomy>();
+  for (const row of result.rows) {
+    map.set(row.name, {
+      scopeId: row.name,
+      scopeType: "department",
+      name: row.name,
+      labels: row.labels ?? [],
+      classifierVersion: row.classifier_version ?? "1",
+    });
+  }
+  taxonomyCache = { map, loadedAt: now };
+  return map;
+}
+
+/**
+ * Classify a prompt's work-type via the zero-LLM cascade (D7).
+ * Falls back to `unknown` if no taxonomy exists for the department — never throws.
+ */
+async function classifyWorkType(sa: any, modelId: string, promptText: string) {
+  try {
+    const taxonomies = await loadTaxonomies();
+    const taxonomy = taxonomies.get(sa.dept_name) ?? taxonomies.values().next().value;
+    if (!taxonomy) {
+      return { workType: "unknown", usageTags: [`model:${modelId}`], stage: "unknown" as const, confidence: null };
+    }
+    const features: PromptFeatures = {
+      promptText,
+      modelId,
+      agentType: sa.task_type,
+      taskType: sa.task_type,
+      departmentName: sa.dept_name,
+      priorityTier: sa.priority_tier,
+    };
+    const result = await classifyPrompt(features, taxonomy);
+    return result;
+  } catch {
+    return { workType: "unknown", usageTags: [`model:${modelId}`], stage: "unknown" as const, confidence: null };
+  }
+}
+
 async function meterEvent(
   sa: any, model: string, status: string, denyReason: string,
   totalTokens: number, cloudCostCents: number, t0: number,
-  extra?: { promptTokens: number; completionTokens: number; actualCostCents: number }
+  extra?: {
+    promptTokens: number; completionTokens: number; actualCostCents: number;
+    workType?: string; usageTags?: string[];
+    classifierStage?: string; classifierConfidence?: number | null;
+  }
 ): Promise<void> {
   const eventId = `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const actualCost = extra?.actualCostCents ?? 0;
@@ -289,6 +361,11 @@ async function meterEvent(
     kind: "self-hosted",
     task_type: sa.task_type,
     classification: sa.classification_clearance,
+    // D7 work-type tag (per-prompt, enforcement-ready)
+    work_type: extra?.workType ?? "",
+    usage_tags: extra?.usageTags ?? [],
+    classifier_stage: extra?.classifierStage ?? "unknown",
+    work_type_confidence: extra?.classifierConfidence ?? -1,
     prompt_tokens: extra?.promptTokens ?? 0,
     completion_tokens: extra?.completionTokens ?? 0,
     total_tokens: totalTokens,

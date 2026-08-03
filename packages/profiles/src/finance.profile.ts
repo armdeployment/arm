@@ -167,4 +167,33 @@ export const financeProfile: IndustryProfilePreset = {
     { key: "access", label: "Access Control", order: 7 },
     { key: "idp", label: "Identity Providers", order: 8 },
   ],
+
+  // ── Work-type taxonomies (D7) — per-desk label sets ──
+  workTypeTaxonomies: [
+    {
+      departmentName: "Trading",
+      labels: ["trade_analysis", "portfolio_optimization", "execution_strategy", "alpha_research", "position_rebalance"],
+      secondaryTagPresets: ["resource:trading_system", "resource:bloomberg"],
+    },
+    {
+      departmentName: "Risk Management",
+      labels: ["risk_assessment", "stress_test", "limit_review", "var_computation", "exposure_analysis"],
+    },
+    {
+      departmentName: "Compliance",
+      labels: ["compliance_review", "regulatory_reporting", "policy_review", "mnpi_screening", "trade_surveillance"],
+    },
+    {
+      departmentName: "Quantitative Research",
+      labels: ["quant_research", "model_backtest", "factor_analysis", "sharpe_optimization", "signal_research"],
+    },
+    {
+      departmentName: "Operations",
+      labels: ["reconciliation", "settlement_check", "break_investigation", "t_plus_1_resolution"],
+    },
+    {
+      departmentName: "Audit",
+      labels: ["audit_trail_analysis", "forensic_review", "control_testing", "finding_documentation"],
+    },
+  ],
 };

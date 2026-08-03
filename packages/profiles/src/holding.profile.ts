@@ -204,4 +204,28 @@ export const holdingProfile: IndustryProfilePreset = {
     { key: "resources", label: "Resources", order: 8 },
     { key: "idp", label: "Identity Providers", order: 9 },
   ],
+
+  // ── Work-type taxonomies (D7) — per-subsidiary label sets ──
+  workTypeTaxonomies: [
+    {
+      departmentName: "Corporate (Parent)",
+      labels: ["financial_consolidation", "board_reporting", "ma_legal_review", "treasury_analysis", "investor_relations"],
+    },
+    {
+      departmentName: "Subsidiary: Tech Division",
+      labels: ["code_review", "devops_automation", "architecture_design", "incident_triage", "dependency_upgrade"],
+    },
+    {
+      departmentName: "Subsidiary: Manufacturing Division",
+      labels: ["cnc_toolpath_optimization", "defect_analysis", "predictive_maintenance", "quality_inspection", "demand_forecasting"],
+    },
+    {
+      departmentName: "Subsidiary: Finance Division",
+      labels: ["risk_assessment", "trade_analysis", "compliance_review", "reconciliation", "regulatory_reporting"],
+    },
+    {
+      departmentName: "Shared Services",
+      labels: ["it_governance", "audit_trail_analysis", "access_review", "policy_review", "cybersecurity_scan"],
+    },
+  ],
 };

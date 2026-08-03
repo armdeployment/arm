@@ -16,6 +16,19 @@ import { z } from "zod";
 export const tokenUsageSourceSchema = z.enum(["proxy", "gateway", "plugin", "billing_api"]);
 export type TokenUsageSource = z.infer<typeof tokenUsageSourceSchema>;
 
+/**
+ * Work-type classifier stage (D7). Tracks which cascade stage resolved the
+ * work-type tag. `unknown` is first-class: stored as-is, never guessed.
+ */
+export const workTypeStageSchema = z.enum([
+  "structural",
+  "cache",
+  "linear",
+  "embedding",
+  "unknown",
+]);
+export type WorkTypeStage = z.infer<typeof workTypeStageSchema>;
+
 export const tokenUsageEventSchema = z.object({
   ts: z.string().datetime({ local: true }),
   tenant_id: z.string().min(1),
@@ -27,6 +40,18 @@ export const tokenUsageEventSchema = z.object({
   output_tokens: z.number().int().nonnegative(),
   cost_usd: z.number().nonnegative(),
   source: tokenUsageSourceSchema,
+  // ── D7 work-type tag (per-prompt, enforcement-ready) ──
+  /** Primary work-type label from the agent's department taxonomy. NULL until
+   *  resolved / `unknown` is stored as-is, never guessed. */
+  work_type: z.string().nullable().default(null),
+  /** Secondary structural tags (≤5): tool names, model ids, etc. */
+  usage_tags: z.array(z.string()).max(5).default([]),
+  /** Monotonic taxonomy version enabling re-labeling after taxonomy edits. */
+  classifier_version: z.string().default("1"),
+  /** Which cascade stage resolved the label (audit + gate forensics). */
+  classifier_stage: workTypeStageSchema.default("unknown"),
+  /** Confidence 0–1 (stage-dependent). NULL for `unknown`. */
+  work_type_confidence: z.number().min(0).max(1).nullable().default(null),
 });
 
 export type TokenUsageEvent = z.infer<typeof tokenUsageEventSchema>;

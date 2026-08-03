@@ -109,6 +109,7 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
       { key: "spend", label: "Spend Overview", order: 0 },
       { key: "agents", label: "Agent Fleet", order: 1 },
     ],
+    workTypeTaxonomies: [],
   };
 }
 

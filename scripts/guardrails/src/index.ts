@@ -10,6 +10,8 @@ import "./checks/boundaries.js";
 import "./checks/safe-render.js";
 import "./checks/ci-sync.js";
 import "./checks/no-profile-branching.js";
+import "./checks/taxonomy-scope.js";
+import "./checks/work-type-unknown.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -19,3 +21,9 @@ export { checkBoundaries } from "./checks/boundaries.js";
 export { checkSafeRender } from "./checks/safe-render.js";
 export { checkCISync, parseTableWorkflows } from "./checks/ci-sync.js";
 export { checkNoProfileBranching } from "./checks/no-profile-branching.js";
+export { checkTaxonomyScope, type TaxonomyRow } from "./checks/taxonomy-scope.js";
+export {
+  checkWorkTypeUnknown,
+  UNKNOWN_THRESHOLD_PCT,
+  type ClassificationStats,
+} from "./checks/work-type-unknown.js";

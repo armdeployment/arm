@@ -13,7 +13,13 @@ CREATE TABLE IF NOT EXISTS token_usage_event (
   input_tokens    UInt64,
   output_tokens   UInt64,
   cost_usd        Decimal(12,6),
-  source          Enum('proxy','gateway','plugin','billing_api')
+  source          Enum('proxy','gateway','plugin','billing_api'),
+  -- D7 work-type tag (per-prompt, enforcement-ready; NULL until resolved / unknown as-is)
+  work_type               LowCardinality(String) DEFAULT '',
+  usage_tags              Array(LowCardinality(String)) DEFAULT [],
+  classifier_version      LowCardinality(String) DEFAULT '1',
+  classifier_stage        Enum('structural','cache','linear','embedding','unknown') DEFAULT 'unknown',
+  work_type_confidence    Float32 DEFAULT -1
 ) PARTITION BY (tenant_id, toYYYYMM(ts))
   ORDER BY (tenant_id, ts);
 

@@ -34,7 +34,7 @@ const CH_AUTH = "arm:arm_dev_password";
 
 const PG_SCHEMA = `
 -- Clean slate
-DROP TABLE IF EXISTS management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, dlp_patterns, classification_levels, tenants CASCADE;
+DROP TABLE IF EXISTS management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, dlp_patterns, classification_levels, work_type_taxonomies, tenants CASCADE;
 
 CREATE TABLE tenants (
   id TEXT PRIMARY KEY,
@@ -63,6 +63,17 @@ CREATE TABLE dlp_patterns (
   severity TEXT NOT NULL,
   category TEXT NOT NULL,
   enabled BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE work_type_taxonomies (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(id),
+  scope_type TEXT NOT NULL DEFAULT 'department',
+  scope_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  labels TEXT[] NOT NULL DEFAULT '{}',
+  classifier_version TEXT NOT NULL DEFAULT '1',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE departments (
@@ -158,6 +169,11 @@ CREATE TABLE IF NOT EXISTS arm.llm_events (
   kind String,
   task_type String,
   classification String,
+  -- D7 work-type tag (per-prompt, enforcement-ready)
+  work_type LowCardinality(String) DEFAULT '',
+  usage_tags Array(String) DEFAULT [],
+  classifier_stage LowCardinality(String) DEFAULT 'unknown',
+  work_type_confidence Float32 DEFAULT -1,
   prompt_tokens UInt32,
   completion_tokens UInt32,
   total_tokens UInt32,
@@ -298,6 +314,17 @@ async function main() {
     );
   }
 
+  // ── Work-type taxonomies (from profile — per-department label sets, D7) ──
+  for (const tax of profile.workTypeTaxonomies) {
+    const deptId = deptIdFromName(tax.departmentName);
+    const id = `tax_${deptId}`;
+    await pgClient.query(
+      `INSERT INTO work_type_taxonomies (id, tenant_id, scope_type, scope_id, name, labels, classifier_version)
+       VALUES ($1, $2, 'department', $3, $4, $5, '1') ON CONFLICT (id) DO NOTHING`,
+      [id, TENANT_ID, deptId, tax.departmentName, tax.labels]
+    );
+  }
+
   // ── Departments (from profile orgTree defaults) ──
   for (const dept of profile.orgTree.defaultDepartments) {
     const id = deptIdFromName(dept.name);
@@ -365,7 +392,8 @@ async function main() {
   const agentCount = await pgClient.query("SELECT count(*) as c FROM agents");
   const deptCount = await pgClient.query("SELECT count(*) as c FROM departments");
   const dlpCount = await pgClient.query("SELECT count(*) as c FROM dlp_patterns");
-  console.log(`  ✓ Postgres: 1 tenant (${PROFILE_ID}), ${deptCount.rows[0].c} depts, ${agentCount.rows[0].c} agents, ${dlpCount.rows[0].c} DLP patterns`);
+  const taxCount = await pgClient.query("SELECT count(*) as c FROM work_type_taxonomies");
+  console.log(`  ✓ Postgres: 1 tenant (${PROFILE_ID}), ${deptCount.rows[0].c} depts, ${agentCount.rows[0].c} agents, ${dlpCount.rows[0].c} DLP patterns, ${taxCount.rows[0].c} work-type taxonomies`);
 
   await pgClient.end();
 

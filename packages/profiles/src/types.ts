@@ -154,6 +154,22 @@ export interface UIPanelDef {
   order: number;
 }
 
+// ── Work-type taxonomies (D7) ───────────────────────────────────────────────
+
+/**
+ * Per-department work-type label set (D7). Provisioned as `WorkTypeTaxonomy`
+ * rows keyed by the agent's department scope. The classifier picks from
+ * `labels`; `unknown` is first-class.
+ */
+export interface WorkTypeTaxonomySeed {
+  /** Department name this taxonomy applies to (matches a defaultDepartment). */
+  departmentName: string;
+  /** Ordered primary labels the classifier picks from. */
+  labels: string[];
+  /** Optional secondary structural-tag presets. */
+  secondaryTagPresets?: string[];
+}
+
 // ── Resource types ─────────────────────────────────────────────────────────
 
 /**
@@ -190,4 +206,6 @@ export interface IndustryProfilePreset {
   stakeholderRouting: StakeholderRouting;
   seedAgents: SeedAgentDef[];
   uiPanels: UIPanelDef[];
+  /** Per-department work-type taxonomies (D7). */
+  workTypeTaxonomies: WorkTypeTaxonomySeed[];
 }
