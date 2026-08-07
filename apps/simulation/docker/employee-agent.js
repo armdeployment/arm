@@ -20,37 +20,37 @@ const START_DELAY = parseInt(process.env.START_DELAY || "0");
 
 const TASKS = {
   code_review: [
-    "Review this function for memory leaks: async function process(items) { return items.map(async i => await fetch(i.url)); }",
-    "Check this SQL for injection: SELECT * FROM users WHERE name = '" + "input" + "'",
-    "Analyze this React component for re-render issues: const C = ({d}) => { const s = d.sort(); return <List items={s}/> }",
+    "Review this pull request diff for memory leaks: async function process(items) { return items.map(async i => await fetch(i.url)); } — flag merge blockers and lint issues.",
+    "Code review: check this SQL query for injection risks before merge. The diff adds a dynamic WHERE clause. PR #452.",
+    "Review this React component diff for re-render issues: const C = ({d}) => { const s = d.sort(); return <List items={s}/> } — any hotfix needed before merge?",
   ],
   documentation: [
-    "Write API docs for: POST /api/v1/agents - Creates a new agent. Body: {name, type, department_id}",
-    "Generate release notes for v2.0: Added budget enforcement, DLP scanning, model routing.",
+    "Write API docs and README section for: POST /api/v1/agents - Creates a new agent. Body: {name, type, department_id}. Include examples and comments.",
+    "Generate release notes and explain the v2.0 changes: Added budget enforcement, DLP scanning, model routing. Document each feature for the guide.",
   ],
   cnc_toolpath: [
-    "Optimize CNC toolpath for milling aluminum bracket: reduce cycle time, maintain Ra 1.6.",
-    "Calculate feed rate for 6mm carbide endmill cutting steel at 5000 RPM, 0.5mm depth.",
+    "Review this CNC toolpath optimization strategy for the aluminum bracket, compare roughing and finishing passes for machining efficiency.",
+    "Calculate feed rate for 6mm carbide endmill cutting steel at 5000 RPM, 0.5mm depth. Tune the toolpath for spindle load.",
   ],
   defect_analysis: [
-    "Analyze defect pattern: 3.2% failure rate on assembly line B, primarily weld joints.",
-    "SPC: last 50 samples show Cpk of 1.1 (target 1.33). Corrective actions needed?",
+    "Analyze defect pattern: 3.2% failure rate on assembly line B, primarily weld joints. Run SPC analysis and check tolerance/yield.",
+    "SPC: last 50 samples show Cpk of 1.1 (target 1.33). Defect inspection needed — check quality rejects and tolerance drift.",
   ],
   test_generation: [
-    "Generate unit tests for: function calculateBudget(spend, limit) { return spend > limit ? 0 : limit - spend; }",
-    "Write integration tests for OAuth2 authentication flow.",
+    "Generate unit tests with coverage for: function calculateBudget(spend, limit) { return spend > limit ? 0 : limit - spend; } — add asserts and edge case specs.",
+    "Write integration tests for OAuth2 authentication flow with mocks and fixtures. Add test specs with coverage assertions.",
   ],
   security_scan: [
-    "Check if this is secure: const apiKey = 'sk-ant-api03-abc123def456ghi789';",
-    "Scan for OWASP Top 10: const query = `SELECT * FROM users WHERE id = ${req.params.id}`;",
+    "Vulnerability scan: check if this is secure — const apiKey = 'sk-ant-api03-abc123def456ghi789'; flag CVEs and exploit risk.",
+    "Security scan for OWASP Top 10: const query = `SELECT * FROM users WHERE id = ${req.params.id}`; check CVE exposure and injection.",
   ],
   demand_forecast: [
-    "Forecast Q3 demand: Q1=12000, Q2=15000, trend=+15% QoQ.",
-    "Calculate safety stock: 500 units/week avg demand, 2-week lead time.",
+    "Forecast Q3 demand and inventory planning: Q1=12000, Q2=15000, trend=+15% QoQ. Recommend reorder points and stock levels.",
+    "Calculate safety stock for supply planning: 500 units/week avg demand, 2-week lead time. Forecast reorder quantity.",
   ],
   research: [
-    "Summarize advances in additive manufacturing for aerospace titanium.",
-    "Compare graphene composites vs carbon fiber for automotive applications.",
+    "Research and summarize advances in additive manufacturing for aerospace titanium. Survey literature and synthesize key findings.",
+    "Research: compare graphene composites vs carbon fiber for automotive applications. Summarize and synthesize the literature.",
   ],
 };
 

@@ -35,7 +35,7 @@ const CH_AUTH = "arm:arm_dev_password";
 
 const PG_SCHEMA = `
 -- Clean slate
-DROP TABLE IF EXISTS management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, dlp_patterns, classification_levels, work_type_taxonomies, tenants CASCADE;
+DROP TABLE IF EXISTS org_mutation_log, user_roles, roles, management_decisions, policy_decisions, sub_accounts, agents, users, departments, models, dlp_patterns, classification_levels, work_type_taxonomies, tenants CASCADE;
 
 CREATE TABLE tenants (
   id TEXT PRIMARY KEY,

@@ -310,6 +310,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       labels: [
         "code_review", "code_generation", "test_generation", "architecture_design",
         "hot_issue_resolution", "devops_automation", "dependency_upgrade",
+        "documentation",
       ],
     },
     {
@@ -326,12 +327,16 @@ export const manufacturingProfile: IndustryProfilePreset = {
       labels: ["test_generation", "defect_analysis", "cybersecurity_scan", "compliance_review", "spc_analysis"],
     },
     {
-      departmentName: "Supply Chain",
+      departmentName: "Procurement & Supply Chain",
       labels: ["demand_forecasting", "route_optimization", "inventory_replenishment", "supplier_evaluation", "logistics_planning"],
     },
     {
       departmentName: "Research & Development",
       labels: ["research_synthesis", "experiment_design", "patent_analysis", "material_research"],
+    },
+    {
+      departmentName: "Maintenance",
+      labels: ["cybersecurity_scan", "predictive_maintenance", "compliance_review", "hot_issue_resolution"],
     },
   ],
 };

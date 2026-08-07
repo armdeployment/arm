@@ -1,3 +1,3 @@
-import { config } from "@remotion/eslint-config-flat";
+import { remotionFlatConfig } from "@remotion/eslint-config-flat";
 
-export default config;
+export default remotionFlatConfig({ react: true });

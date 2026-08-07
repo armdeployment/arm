@@ -218,6 +218,12 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
     // 7. WORK-TYPE CLASSIFICATION (D7) — zero-LLM cascade, never blocks
     const workType = await classifyWorkType(sa, effectiveModel, promptText);
 
+    // Surface the D7 classification live (real tagging shown in proxy logs)
+    console.log(
+      `  🏷  [${sa.dept_name}] ${sa.agent_name} → ${workType.workType} ` +
+      `(stage=${workType.stage}, conf=${workType.confidence ?? "-"})`
+    );
+
     // 8. METER — calculate costs and write to ClickHouse
     // Self-hosted models: actual_cost = $0, but cloud_equivalent is tracked for savings
     const modelInfo = await getModelCost(effectiveModel);

@@ -32,7 +32,7 @@ echo "  ✓ ClickHouse ready"
 
 # ── Initialize database ──
 echo "▸ Initializing database schema + seed data..."
-node_modules/.bin/tsx src/db-init.ts
+node src/db-init.mjs
 echo ""
 
 # ── Pre-warm Ollama models (using node fetch — curl not in alpine) ──
@@ -61,4 +61,4 @@ echo "▸ Starting ARM data-plane proxy on :8787..."
 echo "  Internal: http://arm.armtest.com:8787"
 echo "  Upstream: ${OLLAMA_URL}"
 echo ""
-exec node_modules/.bin/tsx src/proxy.ts
+exec node src/proxy.mjs

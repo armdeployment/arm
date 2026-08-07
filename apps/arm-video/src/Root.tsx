@@ -1,5 +1,7 @@
 import { Composition, Folder } from "remotion";
 import { ArmVideo } from "./ArmVideo";
+import { ArmVideo1 } from "./ArmVideo1";
+import { ArmVideo2 } from "./ArmVideo2";
 import { SceneIntro } from "./Scenes/SceneIntro";
 import { SceneProfiles } from "./Scenes/SceneProfiles";
 import { SceneWorkType } from "./Scenes/SceneWorkType";
@@ -22,17 +24,17 @@ const D = {
 };
 const T = 12; // transition overlap frames
 
-// Total = sum of all sequences + transitions (transitions overlap, adding T each)
+// ── CORRECT TransitionSeries duration math ────────────────────────────────
+// Remotion's TransitionSeries shifts each sequence BACK by the previous
+// transition's duration (actualStartFrame = currentStartFrame + transitionOffsets
+// − transitionDuration). So the total visible content =
+//   sum(sequence durations) − sum(transition durations)
+// NOT sum + transitions (that leaves a black tail at the end).
+// Verified empirically with a 3-color probe composition.
 const totalFrames =
-  D.intro * FPS + T +
-  D.profiles * FPS + T +
-  D.workType * FPS + T +
-  D.network * FPS + T +
-  D.workstations * FPS + T +
-  D.server * FPS + T +
-  D.blocking * FPS + T +
-  D.dashboard * FPS + T +
-  D.outro * FPS;
+  (D.intro + D.profiles + D.workType + D.network + D.workstations +
+   D.server + D.blocking + D.dashboard + D.outro) * FPS -
+  8 * T;
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -52,6 +54,22 @@ export const RemotionRoot: React.FC = () => {
         id="ArmVideo"
         component={ArmVideo}
         durationInFrames={totalFrames}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      <Composition
+        id="ArmVideo1-Tagged"
+        component={ArmVideo1}
+        durationInFrames={(4 + 8 + 8 + 8) * FPS - 3 * T}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      <Composition
+        id="ArmVideo2-Structures"
+        component={ArmVideo2}
+        durationInFrames={(4 + 8 + 7 + 7) * FPS - 3 * T}
         fps={FPS}
         width={W}
         height={H}
