@@ -22,3 +22,6 @@ apps/control-plane/web/.next/
 .gstack/
 demo/arm-demo.mp4
 skills-lock.json
+
+# arm-video Remotion build output
+apps/arm-video/build/
