@@ -77,7 +77,7 @@ export const SceneV1Terminals: React.FC = () => {
         <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
           Step 1 · Employees at Work
         </div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, letterSpacing: -0.5 }}>
+        <div style={{ fontSize: 30, fontWeight: 700, color: COLORS.text, letterSpacing: -0.5 }}>
           Real Coding Agents on the Factory Floor
         </div>
       </div>
@@ -103,12 +103,12 @@ export const SceneV1Terminals: React.FC = () => {
                 <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.red }} />
                 <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.goldLight }} />
                 <span style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.greenDark }} />
-                <span style={{ fontSize: 9, color: COLORS.textDarkMuted, marginLeft: 6, fontFamily: FONT_MONO }}>
+                <span style={{ fontSize: 11, color: COLORS.textDarkMuted, marginLeft: 6, fontFamily: FONT_MONO }}>
                   {emp.name.split(" ")[0].toLowerCase()}@arm-ws — {emp.agent}
                 </span>
               </div>
               {/* Terminal body — typewriter effect */}
-              <div style={{ padding: "8px 10px", fontFamily: FONT_MONO, fontSize: 8.5, lineHeight: 1.7, minHeight: 170 }}>
+              <div style={{ padding: "10px 12px", fontFamily: FONT_MONO, fontSize: 11.5, lineHeight: 1.75, minHeight: 200 }}>
                 {lines.map((line, li) => {
                   const lineStart = 12 + i * 4 + li * 6;
                   const shown = interpolate(frame, [lineStart, lineStart + 4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });

@@ -44,9 +44,9 @@ export const SceneV1Intro: React.FC = () => {
               backgroundColor: COLORS.slate800, borderRadius: 8, border: `1px solid ${COLORS.borderDark}`,
               padding: "10px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.white }}>{emp.name.split(" ")[0]}</div>
-              <div style={{ fontSize: 9, color: emp.color, fontFamily: FONT_MONO }}>{emp.agent}</div>
-              <div style={{ fontSize: 8, color: COLORS.textDarkMuted }}>{emp.dept}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.white }}>{emp.name.split(" ")[0]}</div>
+              <div style={{ fontSize: 11, color: emp.color, fontFamily: FONT_MONO }}>{emp.agent}</div>
+              <div style={{ fontSize: 10, color: COLORS.textDarkMuted }}>{emp.dept}</div>
             </div>
           );
         })}

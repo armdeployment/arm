@@ -19,10 +19,10 @@ export const SceneV2OrgTrees: React.FC = () => {
         opacity: titleAppear, transform: `translateY(${titleY}px)`,
         textAlign: "center", marginBottom: 18,
       }}>
-        <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: COLORS.gold, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
           Provisioning · Choose Your Structure
         </div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, letterSpacing: -0.5 }}>
+        <div style={{ fontSize: 30, fontWeight: 700, color: COLORS.text, letterSpacing: -0.5 }}>
           Real Org Trees, Real Hierarchies
         </div>
       </div>
@@ -43,10 +43,10 @@ export const SceneV2OrgTrees: React.FC = () => {
             }}>
               {/* Header */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8, borderBottom: `1px solid ${COLORS.border}` }}>
-                <span style={{ fontSize: 22 }}>{p.icon}</span>
+                <span style={{ fontSize: 26 }}>{p.icon}</span>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{p.label.split(" / ")[0]}</div>
-                  <div style={{ fontSize: 8.5, fontFamily: FONT_MONO, color: COLORS.gold }}>{p.treeSummary}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{p.label.split(" / ")[0]}</div>
+                  <div style={{ fontSize: 10.5, fontFamily: FONT_MONO, color: COLORS.gold }}>{p.treeSummary}</div>
                 </div>
               </div>
 
@@ -61,25 +61,25 @@ export const SceneV2OrgTrees: React.FC = () => {
                       display: "flex", alignItems: "center", gap: 5,
                       padding: "3px 6px", borderRadius: 4,
                       backgroundColor: isContainer ? COLORS.bg : "transparent",
-                      fontSize: 9.5,
+                      fontSize: 12,
                     }}>
-                      <span style={{ fontSize: 11 }}>{node.icon}</span>
+                      <span style={{ fontSize: 14 }}>{node.icon}</span>
                       <span style={{ fontWeight: isContainer ? 700 : 400, color: node.color, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {node.name}
                       </span>
                       {node.location && (
-                        <span style={{ fontSize: 7.5, color: COLORS.textMuted, whiteSpace: "nowrap" }}>📍 {node.location.split(",")[0]}</span>
+                        <span style={{ fontSize: 9.5, color: COLORS.textMuted, whiteSpace: "nowrap" }}>📍 {node.location.split(",")[0]}</span>
                       )}
                       {node.tag && (
                         <span style={{
-                          fontSize: 6.5, fontFamily: FONT_MONO, fontWeight: 700,
+                          fontSize: 10, fontFamily: FONT_MONO, fontWeight: 700,
                           color: COLORS.red, backgroundColor: "rgba(220,38,38,0.08)",
-                          padding: "1px 3px", borderRadius: 2,
+                          padding: "2px 4px", borderRadius: 3,
                         }}>
                           {node.tag}
                         </span>
                       )}
-                      <span style={{ fontSize: 7.5, fontFamily: FONT_MONO, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{node.budget}</span>
+                      <span style={{ fontSize: 9.5, fontFamily: FONT_MONO, color: COLORS.textMuted, whiteSpace: "nowrap" }}>{node.budget}</span>
                     </div>
                   );
                 })}
@@ -92,14 +92,14 @@ export const SceneV2OrgTrees: React.FC = () => {
                     flex: 1, backgroundColor: COLORS.bg, borderRadius: 4, padding: "4px 6px",
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
                   }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.navy, fontFamily: FONT_MONO }}>{s.value}</div>
-                    <div style={{ fontSize: 6.5, color: COLORS.textMuted }}>{s.label}</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: COLORS.navy, fontFamily: FONT_MONO }}>{s.value}</div>
+                    <div style={{ fontSize: 10, color: COLORS.textMuted }}>{s.label}</div>
                   </div>
                 ))}
               </div>
 
               {isHolding && (
-                <div style={{ fontSize: 7.5, color: COLORS.textMuted, fontStyle: "italic" }}>
+                <div style={{ fontSize: 9.5, color: COLORS.textMuted, fontStyle: "italic" }}>
                   Each subsidiary runs its own profile · Chinese walls by default
                 </div>
               )}
