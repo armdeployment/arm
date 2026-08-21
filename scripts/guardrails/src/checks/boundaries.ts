@@ -5,8 +5,8 @@
  *   proto → config → {db, clickhouse, policy, billing, auth} → trpc → apps/*
  *
  * Plus the data-plane trust boundary (AGENTS.md):
- *   data-plane apps import proto/config ONLY — never control-plane-only packages
- *   (db, trpc, policy, auth, billing).
+ *   data-plane apps import proto/config/client-core ONLY — never
+ *   control-plane-only packages (db, trpc, policy, auth, billing, catalog).
  *
  * Scans static `import ... from "@arm/..."` statements in source files.
  */
@@ -19,16 +19,18 @@ const LAYER: Record<string, number> = {
   profiles: 0,
   classifier: 1, // depends on proto only (leaf, beside config)
   config: 1,
+  "client-core": 1, // shared proto/config layer — client-side code, importable by data-plane apps
   db: 2,
   clickhouse: 2,
   policy: 2,
   billing: 2,
   auth: 2,
+  catalog: 2, // control-plane catalog (sits beside db/policy — never importable by data-plane)
   trpc: 3,
 };
 
 /** Packages forbidden to data-plane apps regardless of layer (AGENTS.md trust boundary). */
-const CONTROL_PLANE_ONLY = new Set(["db", "trpc", "policy", "auth", "billing"]);
+const CONTROL_PLANE_ONLY = new Set(["db", "trpc", "policy", "auth", "billing", "catalog"]);
 
 export interface BoundaryViolation {
   from: string;

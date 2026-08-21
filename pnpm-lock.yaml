@@ -87,6 +87,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@arm/client-core':
+        specifier: workspace:*
+        version: link:../../packages/client-core
       '@arm/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -100,6 +103,9 @@ importers:
       '@types/node':
         specifier: 26.1.1
         version: 26.1.1
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
 
   apps/control-plane/api:
     dependencies:
@@ -250,12 +256,22 @@ importers:
 
   apps/data-plane/plugin-ingest:
     dependencies:
+      '@arm/client-core':
+        specifier: workspace:*
+        version: link:../../../packages/client-core
       '@arm/config':
         specifier: workspace:*
         version: link:../../../packages/config
       '@arm/proto':
         specifier: workspace:*
         version: link:../../../packages/proto
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
 
   apps/data-plane/proxy:
     dependencies:
@@ -367,6 +383,25 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
 
+  packages/catalog:
+    dependencies:
+      '@arm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@arm/db':
+        specifier: workspace:*
+        version: link:../db
+      '@arm/proto':
+        specifier: workspace:*
+        version: link:../proto
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+
   packages/classifier:
     dependencies:
       '@arm/proto':
@@ -386,6 +421,25 @@ importers:
       '@types/node':
         specifier: 26.1.1
         version: 26.1.1
+
+  packages/client-core:
+    dependencies:
+      '@arm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@arm/proto':
+        specifier: workspace:*
+        version: link:../proto
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
 
   packages/config:
     dependencies:
@@ -459,6 +513,9 @@ importers:
       '@arm/auth':
         specifier: workspace:*
         version: link:../auth
+      '@arm/catalog':
+        specifier: workspace:*
+        version: link:../catalog
       '@arm/config':
         specifier: workspace:*
         version: link:../config
@@ -487,6 +544,9 @@ importers:
 
   scripts/guardrails:
     dependencies:
+      '@arm/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
       '@arm/clickhouse':
         specifier: workspace:*
         version: link:../../packages/clickhouse

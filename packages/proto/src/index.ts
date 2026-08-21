@@ -52,6 +52,19 @@ export const tokenUsageEventSchema = z.object({
   classifier_stage: workTypeStageSchema.default("unknown"),
   /** Confidence 0–1 (stage-dependent). NULL for `unknown`. */
   work_type_confidence: z.number().min(0).max(1).nullable().default(null),
+  // ── D9 work-package attribution (additive; NULL for un-packaged traffic) ──
+  /** Work Package id the call is attributed to (NULL = bare agent). */
+  package_id: z.string().nullable().default(null),
+  /** Pinned package version id — audit + upgrade forensics. */
+  package_version_id: z.string().nullable().default(null),
+  /** Agentic steps consumed by the enclosing task (loop-cap telemetry). */
+  steps: z.number().int().nonnegative().default(0),
+  /** Tool calls emitted by the agent (tool-gate + minimization telemetry). */
+  tool_calls: z.number().int().nonnegative().default(0),
+  /** Prompt-cache read tokens (cache-hit accounting, D9 §moat). */
+  cache_read_tokens: z.number().int().nonnegative().default(0),
+  /** Semantic-cache hit (1/0) — version-keyed per doc corpus. */
+  semantic_cache_hit: z.number().int().min(0).max(1).default(0),
 });
 
 export type TokenUsageEvent = z.infer<typeof tokenUsageEventSchema>;
@@ -73,6 +86,95 @@ export const accessAuditEventSchema = z.object({
 });
 
 export type AccessAuditEvent = z.infer<typeof accessAuditEventSchema>;
+
+// ── D9 Work Packages (spec §4.1 delta, docs/solutions/2026-08-13-d9-work-packages.md) ──
+
+export const toolKindSchema = z.enum(["mcp", "http_api", "cli", "connector"]);
+export type ToolKind = z.infer<typeof toolKindSchema>;
+
+export const toolReviewStatusSchema = z.enum(["draft", "in_review", "approved", "rejected", "deprecated"]);
+export type ToolReviewStatus = z.infer<typeof toolReviewStatusSchema>;
+
+export const toolSchema = z.object({
+  id: z.string().uuid(),
+  tenant_id: z.string().uuid(),
+  name: z.string().min(1),
+  kind: toolKindSchema,
+  endpoint: z.string().min(1),
+  auth_strategy: z.enum(["oauth", "pat", "service_account", "none"]),
+  /** Data classification the tool may touch — feeds the D2 classification gate. */
+  data_classification: z.enum(["public", "internal", "confidential", "restricted"]),
+  owner_user_id: z.string().uuid(),
+  review_status: toolReviewStatusSchema,
+});
+
+export const toolVersionSchema = z.object({
+  id: z.string().uuid(),
+  tool_id: z.string().uuid(),
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  /** Content hash of the manifest — packages pin exact versions. */
+  manifest_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  config_schema: z.record(z.string(), z.unknown()).default({}),
+  changelog: z.string().default(""),
+});
+
+export const workPackageModeSchema = z.enum(["automated", "copilot"]);
+export type WorkPackageMode = z.infer<typeof workPackageModeSchema>;
+
+export const workPackageSchema = z.object({
+  id: z.string().uuid(),
+  tenant_id: z.string().uuid(),
+  role_key: z.string().regex(/^[a-z0-9_]+$/),
+  name: z.string().min(1),
+  family: z.string().min(1),
+  mode: workPackageModeSchema,
+  description: z.string().default(""),
+});
+
+export const workPackageToolRefSchema = z.object({
+  tool_id: z.string().uuid(),
+  tool_version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  scopes: z.array(z.string()).default([]),
+});
+
+export const workPackageVersionSchema = z.object({
+  id: z.string().uuid(),
+  package_id: z.string().uuid(),
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  tools: z.array(workPackageToolRefSchema).default([]),
+  skills: z.array(z.string()).default([]),
+  subagent_configs: z.array(z.string()).default([]),
+  permissions: z.array(z.string()).default([]),
+  model_routing: z.record(z.string(), z.unknown()).default({}),
+  budget_template: z.record(z.string(), z.unknown()).default({}),
+  starter_prompts: z.array(z.string()).default([]),
+  template_refs: z.array(z.string()).default([]),
+  min_agent_version: z.string().default("0.0.0"),
+  /** sha256 over the canonical manifest JSON — config-tamper detection. */
+  manifest_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+export const packageAssignmentStatusSchema = z.enum(["requested", "approved", "active", "revoked"]);
+export type PackageAssignmentStatus = z.infer<typeof packageAssignmentStatusSchema>;
+
+export const packageAssignmentSchema = z.object({
+  id: z.string().uuid(),
+  tenant_id: z.string().uuid(),
+  package_version_id: z.string().uuid(),
+  assignee_type: z.enum(["user", "agent", "org_node"]),
+  assignee_id: z.string().uuid(),
+  status: packageAssignmentStatusSchema,
+  approver_user_id: z.string().uuid().nullable().default(null),
+  approved_at: z.string().datetime({ local: true }).nullable().default(null),
+});
+
+export const catalogSchemas = {
+  tool: toolSchema,
+  tool_version: toolVersionSchema,
+  work_package: workPackageSchema,
+  work_package_version: workPackageVersionSchema,
+  package_assignment: packageAssignmentSchema,
+} as const;
 
 // ── Aggregates / exports for convenience ───────────────────────────────────
 

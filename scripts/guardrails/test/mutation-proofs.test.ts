@@ -23,6 +23,21 @@ import {
   UNKNOWN_THRESHOLD_PCT,
   type ClassificationStats,
 } from "../src/checks/work-type-unknown.js";
+import {
+  checkPackageIntegrity,
+  verifyFixtureIntegrity,
+  sha256Canonical,
+  type CatalogVersionFixture,
+  type ManifestHashTools,
+} from "../src/checks/package-integrity.js";
+import { checkLeastPrivilege } from "../src/checks/package-least-privilege.js";
+import {
+  checkToolEndpoints,
+  verifyToolEndpoints,
+  type ToolEndpointRecord,
+  type ToolEndpointWireFixture,
+} from "../src/checks/tool-endpoint-scope.js";
+import { checkPackageDrift } from "../src/checks/package-drift.js";
 import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -130,6 +145,36 @@ describe("mutation proof: boundaries (§14.3)", () => {
     const r = checkBoundaries(broken);
     expect(r.status).toBe("fail");
     expect(r.detail).toContain("data-plane-imports-control");
+  });
+
+  it("FAILS when client-core (layer 1) imports @arm/db (layer 2 back-edge)", () => {
+    const broken = [
+      ...clean,
+      { path: "packages/client-core/src/index.ts", content: 'import {} from "@arm/db";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("back-edge");
+    expect(r.detail).toContain("client-core");
+  });
+
+  it("FAILS when a data-plane app imports @arm/catalog (control-plane only)", () => {
+    const broken = [
+      ...clean,
+      { path: "apps/data-plane/plugin-ingest/src/index.ts", content: 'import {} from "@arm/catalog";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("data-plane-imports-control");
+    expect(r.detail).toContain("catalog");
+  });
+
+  it("PASSES when plugin-ingest imports @arm/client-core (shared layer 1)", () => {
+    const files = [
+      ...clean,
+      { path: "apps/data-plane/plugin-ingest/src/index.ts", content: 'import {} from "@arm/client-core";' },
+    ];
+    expect(checkBoundaries(files).status).toBe("pass");
   });
 
   it("PASSES on a clean dependency graph", () => {
@@ -350,5 +395,409 @@ describe("mutation proof: work-type-unknown (D7)", () => {
     const r = checkWorkTypeUnknown(empty);
     expect(r.status).toBe("fail");
     expect(r.detail).toContain("vacuous");
+  });
+});
+
+describe("mutation proof: package-integrity (D9)", () => {
+  const manifest = {
+    tools: [{ toolId: "tool_mes", toolVersion: "1.4.2", scopes: ["read"] }],
+    permissions: ["resource:mes:read"],
+    skills: ["spc_analysis"],
+  };
+  const clean = [{ manifestSha256: sha256Canonical(manifest), manifestJson: manifest }];
+
+  it("FAILS when the manifest content is tampered after hashing", () => {
+    const broken = [
+      {
+        manifestSha256: clean[0]!.manifestSha256,
+        manifestJson: { ...manifest, permissions: ["resource:mes:write"] }, // mutation
+      },
+    ];
+    const r = checkPackageIntegrity(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("index 0");
+    expect(r.detail).toContain("mismatch");
+  });
+
+  it("FAILS when the declared hash is tampered", () => {
+    const broken = [{ manifestSha256: "0".repeat(64), manifestJson: manifest }]; // mutation
+    expect(checkPackageIntegrity(broken).status).toBe("fail");
+  });
+
+  it("PASSES on intact manifests", () => {
+    expect(checkPackageIntegrity(clean).status).toBe("pass");
+  });
+
+  it("canonicalization is key-order independent (same bytes in, same hash out)", () => {
+    const a = { roleKey: "quality_engineer", nested: { b: 1, a: [1, 2, 3] } };
+    const b = { nested: { a: [1, 2, 3], b: 1 }, roleKey: "quality_engineer" };
+    expect(sha256Canonical(a)).toBe(sha256Canonical(b));
+    expect(sha256Canonical(a)).toHaveLength(64);
+  });
+
+  it("PASSES on empty input (vacuous upgrade is the registered check's job, §14.2)", () => {
+    const r = checkPackageIntegrity([]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(false);
+  });
+});
+
+describe("mutation proof: package-least-privilege (D9)", () => {
+  const clean = [
+    "resource:s3:read",
+    "tool:jira:invoke",
+    "org_node:plant_detroit:approve",
+    "org_node:*", // legacy delegation form — allowed
+  ];
+
+  it("FAILS on a bare wildcard resource grant", () => {
+    const r = checkLeastPrivilege([...clean, "resource:*"]); // mutation
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("bare wildcard");
+  });
+
+  it("FAILS on a bare wildcard tool grant", () => {
+    const r = checkLeastPrivilege([...clean, "tool:*"]); // mutation
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("bare wildcard");
+  });
+
+  it("FAILS on a malformed permission entry", () => {
+    const r = checkLeastPrivilege([...clean, "resource:s3"]); // mutation — missing verb
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("malformed");
+  });
+
+  it("FAILS on duplicate permission entries", () => {
+    const r = checkLeastPrivilege([...clean, "resource:s3:read"]); // mutation — dup
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("duplicate");
+  });
+
+  it("PASSES on explicit scoped grants (incl. legacy org_node:*)", () => {
+    expect(checkLeastPrivilege(clean).status).toBe("pass");
+  });
+
+  it("PASSES on empty input (vacuous upgrade is the registered check's job, §14.2)", () => {
+    const r = checkLeastPrivilege([]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(false);
+  });
+});
+
+describe("mutation proof: tool-endpoint-scope (D9)", () => {
+  const clean: ToolEndpointRecord[] = [
+    {
+      kind: "mcp",
+      endpoint: "internal://mcp-gateway.tenant-vpc",
+      authStrategy: "service_account",
+      dataClassification: "confidential",
+    },
+    {
+      kind: "api",
+      endpoint: "https://api.github.com",
+      authStrategy: "oauth",
+      dataClassification: "public",
+    },
+    {
+      kind: "connector",
+      endpoint: "10.0.4.11:8443",
+      authStrategy: "pat",
+      dataClassification: "restricted",
+    },
+  ];
+
+  it("FAILS when restricted data uses authStrategy none", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "mcp",
+        endpoint: "internal://historian.plant",
+        authStrategy: "none", // mutation
+        dataClassification: "restricted",
+      },
+    ];
+    const r = checkToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("authStrategy");
+  });
+
+  it("FAILS when confidential data uses authStrategy none", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "api",
+        endpoint: "https://api.example.com",
+        authStrategy: "none", // mutation
+        dataClassification: "confidential",
+      },
+    ];
+    expect(checkToolEndpoints(broken).status).toBe("fail");
+  });
+
+  it("FAILS when a connector touching restricted data points at a public https URL", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "connector",
+        endpoint: "https://public-saas.example.com/api", // mutation — must be tenant-VPC
+        authStrategy: "oauth",
+        dataClassification: "restricted",
+      },
+    ];
+    const r = checkToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("public https");
+  });
+
+  it("FAILS on a malformed endpoint", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "api",
+        endpoint: "file:///etc/passwd", // mutation
+        authStrategy: "none",
+        dataClassification: "public",
+      },
+    ];
+    const r = checkToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("malformed endpoint");
+  });
+
+  it("PASSES a valid cli:// endpoint for a local desktop app (kind cli)", () => {
+    const r = checkToolEndpoints([
+      {
+        kind: "cli",
+        endpoint: "cli://nx.open-api",
+        authStrategy: "none", // allowed: local-process invocation, OS session is the auth boundary
+        dataClassification: "confidential",
+      },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("FAILS on a disallowed endpoint scheme (ftp://)", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "cli",
+        endpoint: "ftp://files.example.com/parts", // mutation — cli tools may only use cli://
+        authStrategy: "none",
+        dataClassification: "public",
+      },
+    ];
+    const r = checkToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("malformed endpoint");
+  });
+
+  it("FAILS when a non-cli tool uses authStrategy none on confidential data (no exception leak)", () => {
+    const broken: ToolEndpointRecord[] = [
+      {
+        kind: "http_api",
+        endpoint: "https://api.example.com",
+        authStrategy: "none", // mutation — the cli exception must NOT apply to http_api tools
+        dataClassification: "confidential",
+      },
+    ];
+    expect(checkToolEndpoints(broken).status).toBe("fail");
+  });
+
+  it("PASSES on clean endpoints (VPC forms + classified SaaS)", () => {
+    expect(checkToolEndpoints(clean).status).toBe("pass");
+  });
+
+  it("PASSES on empty input (vacuous upgrade is the registered check's job, §14.2)", () => {
+    const r = checkToolEndpoints([]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(false);
+  });
+});
+
+describe("mutation proof: package-drift (D9)", () => {
+  const channel = ["1.0.0", "1.1.0", "1.2.0"];
+  const clean = [{ roleKey: "quality_engineer", installedVersion: "1.1.0", channel }];
+
+  it("FAILS when the installed version trails the channel by > maxLag", () => {
+    const broken = [
+      { roleKey: "quality_engineer", installedVersion: "1.0.0", channel }, // mutation — lag 2 > 1
+    ];
+    const r = checkPackageDrift(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("trails release channel");
+  });
+
+  it("FAILS when the installed version is missing from the channel", () => {
+    const broken = [
+      { roleKey: "quality_engineer", installedVersion: "0.9.0", channel }, // mutation
+    ];
+    const r = checkPackageDrift(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("not in release channel");
+  });
+
+  it("FAILS when the release channel is empty", () => {
+    const broken = [
+      { roleKey: "quality_engineer", installedVersion: "1.0.0", channel: [] }, // mutation
+    ];
+    const r = checkPackageDrift(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("empty release channel");
+  });
+
+  it("PASSES at the maxLag boundary (lag 1 with maxLag 1)", () => {
+    expect(checkPackageDrift(clean).status).toBe("pass");
+  });
+
+  it("PASSES when installed on the latest channel version (lag 0)", () => {
+    const latest = [{ roleKey: "quality_engineer", installedVersion: "1.2.0", channel }];
+    expect(checkPackageDrift(latest).status).toBe("pass");
+  });
+
+  it("PASSES on empty input (vacuous upgrade is the registered check's job, §14.2)", () => {
+    const r = checkPackageDrift([]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(false);
+  });
+});
+
+describe("mutation proof: verifyToolEndpoints over shipped fixtures (D9)", () => {
+  const clean: ToolEndpointWireFixture[] = [
+    {
+      kind: "connector",
+      endpoint: "pi.internal:5450",
+      auth_strategy: "pat",
+      data_classification: "restricted",
+    },
+    {
+      kind: "mcp",
+      endpoint: "mcp://mcp.jira.internal",
+      auth_strategy: "oauth",
+      data_classification: "internal",
+    },
+  ];
+
+  it("FAILS when a fixture endpoint changes to a public https URL on restricted data", () => {
+    const broken: ToolEndpointWireFixture[] = [
+      { ...clean[0]!, endpoint: "https://pi.saas.example.com/api" }, // mutation
+    ];
+    const r = verifyToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("public https");
+  });
+
+  it("FAILS when a restricted-data fixture drops its auth_strategy", () => {
+    const broken: ToolEndpointWireFixture[] = [
+      { ...clean[0]!, auth_strategy: "none" }, // mutation
+    ];
+    const r = verifyToolEndpoints(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("authStrategy");
+  });
+
+  it("PASSES on clean wire-shaped fixtures", () => {
+    const r = verifyToolEndpoints(clean);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(2);
+  });
+
+  it("PASSES cli:// wire fixtures with auth_strategy none (local desktop apps)", () => {
+    const r = verifyToolEndpoints([
+      {
+        kind: "cli",
+        endpoint: "cli://inca.etas",
+        auth_strategy: "none",
+        data_classification: "confidential",
+      },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("PASSES on the real @arm/catalog toolFixtures", async () => {
+    const catalog = await import("@arm/catalog");
+    const r = verifyToolEndpoints(catalog.toolFixtures);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("mutation proof: verifyFixtureIntegrity over shipped fixtures (D9)", () => {
+  const toolId = "10000000-0000-4000-8000-000000000001";
+  const manifest = {
+    tools: [{ tool_id: toolId, tool_version: "1.0.0", scopes: ["read:issue"] }],
+    skills: ["8d-generator"],
+    subagent_configs: [],
+    permissions: ["tool:invoke:jira"],
+    model_routing: {},
+    budget_template: {},
+    starter_prompts: [],
+    template_refs: [],
+    min_agent_version: "1.4.0",
+  };
+  const hashTools: ManifestHashTools = {
+    canonicalManifest: (source: unknown) => {
+      const { manifest_sha256: _dropped, ...fields } = source as CatalogVersionFixture;
+      return fields;
+    },
+    manifestSha256: sha256Canonical,
+  };
+  const clean = {
+    ...manifest,
+    manifest_sha256: sha256Canonical(manifest),
+  };
+  const knownToolIds = new Set([toolId]);
+
+  it("FAILS when a fixture field is tampered after hashing", () => {
+    const broken = {
+      ...manifest,
+      permissions: ["resource:mes:write"], // mutation
+      manifest_sha256: sha256Canonical(manifest),
+    };
+    const r = verifyFixtureIntegrity([broken], hashTools, knownToolIds);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("mismatch");
+  });
+
+  it("FAILS when the declared fixture hash is tampered", () => {
+    const broken = { ...clean, manifest_sha256: "0".repeat(64) }; // mutation
+    expect(verifyFixtureIntegrity([broken], hashTools, knownToolIds).status).toBe("fail");
+  });
+
+  it("FAILS on a dangling tool_id absent from the registry id set", () => {
+    const dangling = {
+      ...manifest,
+      tools: [
+        { tool_id: "99999999-0000-4000-8000-000000000999", tool_version: "1.0.0", scopes: [] }, // mutation
+      ],
+    };
+    const broken = {
+      ...dangling,
+      manifest_sha256: sha256Canonical(dangling),
+    };
+    const r = verifyFixtureIntegrity([broken], hashTools, knownToolIds);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("dangling");
+  });
+
+  it("PASSES on intact wire-shaped fixtures", () => {
+    const r = verifyFixtureIntegrity([clean], hashTools, knownToolIds);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("PASSES on the real @arm/catalog packageVersionFixtures + toolIdFixtures", async () => {
+    const catalog = await import("@arm/catalog");
+    const r = verifyFixtureIntegrity(
+      catalog.packageVersionFixtures,
+      {
+        canonicalManifest: catalog.canonicalManifest as ManifestHashTools["canonicalManifest"],
+        manifestSha256: catalog.manifestSha256,
+      },
+      new Set(Object.values(catalog.toolIdFixtures)),
+    );
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBeGreaterThanOrEqual(6);
   });
 });

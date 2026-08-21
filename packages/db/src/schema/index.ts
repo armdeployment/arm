@@ -5,4 +5,5 @@ export * from "./identity.js";
 export * from "./policy.js";
 export * from "./access.js";
 export * from "./worktype.js";
+export * from "./catalog.js";
 export * from "./org-audit.js";

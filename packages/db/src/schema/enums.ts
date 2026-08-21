@@ -122,3 +122,33 @@ export const workTypeStageEnum = pgEnum("work_type_stage", [
   "embedding",
   "unknown",
 ]);
+
+/**
+ * Work-package tool kinds (D9). Tools are first-class registry entities;
+ * packages pin exact tool versions.
+ */
+export const toolKindEnum = pgEnum("tool_kind", ["mcp", "http_api", "cli", "connector"]);
+
+/** Tool review lifecycle (D9 — publish → approve workflow). */
+export const toolReviewStatusEnum = pgEnum("tool_review_status", [
+  "draft",
+  "in_review",
+  "approved",
+  "rejected",
+  "deprecated",
+]);
+
+/**
+ * Work-package deployment mode (D9). `copilot` = employee-adjacent,
+ * human-in-the-loop (default for human job roles); `automated` = scope-owned
+ * agent running unattended under policy + budget.
+ */
+export const workPackageModeEnum = pgEnum("work_package_mode", ["automated", "copilot"]);
+
+/** Package-assignment lifecycle (D9): requested → approved → active → revoked. */
+export const packageAssignmentStatusEnum = pgEnum("package_assignment_status", [
+  "requested",
+  "approved",
+  "active",
+  "revoked",
+]);

@@ -14,8 +14,9 @@
     "guardrails": "tsx src/run.ts"
   },
   "dependencies": {
-    "@arm/db": "workspace:*",
+    "@arm/catalog": "workspace:*",
     "@arm/clickhouse": "workspace:*",
+    "@arm/db": "workspace:*",
     "@arm/proto": "workspace:*",
     "drizzle-orm": "0.45.2"
   },

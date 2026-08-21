@@ -22,6 +22,7 @@ ARM (Agent Resource Management) is an HR-style platform for AI agents: identity,
 │   ├── permission-rules.md  # Tiered-delegation / deny-override contract
 │   ├── CONCEPTS.md          # Shared domain vocabulary
 │   ├── solutions/           # Dated decision/solution records (target)
+│   ├── research/            # Job-taxonomy & work-package research (D9 inputs)
 │   └── figures/             # Rendered diagrams
 └── AGENTS.md                # This file
 ```

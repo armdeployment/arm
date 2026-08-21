@@ -44,6 +44,7 @@ const REQUIRED_KEYS: (keyof IndustryProfilePreset)[] = [
   "uiPanels",
   "rolePresets",
   "workTypeTaxonomies",
+  "workPackages",
 ];
 
 describe("Industry Profile presets", () => {
@@ -459,6 +460,218 @@ describe("D6 governing rule: profiles are pure data", () => {
       const serialized = JSON.parse(JSON.stringify(profile));
       expect(serialized.id).toBe(profile.id);
       expect(serialized.seedAgents.length).toBe(profile.seedAgents.length);
+    }
+  });
+});
+
+describe("Work packages (D9 — role-scoped tool bundles)", () => {
+  const PROFILES: IndustryProfilePreset[] = [
+    techProfile,
+    manufacturingProfile,
+    financeProfile,
+    holdingProfile,
+  ];
+  const TOOL_VERSION_RE = /^\d+\.\d+\.\d+$/;
+  const ROLE_KEY_RE = /^[a-z0-9_]+$/;
+  // Mirrors the rolePresets style: "resource:<slug>:<verb>", "tool:<slug>:<verb>",
+  // and "org_node:<verb>" — no wildcards allowed inside a work package.
+  const PERMISSION_RE = /^(resource|tool|org_node):[a-z0-9_.-]+:[a-z_]+$/;
+
+  it("every profile has a workPackages array and every entry is JSON-serializable", () => {
+    for (const profile of PROFILES) {
+      expect(Array.isArray(profile.workPackages)).toBe(true);
+      for (const pkg of profile.workPackages) {
+        const roundTripped = JSON.parse(JSON.stringify(pkg));
+        expect(roundTripped).toEqual(pkg);
+      }
+    }
+  });
+
+  it("roleKeys are well-formed and unique within each profile", () => {
+    for (const profile of PROFILES) {
+      const keys = profile.workPackages.map((p) => p.roleKey);
+      expect(new Set(keys).size).toBe(keys.length);
+      for (const key of keys) {
+        expect(key).toMatch(ROLE_KEY_RE);
+      }
+    }
+  });
+
+  it("every pinned tool version is a semver triplet", () => {
+    for (const profile of PROFILES) {
+      for (const pkg of profile.workPackages) {
+        for (const t of pkg.tools) {
+          expect(t.toolVersion).toMatch(TOOL_VERSION_RE);
+          expect(t.tool).toBeTruthy();
+        }
+      }
+    }
+  });
+
+  it("permissions are well-formed (resource|tool|org_node : slug : verb)", () => {
+    for (const profile of PROFILES) {
+      for (const pkg of profile.workPackages) {
+        for (const perm of pkg.permissions) {
+          expect(perm).toMatch(PERMISSION_RE);
+        }
+      }
+    }
+  });
+
+  it("every package carries at least one of tools/skills/subagentConfigs", () => {
+    for (const profile of PROFILES) {
+      for (const pkg of profile.workPackages) {
+        const hasContent =
+          pkg.tools.length > 0 ||
+          pkg.skills.length > 0 ||
+          pkg.subagentConfigs.length > 0;
+        expect(hasContent).toBe(true);
+      }
+    }
+  });
+
+  it("every package has required scalar fields and a budget template", () => {
+    for (const profile of PROFILES) {
+      for (const pkg of profile.workPackages) {
+        expect(pkg.name).toBeTruthy();
+        expect(pkg.family).toBeTruthy();
+        expect(["automated", "copilot"]).toContain(pkg.mode);
+        expect(pkg.description).toBeTruthy();
+        expect(pkg.minAgentVersion).toMatch(TOOL_VERSION_RE);
+        expect(pkg.budgetTemplate.monthly_usd_cap).toBeTypeOf("number");
+        expect(pkg.starterPrompts.length).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it("manufacturing ships the 10-package pilot set", () => {
+    const keys = manufacturingProfile.workPackages.map((p) => p.roleKey);
+    expect(manufacturingProfile.workPackages.length).toBeGreaterThanOrEqual(10);
+    for (const pilot of [
+      "quality_engineer",
+      "sqe_supplier_quality",
+      "plc_programmer",
+      "maintenance_technician",
+      "material_planner",
+      "production_supervisor",
+      "warranty_analyst",
+      "data_analyst_plant",
+      "office_worker_general",
+      "exec_assistant",
+    ]) {
+      expect(keys).toContain(pilot);
+    }
+  });
+
+  it("manufacturing material_planner is the automated-mode package", () => {
+    const planner = manufacturingProfile.workPackages.find(
+      (p) => p.roleKey === "material_planner",
+    );
+    expect(planner?.mode).toBe("automated");
+  });
+
+  it("every profile seeds a non-empty workPackages array", () => {
+    for (const profile of PROFILES) {
+      expect(profile.workPackages.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe("Work packages (D9 — automotive OEM toolchain expansion)", () => {
+  const PROFILES: IndustryProfilePreset[] = [
+    techProfile,
+    manufacturingProfile,
+    financeProfile,
+    holdingProfile,
+  ];
+
+  // The 12 packages added with the Aug 2026 automotive tool landscape survey.
+  const NEW_PACKAGE_ROLE_KEYS = [
+    "cae_analyst",
+    "embedded_sw_engineer",
+    "systems_engineer",
+    "calibration_engineer",
+    "hils_engineer",
+    "program_manager",
+    "plm_administrator",
+    "mfg_sim_engineer",
+    "ee_architect",
+    "qms_apqp",
+    "devops_engineer",
+    "embedded_engineer",
+  ];
+
+  // Canonical slug list from the Aug 2026 automotive tool landscape survey
+  // (registry fixtures not landed yet — this is the cross-package guard).
+  const SURVEY_TOOL_SLUGS = [
+    "cad.nx", "cad.catia", "cad.alias",
+    "ee.capital", "ee.e3-series", "ee.preevision",
+    "plm.teamcenter", "plm.windchill",
+    "sim.ansa", "sim.gt-suite", "sim.star-ccm", "sim.ls-dyna", "sim.abaqus",
+    "mdl.matlab-simulink",
+    "test.canoe", "test.dspace",
+    "cal.inca",
+    "autosar.tresos", "autosar.davinci",
+    "rm.jama", "rm.polarion", "rm.codebeamer", "rm.doors", "rm.valispace",
+    "docs.confluence",
+    "pm.cplace",
+    "vcs.gitlab", "vcs.azure-devops",
+    "spc.minitab",
+    "qms.aqua-pro", "qms.net-inspect", "qms.sap-qm",
+    "mfg.tecnomatix", "mfg.delmia",
+    "dt.omniverse",
+    "rt.qnx",
+  ];
+
+  // Existing slugs already in use by the presets.
+  const EXISTING_TOOL_SLUGS = [
+    "git.repo", "web.search", "code.search",
+    "spc.cmm-connector", "mes.defect-feed", "ticketing.jira",
+    "supplier.portal", "ppap.inbox", "opcua.diagnostics",
+    "io.table", "cmms.sap-pm", "fault.kb", "spares.catalog",
+    "mrp.erp", "supplier.edi", "mes.andon",
+    "warranty.dwh", "claims.api",
+    "historian.pi", "lakehouse.sql", "bi.dashboards",
+    "sharepoint.docs", "email.outlook", "dashboards.api",
+    "approvals.inbox", "crm.salesforce",
+  ];
+
+  const CANONICAL_TOOL_SLUGS = new Set([...SURVEY_TOOL_SLUGS, ...EXISTING_TOOL_SLUGS]);
+
+  const NEW_PACKAGES = PROFILES.flatMap((p) =>
+    p.workPackages.filter((w) => NEW_PACKAGE_ROLE_KEYS.includes(w.roleKey)),
+  );
+
+  it("manufacturing profile has exactly 20 work packages and tech exactly 7", () => {
+    expect(manufacturingProfile.workPackages.length).toBe(20);
+    expect(techProfile.workPackages.length).toBe(7);
+  });
+
+  it("every new tool slug used in a package exists in the canonical allowed-slug list", () => {
+    expect(NEW_PACKAGES.length).toBe(NEW_PACKAGE_ROLE_KEYS.length);
+    for (const pkg of NEW_PACKAGES) {
+      for (const t of pkg.tools) {
+        expect(CANONICAL_TOOL_SLUGS.has(t.tool)).toBe(true);
+      }
+    }
+  });
+
+  it("new packages introduce no duplicate roleKeys across profiles", () => {
+    const newKeys = NEW_PACKAGES.map((p) => p.roleKey);
+    expect(new Set(newKeys).size).toBe(newKeys.length);
+    const preExistingKeys = PROFILES.flatMap((p) =>
+      p.workPackages.map((w) => w.roleKey),
+    ).filter((k) => !NEW_PACKAGE_ROLE_KEYS.includes(k));
+    for (const key of NEW_PACKAGE_ROLE_KEYS) {
+      expect(preExistingKeys).not.toContain(key);
+    }
+  });
+
+  it("every new package has at least 2 tools, 2 skills, and 3 starter prompts", () => {
+    for (const pkg of NEW_PACKAGES) {
+      expect(pkg.tools.length).toBeGreaterThanOrEqual(2);
+      expect(pkg.skills.length).toBeGreaterThanOrEqual(2);
+      expect(pkg.starterPrompts.length).toBeGreaterThanOrEqual(3);
     }
   });
 });

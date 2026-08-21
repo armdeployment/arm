@@ -120,6 +120,7 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
       },
     ],
     workTypeTaxonomies: [],
+    workPackages: [],
   };
 }
 

@@ -232,4 +232,71 @@ export const financeProfile: IndustryProfilePreset = {
       labels: ["audit_trail_analysis", "forensic_review", "control_testing", "finding_documentation"],
     },
   ],
+
+  // ── Work packages (D9) — finance pilot set ───────────────────────────────
+  workPackages: [
+    {
+      roleKey: "analyst_general",
+      name: "Financial Analyst",
+      family: "analysis",
+      mode: "copilot",
+      description: "Market-data research, spreadsheet analysis, and financial memos for analysts across desks.",
+      tools: [
+        { tool: "marketdata.bloomberg", toolVersion: "1.0.0" },
+        { tool: "spreadsheets.excel", toolVersion: "1.2.0" },
+        { tool: "web.search", toolVersion: "1.0.0" },
+      ],
+      skills: ["financial-memo", "earnings-summary", "portfolio-brief"],
+      subagentConfigs: [],
+      permissions: [
+        "tool:marketdata.bloomberg:invoke",
+        "tool:spreadsheets.excel:invoke",
+        "tool:web.search:invoke",
+        "resource:bloomberg:read",
+      ],
+      modelRouting: {
+        allowed_models: ["claude-sonnet", "minicpm5-1b"],
+        auto_downgrade_to: "minicpm5-1b",
+      },
+      budgetTemplate: { monthly_usd_cap: 400, critical_reserve_pct: 10 },
+      starterPrompts: [
+        "Summarize this morning's market moves and what they mean for our book",
+        "Pull the latest consensus estimates for our top five holdings and compare them to guidance",
+        "Draft a one-page memo on the sector re-rating for the investment committee",
+      ],
+      templateRefs: ["tpl.financial-memo", "tpl.earnings-summary"],
+      minAgentVersion: "1.0.0",
+    },
+    {
+      roleKey: "exec_assistant",
+      name: "Executive Assistant",
+      family: "executive",
+      mode: "copilot",
+      description: "KPI briefings, approvals inbox summaries, and web research for management. Aggregates-only — never raw content.",
+      tools: [
+        { tool: "dashboards.api", toolVersion: "1.9.0" },
+        { tool: "approvals.inbox", toolVersion: "1.2.0" },
+        { tool: "web.search", toolVersion: "1.0.0" },
+      ],
+      skills: ["kpi-briefing", "exec-digest", "approval-summary"],
+      subagentConfigs: [],
+      permissions: [
+        "tool:dashboards.api:invoke",
+        "tool:approvals.inbox:invoke",
+        "tool:web.search:invoke",
+      ],
+      modelRouting: {
+        allowed_models: ["claude-sonnet", "minicpm5-1b"],
+        auto_downgrade_to: "minicpm5-1b",
+      },
+      budgetTemplate: { monthly_usd_cap: 200, critical_reserve_pct: 10 },
+      starterPrompts: [
+        "Give me a one-page briefing on this week's risk and compliance KPIs",
+        "Summarize the approvals waiting in my inbox and recommend which to review first",
+        "Draft my monthly exec digest for the leadership team",
+      ],
+      templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
+      minAgentVersion: "1.0.0",
+    },
+  ],
 };

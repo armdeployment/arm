@@ -12,6 +12,10 @@ import "./checks/ci-sync.js";
 import "./checks/no-profile-branching.js";
 import "./checks/taxonomy-scope.js";
 import "./checks/work-type-unknown.js";
+import "./checks/package-integrity.js";
+import "./checks/package-least-privilege.js";
+import "./checks/tool-endpoint-scope.js";
+import "./checks/package-drift.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -27,3 +31,25 @@ export {
   UNKNOWN_THRESHOLD_PCT,
   type ClassificationStats,
 } from "./checks/work-type-unknown.js";
+export {
+  checkPackageIntegrity,
+  verifyFixtureIntegrity,
+  canonicalize,
+  sha256Canonical,
+  type VersionedManifest,
+  type CatalogVersionFixture,
+  type CatalogFixtureToolRef,
+  type ManifestHashTools,
+} from "./checks/package-integrity.js";
+export { checkLeastPrivilege } from "./checks/package-least-privilege.js";
+export {
+  checkToolEndpoints,
+  verifyToolEndpoints,
+  type ToolEndpointRecord,
+  type ToolEndpointWireFixture,
+} from "./checks/tool-endpoint-scope.js";
+export {
+  checkPackageDrift,
+  DEFAULT_MAX_LAG,
+  type InstalledPackageVersion,
+} from "./checks/package-drift.js";

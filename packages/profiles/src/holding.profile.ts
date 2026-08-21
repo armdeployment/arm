@@ -317,4 +317,71 @@ export const holdingProfile: IndustryProfilePreset = {
       labels: ["it_governance", "audit_trail_analysis", "access_review", "policy_review", "cybersecurity_scan"],
     },
   ],
+
+  // ── Work packages (D9) — holding pilot set ───────────────────────────────
+  workPackages: [
+    {
+      roleKey: "consolidation_analyst",
+      name: "Consolidation Analyst",
+      family: "corporate_finance",
+      mode: "copilot",
+      description: "Cross-entity consolidation, board-pack assembly, and variance memos for group finance.",
+      tools: [
+        { tool: "erp.sap", toolVersion: "2.0.0" },
+        { tool: "spreadsheets.excel", toolVersion: "1.2.0" },
+        { tool: "bi.dashboards", toolVersion: "1.7.0" },
+      ],
+      skills: ["consolidation-checklist", "board-pack", "variance-memo"],
+      subagentConfigs: [],
+      permissions: [
+        "tool:erp.sap:invoke",
+        "tool:spreadsheets.excel:invoke",
+        "tool:bi.dashboards:invoke",
+        "resource:erp:read",
+      ],
+      modelRouting: {
+        allowed_models: ["claude-sonnet", "minicpm5-1b"],
+        auto_downgrade_to: "minicpm5-1b",
+      },
+      budgetTemplate: { monthly_usd_cap: 500, critical_reserve_pct: 10 },
+      starterPrompts: [
+        "Run the consolidation checklist for this quarter and list what is still missing",
+        "Draft the variance memo explaining the manufacturing division's cost overrun",
+        "Assemble the first section of the board pack from the subsidiary submissions",
+      ],
+      templateRefs: ["tpl.consolidation-checklist", "tpl.board-pack", "tpl.variance-memo"],
+      minAgentVersion: "1.0.0",
+    },
+    {
+      roleKey: "exec_assistant",
+      name: "Executive Assistant",
+      family: "executive",
+      mode: "copilot",
+      description: "Portfolio KPI briefings, approvals inbox summaries, and web research for group leadership. Aggregates-only — never raw content.",
+      tools: [
+        { tool: "dashboards.api", toolVersion: "1.9.0" },
+        { tool: "approvals.inbox", toolVersion: "1.2.0" },
+        { tool: "web.search", toolVersion: "1.0.0" },
+      ],
+      skills: ["kpi-briefing", "exec-digest", "approval-summary"],
+      subagentConfigs: [],
+      permissions: [
+        "tool:dashboards.api:invoke",
+        "tool:approvals.inbox:invoke",
+        "tool:web.search:invoke",
+      ],
+      modelRouting: {
+        allowed_models: ["claude-sonnet", "minicpm5-1b"],
+        auto_downgrade_to: "minicpm5-1b",
+      },
+      budgetTemplate: { monthly_usd_cap: 200, critical_reserve_pct: 10 },
+      starterPrompts: [
+        "Give me a one-page briefing on portfolio health across all subsidiaries",
+        "Summarize the approvals waiting in my inbox and recommend which to review first",
+        "Draft my monthly exec digest for the group leadership team",
+      ],
+      templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
+      minAgentVersion: "1.0.0",
+    },
+  ],
 };

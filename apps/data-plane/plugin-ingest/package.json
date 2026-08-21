@@ -10,6 +10,11 @@
   },
   "dependencies": {
     "@arm/proto": "workspace:*",
-    "@arm/config": "workspace:*"
+    "@arm/config": "workspace:*",
+    "@arm/client-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "vitest": "4.1.10"
   }
 }

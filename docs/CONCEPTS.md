@@ -122,6 +122,32 @@ A named, shipped Industry Profile bundle (Tech, Manufacturing, Custom). Pure dat
 
 The distinction that keeps hybrid companies first-class. A **profile default** is what the preset seeds (e.g. manufacturing seeds OT resource types as enabled). A **capability toggle** is what a tenant can turn on/off independently (e.g. a tech tenant can enable OT resources without switching to the manufacturing preset). The profile never gates a capability — it only sets the starting state. `guardrails/no-profile-branching` enforces that runtime code never branches on `industryProfile`.
 
+## Work Packages & Agent Enablement
+
+### Work Package
+
+The versioned, role-scoped bundle that makes an agent useful for a specific job (D9): tools (pinned MCP server versions), skills, sub-agent configurations, permission grants, model-routing policy, budget template, starter prompts, and document templates. Materialized from Industry Profile presets — presets set defaults, never gate capabilities (D6 rule) — and copy-on-provisioning: editing a preset never mutates an installed package; version bumps trigger guided upgrades (D7 lock pattern). The package is the unit of governance: budgets, approvals, metering, and Cost-Per-Work-Product telemetry all roll up by package. Ships in two modes: automated agent (scope-owned, unattended) and Copilot Mode (employee-adjacent). See also: Tool Registry, Package Assignment, Copilot Mode.
+
+### Tool Registry
+
+The catalog of first-class tool entities behind Work Packages: `tool` + immutable `tool_version` rows (MCP/HTTP/CLI/connector kinds, endpoint, auth strategy, data classification, owner, review status). Tools are authorized with D8-extended `tool:*` verbs (`invoke`, `configure`, `publish`); deny-override applies unchanged. Every tool carries a data classification so the D2 Classification Gate extends from resources to tools — a tool touching `restricted` data is never callable from a closed external model. See also: Work Package, Classification Gate.
+
+### Copilot Mode
+
+A Work Package deployment where the agent is employee-adjacent and human-in-the-loop: the default mode for every human job role. The employee is the accountable `stakeholder_user_id` (invariant 7); every consequential action surfaces for one-tap approval inside the chat surface. Contrast: automated mode (scope-owned agent, unattended, policy + budget enforced, alerts to its stakeholder). See also: Work Package, Stakeholder.
+
+### Package Assignment
+
+The HR-style link between a Work Package version and who may use it: a user (copilot mode), an agent, or an org-tree node (bulk/automated mode), with status `requested → approved → active → revoked`, an approver, and timestamps. New hires get their role package on day one; revocation is instant and audited. See also: Work Package.
+
+### Guided Provisioning (`arm setup`)
+
+The zero-config onboarding path (D9/1.6): SSO → role picker (assignment-aware) → runtime auto-detect/install (opencode first) → signed config written from the package manifest (MCP servers with short-lived scoped tokens, skills, sub-agents, permissions) → metered round-trip verification. The employee asks two questions and touches zero config files; config integrity is re-checked at every agent start. The manual config path remains as the advanced fallback only. See also: Work Package, Package Assignment.
+
+### Cost-Per-Work-Product
+
+The governance metric that normalizes agent spend by completed work: `$/8D report`, `$/PPAP submission`, `$/PLC routine merged` — computed from `work_type`-labeled tasks attributed to package versions. Always tracked as tokens-per-unit (deflates price changes and model mix) alongside dollars-per-unit (answers the CFO), with a rework-rate counterweight so "cheapest per unit" never silently means "worst per unit". The basis for cross-tenant anonymized benchmarks (aggregates only — dashboard viewers never see row-level cross-tenant data). See also: Work Package, Work-Type Tag.
+
 ## Repo Governance
 
 ### Guardrail

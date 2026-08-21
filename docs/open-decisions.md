@@ -1,8 +1,8 @@
-# Decision Log — D1/D2/D5 locked 2026-07-26; D6/D7 proposed 2026-08-02
+# Decision Log — D1/D2/D5 locked 2026-07-26; D6/D7 proposed 2026-08-02; D9 proposed 2026-08-13
 
 Captured from spec reviews (`docs/arm-spec.md`). These are design-level decisions that ripple across components and cannot be patched with prose alone; they need a sign-off. Each item lists the blocking phase, why it matters, and the decision frame.
 
-**Status: D1/D2/D5 LOCKED on 2026-07-26** (resolutions inline; spec v0.3 reflects them — §3.4, §4.1, §5.1, §6.5). **D6 PROPOSED 2026-08-02** — pending architecture + product sign-off; full write-up in `docs/solutions/2026-08-02-d6-industry-profile.md`. **D7 PROPOSED 2026-08-02** — requester answers locked (per-department/plant taxonomies, enforcement-ready, per-prompt); full write-up in `docs/solutions/2026-08-02-d7-work-type-classification.md`.
+**Status: D1/D2/D5 LOCKED on 2026-07-26** (resolutions inline; spec v0.3 reflects them — §3.4, §4.1, §5.1, §6.5). **D6 PROPOSED 2026-08-02** — pending architecture + product sign-off; full write-up in `docs/solutions/2026-08-02-d6-industry-profile.md`. **D7 PROPOSED 2026-08-02** — requester answers locked (per-department/plant taxonomies, enforcement-ready, per-prompt); full write-up in `docs/solutions/2026-08-02-d7-work-type-classification.md`. **D9 PROPOSED 2026-08-13** — Work Packages (role-scoped tool bundles + Tool Registry + one-command provisioning); full write-up in `docs/solutions/2026-08-13-d9-work-packages.md`, roadmap in `docs/solutions/2026-08-13-work-package-roadmap.md`, research inputs in `docs/research/`.
 
 ## D1 — Multi-tenant isolation model [blocks 1.0 schema] ✅ DECIDED (2026-07-26): option (b)
 
@@ -109,6 +109,26 @@ The governing rule under (b): **everything that makes ARM good for manufacturing
 **Owner:** architecture + product + InfoSec (for the gate contract).
 
 **Resolution (2026-08-02): PROPOSED — option (c), requester answers locked, not yet signed off.** Full mechanism, cost/latency table, `token_usage_event` column deltas, `WorkTypeTaxonomy` table, guardrails, phased plan (1.0: tagging only; 1.4+: gating), sub-decisions (label cardinality, taxonomy edit policy, confidence thresholds, cache placement, QA rate), and doc-update obligations live in `docs/solutions/2026-08-02-d7-work-type-classification.md`.
+
+---
+
+## D9 — Work Packages: role-scoped agent tool bundles for governance + zero-friction employee onboarding [blocks 1.5+ work packages] 🔶 PROPOSED (2026-08-13)
+
+**Problem.** ARM provisions *agents*, not *roles*. `arm agent init` writes a minimal LLM-routing config but installs no tools, skills, permissions, or role defaults — every employee hand-edits config files, and management has no unit to govern (budgets are org-node-scoped; there is no per-tool authorization; `secondaryTagPresets` are seeded but never read at runtime). The requester's product requirement: management must govern AI usage across automated and copiloted agents per employee/job function, and every employee — including non-technical lower/middle/upper management — must be able to start using a correctly-configured agent (opencode pre-installed with MCPs, skills, sub-agents, permissions) in minutes without writing a config file.
+
+**Why it matters.** This is the governance×ease-of-use intersection that decides whether ARM is a metering dashboard or the enterprise AI control plane. It also pulls forward the governance-critical half of the deferred Phase 4 agent-plugins work, and turns the D7 work-type stream into enforceable money (per-work-type routing, budgets, and `cost-per-work-product` benchmarks).
+
+**Decision frame — pick one:**
+- **(a) Tool Registry only** (publish MCP servers, tenants hand-assemble bundles) — rejected: no ease-of-use, no governance unit.
+- **(b) Work Packages (recommended):** versioned, role-scoped bundles of tools/skills/sub-agent configs/permissions/routing/budget/templates, materialized from Industry Profile presets (D6 pattern: presets set defaults, never gate capabilities), copy-on-provisioning (D7 lock), distributed via extended `/.well-known/arm-agent` manifest + one-command `arm setup`. Tools become first-class Registry entities with `tool:*` authorization verbs (D8 extension). Two modes: **automated agent** (scope-owned) and **copilot mode** (employee-adjacent, human-in-the-loop — default for human job roles). The package is the unit of metering, budgeting, approval, and `cost-per-work-product` telemetry.
+- **(c) Agent-side config only** (no server-side entity) — rejected: governance would be unenforceable prose.
+
+**Research basis (2026-08-13):** ~250 OEM job types across 20 functions with per-role daily-work/tool/token profiles (`docs/research/oem-job-taxonomy.md`, `docs/research/oem-work-package-design.md`), and a token-economics sweep (`docs/research/token-cost-optimization.md`) showing a 70–85% savings stack (routing + caching + summarization + loop caps) that is only expressible with a package entity.
+
+**Decision needed by:** start of 1.5 work (post-1.4 resource connectors).
+**Owner:** architecture + product.
+
+**Resolution (2026-08-13): PROPOSED — option (b), not yet locked.** Full rationale, data-model deltas (`tool`, `work_package`, `package_assignment`, event columns), guardrails, phase plan (1.5 foundation → 1.6 one-command provisioning + copilot mode → 1.7 governance loop + moat metrics), sub-decisions (role-level granularity, opencode-first runtime, `tool:invoke/configure/publish` verbs, tiered approval defaults, 10-package pilot set), and doc-update obligations live in `docs/solutions/2026-08-13-d9-work-packages.md`; the build plan (personas, ease-of-use contract, component-by-component changes, gantt, exit gates, risks) in `docs/solutions/2026-08-13-work-package-roadmap.md`.
 
 ---
 

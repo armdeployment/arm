@@ -238,6 +238,69 @@ export interface ResourceTypeAllowlist {
   enabled: string[];
 }
 
+// ── Work packages (D9) ────────────────────────────────────────────────────
+
+/**
+ * A single tool pin inside a work package (D9).
+ *
+ * Packages pin EXACT tool versions — `toolVersion` is a semantic-version
+ * triplet (e.g. "2.1.0"), never a range. The package is data, not code:
+ * provisioning copies these seeds into `work_package_version` rows.
+ */
+export interface WorkPackageToolSeed {
+  /** Tool slug from the Tool Registry, e.g. "spc.cmm-connector". */
+  tool: string;
+  /** Exact pinned version, e.g. "2.1.0". */
+  toolVersion: string;
+  /** Optional per-tool scope restrictions (least-privilege hints). */
+  scopes?: string[];
+}
+
+/**
+ * A role-scoped agent tool bundle (D9 — docs/solutions/2026-08-13-d9-work-packages.md).
+ *
+ * Everything an employee's agent needs to do their job: MCP tools, skills,
+ * sub-agent configs, permission grants, model-routing policy, a budget
+ * template, starter prompts, and document templates. Two modes:
+ *
+ *   - "automated": scope-owned agent, runs unattended.
+ *   - "copilot":  employee-adjacent, human-in-the-loop (default for humans).
+ *
+ * Follows the D6 governing rule: presets set DEFAULTS, never gate a
+ * capability — every tool/skill here is something any tenant could assemble.
+ * Pure data, JSON-serializable, copy-on-provisioning (D7 lock).
+ */
+export interface WorkPackageSeed {
+  /** Stable machine key, e.g. "quality_engineer". Matches /^[a-z0-9_]+$/. */
+  roleKey: string;
+  /** Display name, e.g. "Quality Engineer". */
+  name: string;
+  /** Role family for grouping/variants, e.g. "quality", "engineering". */
+  family: string;
+  /** "automated" (unattended, scope-owned) or "copilot" (human-in-the-loop). */
+  mode: "automated" | "copilot";
+  /** Human-readable description of what this package enables. */
+  description: string;
+  /** Pinned tools (Tool Registry slugs + exact versions). */
+  tools: WorkPackageToolSeed[];
+  /** Skill slugs installed with the package, e.g. "8d-report". */
+  skills: string[];
+  /** Sub-agent configuration names installed with the package. */
+  subagentConfigs: string[];
+  /** Permission grants — "tool:*:invoke" and "resource:*:*" strings (D8 extension). */
+  permissions: string[];
+  /** Model-routing policy: allowed_models, auto_downgrade_to, etc. Free-form map. */
+  modelRouting: Record<string, unknown>;
+  /** Budget template: monthly_usd_cap, critical_reserve_pct, etc. */
+  budgetTemplate: Record<string, unknown>;
+  /** Tappable first-task prompts for the employee's chat surface. */
+  starterPrompts: string[];
+  /** Document template references (content-addressed in the catalog). */
+  templateRefs: string[];
+  /** Minimum agent runtime version this package config requires. */
+  minAgentVersion: string;
+}
+
 // ── The full profile preset ────────────────────────────────────────────────
 
 export type ProfileId = "tech" | "manufacturing" | "finance" | "holding" | "custom";
@@ -268,4 +331,7 @@ export interface IndustryProfilePreset {
   rolePresets: RolePresetDef[];
   /** Per-department work-type taxonomies (D7). */
   workTypeTaxonomies: WorkTypeTaxonomySeed[];
+  /** Work packages (D9) — role-scoped tool bundles seeded at provisioning
+   *  time, then governed per-package (budgets, approvals, metering). */
+  workPackages: WorkPackageSeed[];
 }

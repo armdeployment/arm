@@ -7,6 +7,7 @@
 - **v0.3** (2026-07-26): open decisions locked — D1-b (Tenant above Organization; dual delivery: SaaS + self-hosted enterprise, §3.4); D2-a (classification gate via context tagging at vend/return, §6.5); D5 (pull-based policy distribution with version watermark, push deferred to Phase 2+, §5.1)
 - **v0.4** (2026-07-26): frontend/UI plan — §5.3 Web UI (information architecture, role-scoped views, high-stakes action pattern, policy simulator, realtime via tRPC/SSE, deferred-shell stability, design system, onboarding UX, notification surfaces, a11y/testing stances); 1.0 gains web shell + wireframes; 1.3 gains policy simulator
 - **v0.5** (2026-07-26): gstack plan review applied — success criteria & exit gates (§9/1.y), agent-adoption risk row (§12), proxy performance budget + eventual-quota semantics (§5.2), 1.2 vertical-slice exit gate (§9), classification-context write-path hardening (§6.5), meter-agent disk-backed buffer (§5.2), scheduling assumptions + zero-slack note (§9), own-telemetry baseline (§9), differentiation statement (§1), notification preferences (§5.3)
+- **v0.6** (2026-08-13): D9 Work Packages foundation landed — Tool Registry + WorkPackage/Version/Assignment tables (§4.1), `token_usage_event` package-attribution columns (§4.2), `tool:*` authorization verbs (§6.2), employee provisioning flow `arm setup` + connections wizard (§8.6), client packages (`client-core`, CLI `setup`, plugin-ingest manifest) (§15), 4 new guardrails (§14.1), phases 1.5–1.7 (§9). Decision: `docs/solutions/2026-08-13-d9-work-packages.md`; roadmap: `docs/solutions/2026-08-13-work-package-roadmap.md`; research: `docs/research/`.
 - **Scope**: Full Phase 1 (1.0–1.4) including LLM metering, dashboards, agent-IdP, and resource access connectors (S3, GCS, DB, SharePoint/OneDrive).
 - **Decisions locked**:
   - Deployment: hybrid (SaaS control plane, on-prem data plane per tenant VPC).
@@ -33,6 +34,8 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 (4) **Priority tiers** (critical/standard/background) — assignment is policy, not self-declared. Under budget pressure, background agents auto-downgrade to open models, standard agents throttle, critical agents draw from reserve.
 
 (5) **Dual delivery** — multi-tenant SaaS and single-tenant self-hosted from one schema (§3.4), essential for manufacturing enterprises with data residency requirements.
+
+(6) **Work Packages (D9)** — versioned, role-scoped bundles of tools (pinned MCP servers), skills, sub-agent configs, permissions, routing, budget templates, and starter prompts, provisioned from industry profiles and installed by employees with one command (`arm setup`) in < 5 minutes with zero config files. The package is the governance unit: per-package budgets, `tool:*` authorization, approvals, and **cost-per-work-product** telemetry (`$/8D`, `$/PPAP`, `$/PLC routine`) — the metric no LLM gateway can offer.
 
 ### 1.1 Problem statements addressed
 1. Management cannot see how many agents are spawned per department/group/team/workstream, what LLMs they use, or what they cost.
@@ -275,6 +278,28 @@ LLMPolicy(scope_type, scope_id, allowed_models[], auto_downgrade_to,
           per_agent_day_cap, approval_required_for[],
           per_priority_caps_json)     # e.g. {"background": {"day_cap_usd": 50, "models": ["self_hosted/*"]}}
 
+# Work packages (D9) — Tool Registry + role-scoped bundles
+Tool(id, tenant_id, name, kind ENUM('mcp','http_api','cli','connector'),
+     endpoint, auth_strategy, data_classification, owner_user_id,
+     review_status ENUM('draft','in_review','approved','rejected','deprecated'))
+  # UNIQUE(tenant_id, name); data_classification feeds the tool gate (§6.2)
+ToolVersion(id, tenant_id, tool_id, version, manifest_sha256, config_schema_json, changelog)
+  # UNIQUE(tool_id, version); immutable manifest snapshots; packages pin exact versions
+WorkPackage(id, tenant_id, role_key, name, family,
+            mode ENUM('automated','copilot'), description)
+  # UNIQUE(tenant_id, role_key); copilot = employee-adjacent (default), automated = scope-owned
+WorkPackageVersion(id, tenant_id, package_id, version,
+                   tools_json[{tool_id, tool_version, scopes}], skills[], subagent_configs[],
+                   permissions[], model_routing_json, budget_template_json,
+                   starter_prompts[], template_refs[], min_agent_version, manifest_sha256)
+  # UNIQUE(package_id, version); manifest_sha256 covers the canonical snake_case manifest (§4.2 D9)
+PackageAssignment(id, tenant_id, package_version_id,
+                  assignee_type ENUM('user','agent','org_node'), assignee_id,
+                  status ENUM('requested','approved','active','revoked'),
+                  approver_user_id, approved_at)
+BudgetReservation(id, tenant_id, package_id NULL, work_type NULL, period, usd_cap_cents)
+  # per-package / per-work-type budget reservations (D9; NULL work_type = package-wide)
+
 # Resource access
 Resource(id, type ENUM('db','sharepoint','gcs','s3','onedrive','files','internal'),
          connector_id, external_ref, classification, tags_json, tenant_id)
@@ -305,7 +330,20 @@ CREATE TABLE token_usage_event (
   input_tokens    UInt64,
   output_tokens   UInt64,
   cost_usd        Decimal(12,6),
-  source          Enum('proxy','gateway','plugin','billing_api')
+  source          Enum('proxy','gateway','plugin','billing_api'),
+  -- D7 work-type tag
+  work_type           LowCardinality(String),
+  usage_tags          Array(LowCardinality(String)),
+  classifier_version  String,
+  classifier_stage    Enum('structural','cache','linear','embedding','unknown'),
+  work_type_confidence Float32,
+  -- D9 work-package attribution (additive; NULL = bare agent)
+  package_id          Nullable(String),
+  package_version_id  Nullable(String),
+  steps               UInt16,
+  tool_calls          UInt16,
+  cache_read_tokens   UInt64,
+  semantic_cache_hit  UInt8
 ) PARTITION BY (tenant_id, toYYYYMM(ts))
   ORDER BY (tenant_id, ts);
 
@@ -347,6 +385,12 @@ erDiagram
   AccessRequest ||--o{ AccessApproval : requires
   Organization ||--o{ Budget : has
   Organization ||--o{ LLMPolicy : has
+  Tenant ||--o{ Tool : registers
+  Tool ||--o{ ToolVersion : versions
+  Tenant ||--o{ WorkPackage : publishes
+  WorkPackage ||--o{ WorkPackageVersion : versions
+  WorkPackageVersion ||--o{ PackageAssignment : assigned_to
+  User }o--|| PackageAssignment : approver_of
 ```
 
 **Agent ownership & accountability**: user-owned agents have `owner_user_id` set; scope-owned agents (auto-spawned by automation/templates at any tree level) have `owner_user_id NULL` and `scope_type/scope_id` pointing at their node. **Every agent — user-owned or scope-owned — has a non-null `stakeholder_user_id`**: one accountable human. `project_tag` models cross-team initiatives as a reporting dimension and optional ABAC attribute — it is **not** an inheritance level.
@@ -496,6 +540,8 @@ flowchart TB
 | Internal systems | proxy | ARM data-plane brokers |
 | Files (laptop-local) | n/a (agent-side) | Out of ARM scope; classification tag still gates LLM routing |
 
+**Tool authorization (D9).** Tools (MCP servers, APIs, connectors) are first-class registry entities with their own grant verbs — `tool:<tool_key>:invoke|configure|publish` (grammar: key-then-verb). Tool grants resolve with the same deny-override algorithm as resource grants (§6.1) against the shared scope rank (`packages/policy/src/scope-rank.ts`). Every tool carries a `data_classification`; the **tool gate** extends the §6.5 classification gate to tools — a tool touching `confidential`/`restricted` data is never callable from a closed external model, and `restricted` connectors must resolve inside the tenant VPC (`guardrails/tool-endpoint-scope`). Package versions pin exact tool versions (`tool_version.manifest_sha256`), and `guardrails/package-integrity` re-verifies hashes over shipped fixtures.
+
 ### 6.3 Identity model (hybrid issuer)
 
 - **Federated where supported**: S3 IAM, GCS Workload Identity, Graph API trust ARM-issued OIDC tokens as service principals.
@@ -634,6 +680,28 @@ sequenceDiagram
    alerted at each tier action; every tier change emits audit + dashboard events
 ```
 
+### 8.6 Employee provisions a role Work Package (D9, Phase 1.6)
+
+```
+1. Employee (any technical level) runs the ARM client — Desktop installer or `arm setup --role <key>`
+2. SSO login (browser flow) → role picker shows ONLY packages the employee is approved for
+   (PackageAssignment rows: requested → approved → active)
+3. Client detects/installs the agent runtime (opencode first, version-pinned)
+4. Client fetches the package manifest from the control plane
+   (GET /api/catalog/packages/<role_key>/manifest → package + version + tools)
+5. Client verifies manifest integrity: recomputes sha256 over the canonical snake_case manifest
+   and compares to manifest_sha256 — mismatch aborts (config tamper is detected, never applied)
+6. Client renders runtime config: MCP servers with short-lived scoped tokens, skills, sub-agents,
+   permissions — credentials as env-var references (${ARM_AGENT_TOKEN}, ${ARM_MCP_*_TOKEN});
+   the minted agent token lands in <agent-home>/.arm-env (mode 0600), never in config JSON
+7. Connections wizard: Tier A OAuth one-click (Jira/GitHub/Google/AWS SSO) or Tier B guided
+   PAT/service-account steps (server-pushed, versioned guides) for each package tool needing auth
+8. Verification: metered round-trip through the data-plane proxy → event lands in ClickHouse with
+   package_id + package_version_id → "Online. Dept budget remaining: $X. Tools connected: M/N."
+```
+
+Governance loop (Phase 1.7): per-package + per-work-type budgets (`budget_reservation`), one-tap approvals inbox, `$/work-product` dashboards with rework-rate counterweight, causally-attributed savings ledger, cross-tenant anonymized benchmarks. Full plan: `docs/solutions/2026-08-13-work-package-roadmap.md`.
+
 ---
 
 ## 9. Phase Plan
@@ -676,6 +744,26 @@ sequenceDiagram
 - **SharePoint/OneDrive connector** (mint+sync hybrid): Graph API via ARM-OIDC-issuer for scoped tokens; site/doc permission **sync grants** + **drift detection job from day one**.
 - Approval workflow for JIT requests (in-app approvals inbox + email/webhook outbound); classification tag enforcement on LLM routing.
 - Access audit dashboards rolled into the management surface (§5.3 `/audit`).
+
+### 1.5 — Work Packages: foundation (landed 2026-08-13, D9 part 1)
+- Tool Registry + WorkPackage/Version/Assignment + BudgetReservation schema (§4.1) with unique indexes; drizzle migration `0002_sparkling_stingray.sql`.
+- `packages/catalog`: registry service primitives — canonical-manifest sha256, version validation, assignment state machine (requested → approved → active → revoked), slug→toolId seed provisioning, real integrity-hashed fixtures.
+- Pilot packages seeded in profiles: 10 Manufacturing, 5 Tech, 2 Finance, 2 Holding (`workPackages` in every preset; presets set defaults, never gate capabilities — D6).
+- Policy: `resolveToolAccess` (`tool:<key>:invoke|configure|publish`, deny-override, shared `scope-rank.ts`), `resolvePackageModel` (allowlist + auto-downgrade).
+- tRPC `catalog.*` router + web pages `/catalog`, `/assignments`, `/governance`.
+- 4 new mutation-proofed guardrails: `package-integrity`, `package-least-privilege`, `tool-endpoint-scope`, `package-drift` (§14.1).
+- **Exit gate:** publish/approve/assign/budget a package end-to-end via API + UI in CI; guardrails mutation-proofed.
+
+### 1.6 — Work Packages: one-click provisioning + copilot mode
+- `packages/client-core` (SSO → role → runtime → package apply → connections → verify) + `arm setup` CLI + plugin-ingest opencode config writer with integrity re-verification — all landed in the 1.5 PR series as the client foundation.
+- Remaining: Desktop client shells (`arm_client.exe`/`.app`/`.deb`, MDM packages, code signing), live OAuth connection wizard against vendor apps, tool gate + per-package quota enforcement inside closed-proxy/open-gateway.
+- **Exit gate:** non-technical employee → first metered package-attributed call < 5 min, unassisted; zero secrets in agent config files; tool-gate deny emits `access_audit_event(decision=deny, reason="tool_gate")`.
+
+### 1.7 — Work Packages: governance loop & moat metrics
+- Per-package + per-work-type budget reservations and alerts; plain-language policy editor; one-tap approvals inbox.
+- `$/work-product` dashboards with rework-rate counterweight; causally-attributed savings ledger; monthly exec digest; cross-tenant anonymized benchmarks (aggregates only).
+- Fine-tuned small-model pilot for one volume task (e.g. MRP exception triage); re-attestation cadence.
+- **Exit gate:** ≥ 2 pilot tenants × 3 packages; ≥ 80% of metered traffic carries `package_version_id`; ≥ 1 exec decision made from a `$/work-product` dashboard per tenant-month.
 
 ### 1.x Phase sequencing
 
@@ -802,6 +890,10 @@ The invariants in §11 are enforced as **executable guardrails**, not prose. Eve
 | LLM trust boundary (dashboard) | `guardrails/safe-render`: no unescaped rendering of agent/resource/model string fields in the web app (XSS via LLM-adjacent strings) |
 | Master-key custody (§12) | `guardrails/no-secret-dumps`: blocks `.env` dumps and hardcoded provider-key patterns; pre-push secret scan |
 | Policy-cache freshness (D5) | Data plane reports `policy_version` + `last_refresh` on every pull; control-plane health surface flags caches stale beyond SLA (seed-metadata freshness pattern) |
+| Work-package integrity (D9) | `guardrails/package-integrity`: package versions pin existing tool versions; `manifest_sha256` non-null on both version tables; every shipped fixture's hash re-computed and compared at guard time; dangling tool refs fail |
+| Work-package least privilege (D9) | `guardrails/package-least-privilege`: package permissions must be well-formed `resource|org_node:<key>:<verb>` / `tool:<key>:invoke|configure|publish`; bare wildcards (`resource:*`, `tool:*`) and duplicates are violations |
+| Tool endpoint scope (D9, §11.1) | `guardrails/tool-endpoint-scope`: tool endpoints must be tenant-VPC or approved SaaS; `confidential`/`restricted` tools may not use `none` auth; `restricted` connectors must resolve inside the VPC — run over shipped tool fixtures |
+| Package drift (D9, mirrors D5) | `guardrails/package-drift`: installed package versions must trail the preset release channel by ≤ N versions or surface a guided upgrade; `min_agent_version` substrate asserted in presets |
 | Dependency security | `pnpm audit` gate with **baselined advisories** — each entry carries written justification; stale entries fail the gate |
 
 ### 14.2 Guard quality standards
@@ -817,7 +909,7 @@ The invariants in §11 are enforced as **executable guardrails**, not prose. Eve
 - **Docs ownership rule**: when architecture, data model, API surface, or invariants change, `docs/arm-spec.md` (and derived docs) update in the **same PR**.
 - **`docs/solutions/`** logs dated decision/solution records with frontmatter (`title`, `date`, `status`, `supersedes`); `docs/open-decisions.md` tracks pending decisions.
 - **Pre-push gate (tiered)**: state-dependent checks always run (secret scan, branch hygiene); tree-dependent checks run diff-scoped (typecheck, guardrails, contract freshness). CI remains the full-suite authority.
-- **Dependency direction** (enforced by `guardrails/boundaries`): `packages/proto` → `packages/config` → `packages/{db,clickhouse,policy,billing,auth}` → `packages/trpc` → `apps/*`. Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`.
+- **Dependency direction** (enforced by `guardrails/boundaries`): `packages/proto` → `packages/config` → `packages/{db,clickhouse,policy,billing,auth,catalog}` → `packages/trpc` → `apps/*`. `packages/client-core` is a layer-1 shared package (imports proto/config only) usable by data-plane apps. Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`/`client-core`.
 - **CI workflow discipline**: the workflow table in `AGENTS.md` is kept in sync with `.github/workflows/*` by a CI check.
 - **Merge authority is explicit and non-delegable**: agents never merge without an explicit instruction in the current conversation.
 
@@ -841,10 +933,13 @@ arm/
       plugin-ingest/  # OAuth issuer + plugin webhook + agent discovery
       meter-agent/    # event consolidator → control plane
       connectors/     # s3, gcs, db, sharepoint packages
-    cli/              # arm CLI: data-plane install + `arm agent init` onboarding
+    cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (work packages)
+    desktop/          # (planned 1.6) ARM Desktop — arm_client.exe/.app/.deb GUI installer
   packages/
     db/               # Drizzle schema + migrations (Postgres)
     clickhouse/       # ClickHouse schema + migrations
+    catalog/          # (D9) Tool Registry + Work Package service (layer 2)
+    client-core/      # (D9) shared installer/provisioner engine (layer 1)
     trpc/             # shared routers/types
     auth/             # OIDC SSO + OIDC issuer + RBAC
     billing/          # provider billing-API connectors + reconciliation

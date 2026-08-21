@@ -12,18 +12,12 @@
  * and pass them as plain data.
  */
 
+import { SCOPE_RANK, type ScopeType } from "./scope-rank.js";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type ScopeType = "org" | "department" | "group" | "team" | "workstream";
-
-/** Authority rank: lower = more authoritative (Org root = 0). */
-export const SCOPE_RANK: Record<ScopeType, number> = {
-  org: 0,
-  department: 1,
-  group: 2,
-  team: 3,
-  workstream: 4,
-};
+export { SCOPE_RANK };
+export type { ScopeType };
 
 export interface Grant {
   scopeType: ScopeType;
@@ -217,3 +211,7 @@ registerDLPHook({
     return { matched: false };
   },
 });
+
+// ── D9 Tool Authorization (per-tool grants + package model routing) ────────
+
+export * from "./tool-access.js";

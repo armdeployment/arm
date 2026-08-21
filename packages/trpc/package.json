@@ -19,6 +19,7 @@
     "@arm/db": "workspace:*",
     "@arm/policy": "workspace:*",
     "@arm/auth": "workspace:*",
+    "@arm/catalog": "workspace:*",
     "@trpc/server": "11.18.0",
     "zod": "4.4.3"
   },

@@ -17,6 +17,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { ARMClaims } from "@arm/auth";
 import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
+import { catalogRouter } from "./catalog-router.js";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -919,6 +920,7 @@ export const appRouter = t.router({
   security: securityRouter,
   gpu: gpuRouter,
   anomaly: anomalyRouter,
+  catalog: catalogRouter,
 });
 
 export type AppRouter = typeof appRouter;
