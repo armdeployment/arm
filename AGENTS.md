@@ -46,14 +46,16 @@ These are enforced as **executable guardrails** (spec §14.1), not prose. Never 
 
 ## Architecture Rules
 
-### Dependency Direction *(target)*
+### Dependency Direction *(target, updated D10 — docs/guides/00-shared-contracts.md §7)*
 
 ```
-packages/proto → packages/config → packages/{db,clickhouse,policy,billing,auth} → packages/trpc → apps/*
+packages/proto → packages/config → packages/{db,clickhouse,policy,billing,auth,profiles}
+      → packages/{artifactory,catalog,discovery,questionnaire} → packages/trpc → apps/*
 ```
 
 - `packages/proto` has zero internal imports (zod contracts only).
-- Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`.
+- D10 exceptions to the strict same-rank rule: `catalog` may import `artifactory` (not vice versa); `discovery` may import `artifactory` (+ `db`, already allowed by rank), never `catalog` or `trpc`. `packages/questionnaire` is further restricted to `proto`/`config` only, regardless of rank, so it stays pure and dependency-light enough for `questionnaire-determinism` to check.
+- Data-plane apps must not import control-plane-only packages (`db`, `trpc`, `policy`, `auth`, `billing`, `catalog`, `artifactory`, `discovery`, `questionnaire`); shared code crosses only via `proto`/`config`.
 - Enforced by `scripts/guardrails/boundaries`.
 
 ### Trust Boundaries

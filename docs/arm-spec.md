@@ -278,27 +278,81 @@ LLMPolicy(scope_type, scope_id, allowed_models[], auto_downgrade_to,
           per_agent_day_cap, approval_required_for[],
           per_priority_caps_json)     # e.g. {"background": {"day_cap_usd": 50, "models": ["self_hosted/*"]}}
 
-# Work packages (D9) — Tool Registry + role-scoped bundles
-Tool(id, tenant_id, name, kind ENUM('mcp','http_api','cli','connector'),
-     endpoint, auth_strategy, data_classification, owner_user_id,
-     review_status ENUM('draft','in_review','approved','rejected','deprecated'))
-  # UNIQUE(tenant_id, name); data_classification feeds the tool gate (§6.2)
-ToolVersion(id, tenant_id, tool_id, version, manifest_sha256, config_schema_json, changelog)
-  # UNIQUE(tool_id, version); immutable manifest snapshots; packages pin exact versions
+# Work packages (D9, updated D10) — Component Registry + role-scoped bundles
+#
+# D10 cutover (docs/guides/00-shared-contracts.md §1, A3): `tool` generalizes
+# to `component` — one registry entity with a `kind` discriminator, no
+# parallel skill/plugin tables. No production data existed, so this was a
+# clean cutover: Tool/ToolVersion are GONE, replaced by Component/
+# ComponentVersion below. `tool:invoke`/`tool:configure`/`tool:publish`
+# verbs (D8/D9) do NOT rename — they apply only to callable components
+# (kind ∈ {mcp, http_api, cli, connector}); the rest (plugin, skill,
+# subagent, template, prompt_pack) are installed, not invoked, and carry no
+# verb (docs/CONCEPTS.md).
+Component(id, tenant_id, slug, kind ENUM('mcp','http_api','cli','connector',
+          'plugin','skill','subagent','template','prompt_pack'),
+          name, description, owner_user_id,
+          review_status ENUM('draft','in_review','approved','rejected','deprecated'),
+          source_kind ENUM('first_party','tenant_authored','imported'), source_ref,
+          endpoint NULL, auth_strategy NULL, data_classification, homepage_url NULL)
+  # UNIQUE(tenant_id, slug); endpoint/auth_strategy NULL for non-callable components;
+  # data_classification feeds the classification gate (§6.2) for every component
+ComponentVersion(id, tenant_id, component_id, version, manifest_json, manifest_sha256,
+                  blob_digest NULL "sha256:<hex>", blob_size_bytes, blob_media_type,
+                  config_schema_json, requires_json[{component_slug, range}], changelog,
+                  yanked DEFAULT false, published_at, published_by)
+  # UNIQUE(component_id, version); immutable manifest snapshots; packages pin exact versions;
+  # blob_digest is a verified content hash, never a mutable URL (guardrails/artifact-integrity)
+ComponentBlob(digest PK "sha256:<hex>", tenant_id NULL, media_type, size_bytes,
+              storage_backend ENUM('fs','s3','oci'), residency ENUM('control_plane','tenant'),
+              storage_key, uploaded_by, created_at)
+  # tenant_id nullable ONLY for residency='control_plane' first-party artifacts — the one
+  # documented exemption from "every table carries tenant_id NOT NULL" (guardrails/tenant-isolation);
+  # tenant-authored content must never sit at control_plane residency (guardrails/blob-residency)
+JobFunction(id, tenant_id, key, name, function_family, industry_profile,
+            aliases[], headcount_weight DEFAULT 0, created_at)
+  # UNIQUE(tenant_id, key); the questionnaire→recommendation taxonomy (D10)
+ComponentJobFunction(component_id, job_function_id)   # many-to-many junction, PK both + tenant_id
+WorkPackageJobFunction(package_id, job_function_id)   # many-to-many junction, PK both + tenant_id
+DiscoverySource(id, tenant_id, kind ENUM('mcp_registry','git','http_index','marketplace'),
+                name, endpoint, auth_ref NULL, enabled, last_synced_at, created_at)
+DiscoveryCandidate(id, tenant_id, source_id, external_ref, proposed_kind, name, description,
+                    raw_manifest_json, status ENUM('new','triaged','promoted','rejected'),
+                    promoted_component_id NULL, first_seen_at, reviewed_by, reviewed_at)
+  # UNIQUE(source_id, external_ref)
 WorkPackage(id, tenant_id, role_key, name, family,
-            mode ENUM('automated','copilot'), description)
-  # UNIQUE(tenant_id, role_key); copilot = employee-adjacent (default), automated = scope-owned
-WorkPackageVersion(id, tenant_id, package_id, version,
-                   tools_json[{tool_id, tool_version, scopes}], skills[], subagent_configs[],
+            mode ENUM('automated','copilot'), description,
+            approval_required DEFAULT true)
+  # UNIQUE(tenant_id, role_key); copilot = employee-adjacent (default), automated = scope-owned;
+  # approval_required=false ⇒ questionnaire recommendations auto-approve (A6)
+WorkPackageVersion(id, tenant_id, package_id, version, manifest_version DEFAULT 2,
+                   components_json[{component_id, version, kind, scopes}], job_functions[],
                    permissions[], model_routing_json, budget_template_json,
-                   starter_prompts[], template_refs[], min_agent_version, manifest_sha256)
-  # UNIQUE(package_id, version); manifest_sha256 covers the canonical snake_case manifest (§4.2 D9)
+                   starter_prompts[], min_agent_version, manifest_sha256)
+  # UNIQUE(package_id, version); manifest_sha256 covers the canonical manifest v2 JSON —
+  # 8 fields, snake_case, sorted arrays (docs/guides/00-shared-contracts.md §4); D10 REPLACES
+  # tools_json/skills/subagent_configs/template_refs with components_json/job_functions —
+  # a deliberate wire break, no v1 reader
 PackageAssignment(id, tenant_id, package_version_id,
                   assignee_type ENUM('user','agent','org_node'), assignee_id,
                   status ENUM('requested','approved','active','revoked'),
                   approver_user_id, approved_at)
 BudgetReservation(id, tenant_id, package_id NULL, work_type NULL, period, usd_cap_cents)
   # per-package / per-work-type budget reservations (D9; NULL work_type = package-wide)
+
+# Onboarding (D10) — questionnaire → recommendation → setup token
+QuestionnaireDefinition(id, tenant_id, version, industry_profile, graph_json,
+                        status ENUM('draft','published','archived'), published_at, created_at)
+  # UNIQUE(tenant_id, version); graph_json is the question DAG (docs/guides/00-shared-contracts.md §5.1)
+QuestionnaireResponse(id, tenant_id, definition_version, user_id NULL, org_node_id NULL,
+                      answers_json, resolved_job_function_key,
+                      recommended_package_version_ids[], created_at)
+  # answers_json is STRUCTURED ONLY — no free text ever reaches the control plane (A5, Invariant 1)
+SetupToken(id "=jti", tenant_id, token_sha256, user_id, package_version_ids[],
+           connections_digest, activation_code "6 chars, UNIQUE per tenant",
+           expires_at, redeemed_at NULL, redeemed_client_version, created_at)
+  # stores a HASH of the token, never the token itself (Invariant 4); A4 — one signed generic
+  # client + a per-user signed setup token, never a per-user compiled binary
 
 # Resource access
 Resource(id, type ENUM('db','sharepoint','gcs','s3','onedrive','files','internal'),
@@ -356,6 +410,41 @@ CREATE TABLE access_audit_event (
   decision      Enum('allow','deny','jit_grant'),
   reason        String,
   connector     String
+) PARTITION BY (tenant_id, toYYYYMM(ts))
+  ORDER BY (tenant_id, ts);
+
+-- D10 adoption events (docs/guides/00-shared-contracts.md §6,
+-- docs/solutions/2026-08-21-d10-adoption-first-restructure.md). Both
+-- METADATA + AUDIT ONLY (Invariant 1) and partitioned (tenant_id,
+-- toYYYYMM(ts)) from day 1 (Invariant 6), same as the tables above.
+
+CREATE TABLE activation_event (
+  ts               DateTime64(3),
+  tenant_id        String,
+  org_node_id      String,
+  user_ref         String,   -- pseudonymous id, never an email
+  job_function_key LowCardinality(String),
+  step             Enum('invited','questionnaire_started','questionnaire_completed',
+                        'token_issued','downloaded','installed','runtime_ready',
+                        'connections_started','connections_completed',
+                        'first_metered_call','weekly_active'),
+  outcome          Enum('ok','error','abandoned'),
+  package_version_id String,
+  client_version   LowCardinality(String),
+  error_code       LowCardinality(String),
+  duration_ms      UInt32
+) PARTITION BY (tenant_id, toYYYYMM(ts))
+  ORDER BY (tenant_id, ts);
+
+CREATE TABLE component_pull_event (
+  ts            DateTime64(3),
+  tenant_id     String,
+  component_id  String,
+  version       String,
+  blob_digest   String,
+  bytes         UInt64,
+  cache_hit     UInt8,
+  client_version LowCardinality(String)
 ) PARTITION BY (tenant_id, toYYYYMM(ts))
   ORDER BY (tenant_id, ts);
 ```
@@ -890,10 +979,15 @@ The invariants in §11 are enforced as **executable guardrails**, not prose. Eve
 | LLM trust boundary (dashboard) | `guardrails/safe-render`: no unescaped rendering of agent/resource/model string fields in the web app (XSS via LLM-adjacent strings) |
 | Master-key custody (§12) | `guardrails/no-secret-dumps`: blocks `.env` dumps and hardcoded provider-key patterns; pre-push secret scan |
 | Policy-cache freshness (D5) | Data plane reports `policy_version` + `last_refresh` on every pull; control-plane health surface flags caches stale beyond SLA (seed-metadata freshness pattern) |
-| Work-package integrity (D9) | `guardrails/package-integrity`: package versions pin existing tool versions; `manifest_sha256` non-null on both version tables; every shipped fixture's hash re-computed and compared at guard time; dangling tool refs fail |
+| Work-package integrity (D9/D10) | `guardrails/package-integrity`: `manifest_sha256` non-null on `componentVersionTable` (D10, replaces `toolVersionTable`) + `workPackageVersionTable`; profile `workPackages` blocks pin semver-ish versions |
 | Work-package least privilege (D9) | `guardrails/package-least-privilege`: package permissions must be well-formed `resource|org_node:<key>:<verb>` / `tool:<key>:invoke|configure|publish`; bare wildcards (`resource:*`, `tool:*`) and duplicates are violations |
-| Tool endpoint scope (D9, §11.1) | `guardrails/tool-endpoint-scope`: tool endpoints must be tenant-VPC or approved SaaS; `confidential`/`restricted` tools may not use `none` auth; `restricted` connectors must resolve inside the VPC — run over shipped tool fixtures |
+| Component endpoint scope (D9/D10, §11.1) | `guardrails/tool-endpoint-scope`: component endpoints must be tenant-VPC or approved SaaS; `confidential`/`restricted` components may not use `none` auth; `restricted` connectors must resolve inside the VPC |
 | Package drift (D9, mirrors D5) | `guardrails/package-drift`: installed package versions must trail the preset release channel by ≤ N versions or surface a guided upgrade; `min_agent_version` substrate asserted in presets |
+| Component review gate (D10) | `guardrails/component-review`: no `work_package_version.components` entry may reference a component whose `review_status ≠ approved` |
+| Artifact integrity (D10, A2) | `guardrails/artifact-integrity`: every `component_version` with a blob carries a well-formed `sha256:<hex>` digest; no manifest carries a mutable URL where a digest belongs |
+| Blob residency (D10, §11.1) | `guardrails/blob-residency`: no `component_blob` sourced from a `tenant_authored` component may sit at `control_plane` residency |
+| Questionnaire determinism (D10) | `guardrails/questionnaire-determinism`: the questionnaire→job-function mapping module imports only `proto`/`config` and calls no `fetch`/`Date.now`/`Math.random`/`crypto.randomUUID` — reproducible, auditable recommendations |
+| No content in activation (D10, §11.1/A5) | `guardrails/no-content-in-activation`: `activationEventSchema` carries no content-bearing field name; `questionNodeSchema.kind` never re-admits a free-text question kind — extends `no-content-egress` |
 | Dependency security | `pnpm audit` gate with **baselined advisories** — each entry carries written justification; stale entries fail the gate |
 
 ### 14.2 Guard quality standards
@@ -909,7 +1003,7 @@ The invariants in §11 are enforced as **executable guardrails**, not prose. Eve
 - **Docs ownership rule**: when architecture, data model, API surface, or invariants change, `docs/arm-spec.md` (and derived docs) update in the **same PR**.
 - **`docs/solutions/`** logs dated decision/solution records with frontmatter (`title`, `date`, `status`, `supersedes`); `docs/open-decisions.md` tracks pending decisions.
 - **Pre-push gate (tiered)**: state-dependent checks always run (secret scan, branch hygiene); tree-dependent checks run diff-scoped (typecheck, guardrails, contract freshness). CI remains the full-suite authority.
-- **Dependency direction** (enforced by `guardrails/boundaries`): `packages/proto` → `packages/config` → `packages/{db,clickhouse,policy,billing,auth,catalog}` → `packages/trpc` → `apps/*`. `packages/client-core` is a layer-1 shared package (imports proto/config only) usable by data-plane apps. Data-plane apps must not import control-plane-only packages; shared code crosses only via `proto`/`config`/`client-core`.
+- **Dependency direction** (enforced by `guardrails/boundaries`, updated D10 — docs/guides/00-shared-contracts.md §7): `packages/proto` → `packages/config` → `packages/{db,clickhouse,policy,billing,auth,profiles}` → `packages/{artifactory,catalog,discovery,questionnaire}` → `packages/trpc` → `apps/*`. Two D10 exceptions to the strict same-rank rule: `catalog` may import `artifactory` (not vice versa); `discovery` may import `artifactory` (and `db`, already allowed by rank), never `catalog` or `trpc`. `packages/questionnaire` is further restricted to `proto`/`config` ONLY (stricter than its rank would otherwise permit) so `questionnaire-determinism` stays checkable. `packages/client-core` is a layer-1 shared package (imports proto/config only) usable by data-plane apps. Data-plane apps must not import control-plane-only packages (`db`, `trpc`, `policy`, `auth`, `billing`, `catalog`, `artifactory`, `discovery`, `questionnaire`); shared code crosses only via `proto`/`config`/`client-core`.
 - **CI workflow discipline**: the workflow table in `AGENTS.md` is kept in sync with `.github/workflows/*` by a CI check.
 - **Merge authority is explicit and non-delegable**: agents never merge without an explicit instruction in the current conversation.
 
@@ -934,11 +1028,16 @@ arm/
       meter-agent/    # event consolidator → control plane
       connectors/     # s3, gcs, db, sharepoint packages
     cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (work packages)
-    desktop/          # (planned 1.6) ARM Desktop — arm_client.exe/.app/.deb GUI installer
+    onboarding/       # (D10) web questionnaire + signed platform installers (A7: no Desktop GUI)
+    artifact-cache/   # (D10, data-plane) local component/blob cache for the ARM client
   packages/
-    db/               # Drizzle schema + migrations (Postgres)
-    clickhouse/       # ClickHouse schema + migrations
-    catalog/          # (D9) Tool Registry + Work Package service (layer 2)
+    db/               # Drizzle schema + migrations (Postgres) — includes artifactory.ts, onboarding.ts (D10)
+    clickhouse/       # ClickHouse schema + migrations — includes 0003_adoption.sql (D10)
+    artifactory/      # (D10) Component Registry — content-addressed artifact storage (A2, layer 3)
+    catalog/          # (D9, updated D10) Work Package service — manifest v2 (layer 3)
+    discovery/        # (D10) external source → candidate → promoted component pipeline (layer 3)
+    questionnaire/    # (D10) questionnaire → job-function/recommendation mapping, proto/config only (layer 3)
+    profiles/         # (D6, moved to layer 2 in D10) industry-profile presets
     client-core/      # (D9) shared installer/provisioner engine (layer 1)
     trpc/             # shared routers/types
     auth/             # OIDC SSO + OIDC issuer + RBAC

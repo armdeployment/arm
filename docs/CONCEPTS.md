@@ -126,11 +126,43 @@ The distinction that keeps hybrid companies first-class. A **profile default** i
 
 ### Work Package
 
-The versioned, role-scoped bundle that makes an agent useful for a specific job (D9): tools (pinned MCP server versions), skills, sub-agent configurations, permission grants, model-routing policy, budget template, starter prompts, and document templates. Materialized from Industry Profile presets — presets set defaults, never gate capabilities (D6 rule) — and copy-on-provisioning: editing a preset never mutates an installed package; version bumps trigger guided upgrades (D7 lock pattern). The package is the unit of governance: budgets, approvals, metering, and Cost-Per-Work-Product telemetry all roll up by package. Ships in two modes: automated agent (scope-owned, unattended) and Copilot Mode (employee-adjacent). See also: Tool Registry, Package Assignment, Copilot Mode.
+The versioned, role-scoped bundle that makes an agent useful for a specific job (D9, updated D10): pinned components (see Component), permission grants, model-routing policy, budget template, starter prompts, and job-function tags. Materialized from Industry Profile presets — presets set defaults, never gate capabilities (D6 rule) — and copy-on-provisioning: editing a preset never mutates an installed package; version bumps trigger guided upgrades (D7 lock pattern). `approval_required` (A6) controls whether a questionnaire recommendation for this package auto-approves or routes to an approver. The package is the unit of governance: budgets, approvals, metering, and Cost-Per-Work-Product telemetry all roll up by package. Ships in two modes: automated agent (scope-owned, unattended) and Copilot Mode (employee-adjacent). See also: Component Registry, Manifest v2, Package Assignment, Copilot Mode, Job Function.
 
-### Tool Registry
+### Component
 
-The catalog of first-class tool entities behind Work Packages: `tool` + immutable `tool_version` rows (MCP/HTTP/CLI/connector kinds, endpoint, auth strategy, data classification, owner, review status). Tools are authorized with D8-extended `tool:*` verbs (`invoke`, `configure`, `publish`); deny-override applies unchanged. Every tool carries a data classification so the D2 Classification Gate extends from resources to tools — a tool touching `restricted` data is never callable from a closed external model. See also: Work Package, Classification Gate.
+The D10 generalization of `tool` (A3): one registry entity with a `kind` discriminator — `mcp`, `http_api`, `cli`, `connector` (**callable**, authorized with the unrenamed D8-extended `tool:*` verbs: `tool:invoke`, `tool:configure`, `tool:publish`) or `plugin`, `skill`, `subagent`, `template`, `prompt_pack` (**installable** — configured into an agent's runtime, never invoked, and carry no verb). There is no parallel skill/plugin table; `kind` is the only discriminator. Every component carries a data classification so the D2 Classification Gate extends uniformly to it — a component touching `restricted` data is never callable from a closed external model, whether or not it's callable at all. See also: Component Registry, Artifact Digest.
+
+### Component Registry
+
+The catalog of Components behind Work Packages (D10, replaces Tool Registry): `component` + immutable, content-addressed `component_version` rows (manifest, `manifest_sha256`, optional `blob_digest`, `requires` — dependencies on other component slugs+ranges). `source_kind` distinguishes first-party (ARM-shipped), tenant-authored, and imported (promoted from a Discovery Candidate) components; `review_status` gates whether a component may be referenced by a published Work Package version (`guardrails/component-review`). A real artifactory (A2) — immutable, versioned, signed-manifest storage with a pluggable blob backend — not a metadata-only registry. See also: Component, Artifact Digest, Discovery Candidate.
+
+### Artifact Digest
+
+The content hash (`sha256:<hex>`) that identifies a component's binary payload (`component_blob.digest`, referenced by `component_version.blob_digest`). Never a mutable URL — a manifest field that should carry a digest and instead carries an http(s) location is an integrity violation (`guardrails/artifact-integrity`). Blob storage is pluggable (`fs`/`s3`/`oci`, A2) and carries a `residency` (`control_plane` vs `tenant`): tenant-authored content must never sit at `control_plane` residency (Invariant 1, `guardrails/blob-residency`) — only first-party artifacts may. See also: Component Registry, Manifest v2, Metadata-Only Boundary.
+
+### Manifest v2
+
+The D10 canonical, hashed manifest shape for a Work Package version (guide 00 §4) — a deliberate wire break from the v1 (tool-shaped) manifest, with no compatibility reader. Exactly eight fields, snake_case, in this order, with arrays sorted deterministically: `manifest_version` (always 2), `components` (sorted by `component_id`), `permissions` (sorted), `model_routing`, `budget_template`, `starter_prompts` (insertion order), `min_agent_version`, `job_functions` (sorted). `manifest_sha256` covers the canonical JSON encoding of exactly this object — recursively sorted object keys, no whitespace — so the DB-side (`@arm/catalog`) and client-side (`@arm/client-core`) canonicalizers must produce byte-identical output, proven against a shared committed golden vector. See also: Work Package, Component, Artifact Digest.
+
+### Job Function
+
+The questionnaire/recommendation taxonomy entity (D10) that Work Packages and Components attach to (`component_job_function`, `work_package_job_function` junctions): a `key`, `name`, `function_family`, and `industry_profile` (default-source, not runtime-branched — same D6 discipline as Industry Profile). The Questionnaire resolves a respondent's answers to a `resolved_job_function_key`, which drives package recommendation (`recommendForJobFunction`) and gap analysis (`gaps` — job functions with no assigned package). See also: Questionnaire, Work Package, Industry Profile.
+
+### Questionnaire
+
+The structured, adoption-first onboarding flow (D10) that replaces manual role-picking: a versioned graph of question nodes (`questionnaire_definition.graph`), each `single`/`multi`/`scale` — **never `text`** (A5) — whose answered options carry `signals` (job-function and component weights) that resolve a respondent to a Job Function and a set of recommended package versions. Answers are **structured only** (`questionnaireAnswerSchema`: string/string-array/number/boolean, keyed by question id) — free-text questionnaire input never reaches the control plane, the same Metadata-Only Boundary discipline applied to a new surface. See also: Job Function, Setup Token, Metadata-Only Boundary.
+
+### Setup Token
+
+The per-user signed credential (A4) that lets one signed generic ARM client install and activate a recommended package, without a per-user compiled binary. Issued after questionnaire recommendation (auto-approved if every recommended package has `approval_required = false`, A6; otherwise after approver sign-off), redeemed exactly once. The control plane stores only `token_sha256` — never the token itself (Invariant 4, the same short-lived-credential discipline applied to onboarding) — plus a short human-relayable `activation_code` for out-of-band redemption. See also: Work Package, Questionnaire, Activation Funnel.
+
+### Activation Funnel
+
+The adoption-first metric spine (A1 — agent adoption at scale is the *primary* value prop, ahead of cost saving and on-prem LLM): the ordered `activation_event.step` sequence from `invited` through `questionnaire_started`/`completed` → `token_issued` → `downloaded` → `installed` → `runtime_ready` → `connections_started`/`completed` → `first_metered_call` → `weekly_active`, partitioned `(tenant_id, toYYYYMM(ts))` like every other event table (Invariant 6). Drives the `/adoption` dashboard's funnel, stall detection, time-to-value, and job-function coverage panels — the first-class surface reflecting A1's ordering, not a metric bolted onto spend/cost panels. See also: Setup Token, Metadata-Only Boundary.
+
+### Discovery Candidate
+
+An external component observed by a Discovery Source (an MCP registry, git index, HTTP index, or marketplace feed) pending human triage (D10): `status` moves `new → triaged → promoted|rejected`. A candidate's `raw_manifest` is unverified, as-fetched data — never trusted until promotion re-validates it through the same integrity gate real components pass (`guardrails/artifact-integrity`). Promotion sets `promoted_component_id`, turning the candidate into a real Component Registry entry. See also: Component Registry, Component.
 
 ### Copilot Mode
 
