@@ -124,18 +124,70 @@ export const workTypeStageEnum = pgEnum("work_type_stage", [
 ]);
 
 /**
- * Work-package tool kinds (D9). Tools are first-class registry entities;
- * packages pin exact tool versions.
+ * Component kind (D10 — `tool` generalizes to `component`, A3). One registry
+ * entity with a `kind` discriminator; no parallel skill/plugin tables.
+ * Callable kinds (mcp/http_api/cli/connector) carry `tool:*` verbs (D8/D9,
+ * unrenamed by design — docs/guides/00-shared-contracts.md §1); the rest are
+ * installed, not invoked, and have no verb.
  */
-export const toolKindEnum = pgEnum("tool_kind", ["mcp", "http_api", "cli", "connector"]);
+export const componentKindEnum = pgEnum("component_kind", [
+  "mcp",
+  "http_api",
+  "cli",
+  "connector", // callable → tool:* verbs apply
+  "plugin",
+  "skill",
+  "subagent",
+  "template",
+  "prompt_pack", // installable
+]);
 
-/** Tool review lifecycle (D9 — publish → approve workflow). */
-export const toolReviewStatusEnum = pgEnum("tool_review_status", [
+/** Component review lifecycle (D9/D10 — publish → approve workflow). */
+export const componentReviewStatusEnum = pgEnum("component_review_status", [
   "draft",
   "in_review",
   "approved",
   "rejected",
   "deprecated",
+]);
+
+/** Component provenance (D10 A2/A3): first-party (ARM-shipped), tenant-authored
+ *  (private to the tenant), or imported (from a discovery source). */
+export const componentSourceKindEnum = pgEnum("component_source_kind", [
+  "first_party",
+  "tenant_authored",
+  "imported",
+]);
+
+/** Blob storage backend for artifactory content (D10 A2 — pluggable blob backend). */
+export const storageBackendEnum = pgEnum("storage_backend", ["fs", "s3", "oci"]);
+
+/** Blob residency — control_plane (ARM-hosted, first-party only) vs tenant
+ *  (customer VPC). Invariant 1: tenant-authored content never sits at
+ *  control_plane residency (see guardrails/blob-residency). */
+export const blobResidencyEnum = pgEnum("blob_residency", ["control_plane", "tenant"]);
+
+/** Discovery source kind (D10 — where candidate components are pulled from). */
+export const discoverySourceKindEnum = pgEnum("discovery_source_kind", [
+  "mcp_registry",
+  "git",
+  "http_index",
+  "marketplace",
+]);
+
+/** Discovery candidate triage lifecycle (D10). */
+export const discoveryCandidateStatusEnum = pgEnum("discovery_candidate_status", [
+  "new",
+  "triaged",
+  "promoted",
+  "rejected",
+]);
+
+/** Questionnaire definition lifecycle (D10 — adoption-first onboarding). */
+export const questionnaireStatusEnum = pgEnum("questionnaire_status", [
+  "draft",
+  "published",
+  "archived",
 ]);
 
 /**

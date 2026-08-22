@@ -1,0 +1,44 @@
+{
+  "manifest_version": 2,
+  "components": [
+    {
+      "component_id": "10000000-0000-4000-8000-000000000001",
+      "version": "1.0.0",
+      "kind": "mcp",
+      "scopes": [
+        "read:issue",
+        "write:issue"
+      ]
+    },
+    {
+      "component_id": "20000000-0000-4000-8000-000000000002",
+      "version": "2.1.0",
+      "kind": "skill",
+      "scopes": []
+    }
+  ],
+  "permissions": [
+    "resource:mes:read",
+    "tool:invoke:jira"
+  ],
+  "model_routing": {
+    "allowed_models": [
+      "claude-sonnet-4.5",
+      "self_hosted/*"
+    ],
+    "auto_downgrade_to": "self_hosted/glm-5.2"
+  },
+  "budget_template": {
+    "monthly_usd_cap": 500,
+    "period": "monthly"
+  },
+  "starter_prompts": [
+    "Summarize today's open defects",
+    "Draft a PPAP submission checklist"
+  ],
+  "min_agent_version": "1.4.0",
+  "job_functions": [
+    "quality_engineer",
+    "quality_engineer_plant"
+  ]
+}

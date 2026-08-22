@@ -7,3 +7,5 @@ export * from "./access.js";
 export * from "./worktype.js";
 export * from "./catalog.js";
 export * from "./org-audit.js";
+export * from "./artifactory.js";
+export * from "./onboarding.js";
