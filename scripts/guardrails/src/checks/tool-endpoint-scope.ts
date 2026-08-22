@@ -1,11 +1,11 @@
 /**
- * guardrail: tool-endpoint-scope (D9).
+ * guardrail: tool-endpoint-scope (D9, updated D10).
  *
- * Tool endpoints must be tenant-VPC or approved SaaS tagged with a data
- * classification — connects tools to the Invariant 1 / D2 classification gate.
- * A tool touching `restricted` data is never callable from a closed external
- * model (docs/solutions/2026-08-13-d9-work-packages.md §Consequences →
- * Guardrails):
+ * Callable-component endpoints must be tenant-VPC or approved SaaS tagged
+ * with a data classification — connects them to the Invariant 1 / D2
+ * classification gate. A component touching `restricted` data is never
+ * callable from a closed external model
+ * (docs/solutions/2026-08-13-d9-work-packages.md §Consequences → Guardrails):
  *   - endpoints must be `https|internal|mcp|cli://` URLs or bare
  *     `host[:port]` (cli:// is reserved for kind==="cli" local desktop apps),
  *   - `confidential`/`restricted` data ⇒ authStrategy must not be "none" —
@@ -16,12 +16,24 @@
  *   - a `connector` touching `restricted` data must not call a public https
  *     endpoint (tenant-VPC form only).
  *
- * Pure-function form (`checkToolEndpoints`) is exercised by mutation proofs.
- * The registered check asserts the DB substrate: the tool table ships nonNull
- * `endpoint`, `auth_strategy`, and `data_classification` columns, so every
- * registered tool is forced through this gate — and then runs the same gate
- * over the REAL shipped tool rows (`@arm/catalog` toolFixtures, snake_case
- * wire shape), so the guard can never go vacuous while fixtures exist.
+ * D10 MECHANICAL UPDATE (contracts, Wave 0 — NOT a reimplementation): `tool`
+ * generalizes to `component` (A3, guide 00 §1); the registry table is now
+ * `componentTable` (packages/db/src/schema/artifactory.ts, replaces
+ * `toolTable`). The "shipped @arm/catalog toolFixtures" run is REMOVED:
+ * `@arm/catalog`'s fixtures are still v1/tool-shaped pending `library`'s
+ * (Wave 1) migration to components. Its D10 successor
+ * (`scripts/guardrails/src/checks/component-review.ts`, stubbed by
+ * `contracts`) is where that real-fixture gate is re-established once
+ * `packages/artifactory` fixtures land.
+ *
+ * Pure-function form (`checkToolEndpoints`) is exercised by mutation proofs
+ * and is UNCHANGED — it operates on plain `{kind, endpoint, authStrategy,
+ * dataClassification}` rows, independent of the tool/component cutover.
+ * `verifyToolEndpoints` is ALSO unchanged and still exercised directly by
+ * mutation proofs with synthetic data; only the REGISTERED check's fixture
+ * wiring is removed. The registered check still asserts the DB substrate —
+ * `componentTable` ships nonNull `endpoint`, `auth_strategy`, and
+ * `data_classification` columns — so it stays non-vacuous.
  */
 
 import { register, type CheckResult } from "../types.js";
@@ -130,18 +142,18 @@ export function verifyToolEndpoints(fixtures: ToolEndpointWireFixture[]): CheckR
 register({
   id: "tool-endpoint-scope",
   description:
-    "Tool table must ship nonNull endpoint, auth_strategy, and data_classification columns — every registered tool passes through the Invariant 1/D2 classification gate (D9). Also runs the endpoint gate over the real @arm/catalog toolFixtures.",
+    "Component table (artifactory.ts) must ship endpoint, auth_strategy (nullable — non-callable components carry neither), and nonNull data_classification columns — every registered component passes through the Invariant 1/D2 classification gate (D9/D10).",
   invariant:
-    "D9/Invariant 1: tool endpoints must be tenant-VPC or approved SaaS tagged with data classification; a restricted-data tool is never callable from a closed external model",
-  run: async () => {
+    "D9/D10/Invariant 1: component endpoints must be tenant-VPC or approved SaaS tagged with data classification; a restricted-data component is never callable from a closed external model",
+  run: () => {
     const repoRoot = path.resolve(import.meta.dirname, "../../../..");
-    const schemaPath = path.join(repoRoot, "packages/db/src/schema/catalog.ts");
+    const schemaPath = path.join(repoRoot, "packages/db/src/schema/artifactory.ts");
 
     if (!fs.existsSync(schemaPath)) {
       return {
         id: "tool-endpoint-scope",
         status: "fail" as const,
-        detail: `catalog schema file not found: ${schemaPath}`,
+        detail: `artifactory schema file not found: ${schemaPath}`,
         scanned: 1,
         assertsNegative: true,
       };
@@ -149,50 +161,41 @@ register({
 
     const content = fs.readFileSync(schemaPath, "utf-8");
 
+    // endpoint/auth_strategy are NULLABLE (D10, guide 00 §3.1) — non-callable
+    // components (skill/subagent/template/prompt_pack/plugin) carry neither.
+    // data_classification stays NOT NULL for every component regardless of
+    // callability (the classification gate applies uniformly).
     const required = [
-      'text("endpoint").notNull()',
-      'text("auth_strategy").notNull()',
+      'text("endpoint")',
+      'text("auth_strategy")',
       'text("data_classification").notNull()',
     ];
     const missing = required.filter((needle) => !content.includes(needle));
     const missingTable =
-      !content.includes("export const toolTable") ? ["toolTable definition"] : [];
+      !content.includes("export const componentTable") ? ["componentTable definition"] : [];
 
     const issues = [...missingTable, ...missing];
     if (issues.length > 0) {
       return {
         id: "tool-endpoint-scope",
         status: "fail" as const,
-        detail: `tool table schema missing required definitions: ${issues.join(", ")}`,
+        detail: `component table schema missing required definitions: ${issues.join(", ")}`,
         scanned: 1,
         assertsNegative: true,
       };
     }
 
-    // ── Shipped fixture rows: run the endpoint gate over real data ─────────
-    let tools: ToolEndpointWireFixture[];
-    try {
-      const catalog = await import("@arm/catalog");
-      tools = catalog.toolFixtures;
-    } catch (err) {
-      return {
-        id: "tool-endpoint-scope",
-        status: "fail" as const,
-        detail: `@arm/catalog unavailable — cannot verify shipped tool fixtures: ${String(err)}`,
-        scanned: 0,
-        assertsNegative: true,
-      };
-    }
-
-    const fixtureCheck = verifyToolEndpoints(tools);
-    if (fixtureCheck.status === "fail") {
-      return fixtureCheck;
-    }
-
+    // NOTE (D10 mechanical update): the "shipped @arm/catalog toolFixtures"
+    // run that used to happen here is removed — @arm/catalog's fixtures are
+    // still v1/tool-shaped pending `library`'s (Wave 1) migration to
+    // components (see file header). `verifyToolEndpoints` stays exported and
+    // mutation-proofed with synthetic data below; the D10 successor for
+    // real shipped-fixture verification is `component-review`
+    // (scripts/guardrails/src/checks/component-review.ts).
     return {
       id: "tool-endpoint-scope",
       status: "pass" as const,
-      scanned: fixtureCheck.scanned,
+      scanned: required.length + 1,
       assertsNegative: true,
     };
   },

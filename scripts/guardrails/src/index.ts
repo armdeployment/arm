@@ -16,6 +16,11 @@ import "./checks/package-integrity.js";
 import "./checks/package-least-privilege.js";
 import "./checks/tool-endpoint-scope.js";
 import "./checks/package-drift.js";
+import "./checks/component-review.js";
+import "./checks/artifact-integrity.js";
+import "./checks/blob-residency.js";
+import "./checks/questionnaire-determinism.js";
+import "./checks/no-content-in-activation.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -53,3 +58,17 @@ export {
   DEFAULT_MAX_LAG,
   type InstalledPackageVersion,
 } from "./checks/package-drift.js";
+export { checkComponentReview, type ComponentRefWithStatus } from "./checks/component-review.js";
+export {
+  checkArtifactIntegrity,
+  type ComponentVersionBlobRef,
+} from "./checks/artifact-integrity.js";
+export { checkBlobResidency, type BlobResidencyRow } from "./checks/blob-residency.js";
+export {
+  checkQuestionnaireDeterminism,
+  type DeterminismViolation,
+} from "./checks/questionnaire-determinism.js";
+export {
+  checkNoContentInActivation,
+  type ActivationContentCheckInput,
+} from "./checks/no-content-in-activation.js";

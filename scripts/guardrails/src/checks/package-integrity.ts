@@ -1,22 +1,31 @@
 /**
- * guardrail: package-integrity (D9).
+ * guardrail: package-integrity (D9, updated D10).
  *
- * Every package version pins existing tool versions and is content-addressed:
- * `manifest_sha256` covers the canonical manifest JSON so a client can verify
- * a tamper-free config at install and at agent start
- * (docs/solutions/2026-08-13-d9-work-packages.md §Consequences → Guardrails).
- * Any recompute mismatch is red.
+ * Every package version is content-addressed: `manifest_sha256` covers the
+ * canonical manifest JSON so a client can verify a tamper-free config at
+ * install and at agent start (docs/solutions/2026-08-13-d9-work-packages.md
+ * §Consequences → Guardrails). Any recompute mismatch is red.
  *
- * Pure-function form (`checkPackageIntegrity`) is exercised by mutation proofs.
- * The registered check asserts the DB substrate — nonNull `manifest_sha256` on
- * BOTH `toolVersionTable` and `workPackageVersionTable` — and that the shipped
- * profile presets define `workPackages` blocks whose entries pin semver-ish
- * `toolVersion`s. It ALSO recomputes every shipped @arm/catalog
- * `packageVersionFixtures` manifest hash (via @arm/catalog's own
- * `canonicalManifest` + `manifestSha256`) and rejects tool refs pointing at
- * unknown Tool Registry ids (dangling-ref detection, D9 M5). If profiles
- * haven't landed `workPackages` yet, the registered check FAILS LOUDLY
- * (spec §14.2 vacuous-guard rule).
+ * D10 MECHANICAL UPDATE (contracts, Wave 0 — NOT a reimplementation): `tool`
+ * generalizes to `component` (A3, guide 00 §1). The DB substrate check now
+ * asserts nonNull `manifest_sha256` on `componentVersionTable`
+ * (packages/db/src/schema/artifactory.ts, replaces `toolVersionTable`) and
+ * `workPackageVersionTable` (packages/db/src/schema/catalog.ts, unchanged
+ * table, changed columns). The "shipped @arm/catalog fixture" recompute +
+ * dangling-tool-ref check is REMOVED here: `@arm/catalog`'s fixtures are
+ * still v1/tool-shaped and are `library`'s (Wave 1) migration to do
+ * (docs/guides/01-library-artifactory.md) — its future `artifact-integrity`
+ * guardrail (scripts/guardrails/src/checks/artifact-integrity.ts, stubbed by
+ * `contracts`) is the D10 successor for that specific check, not this file.
+ *
+ * Pure-function form (`checkPackageIntegrity`) is exercised by mutation
+ * proofs and is UNCHANGED — it operates on plain `{manifestSha256,
+ * manifestJson}` pairs, independent of the tool/component cutover.
+ * `verifyFixtureIntegrity` (the @arm/catalog-shaped fixture verifier) is
+ * ALSO unchanged and still exercised directly by mutation proofs with
+ * synthetic data; only the REGISTERED check's fixture wiring is removed.
+ * If profiles haven't landed `workPackages` yet, the registered check FAILS
+ * LOUDLY (spec §14.2 vacuous-guard rule).
  */
 
 import { register, type CheckResult } from "../types.js";
@@ -162,12 +171,13 @@ export function verifyFixtureIntegrity(
 register({
   id: "package-integrity",
   description:
-    "Package/tool manifests are content-addressed: nonNull manifest_sha256 on both version tables; profile workPackages pin semver-ish tool versions; shipped @arm/catalog packageVersionFixtures rehash clean and their tool refs resolve (no dangling refs) (D9).",
+    "Package manifests are content-addressed: nonNull manifest_sha256 on componentVersionTable + workPackageVersionTable; profile workPackages pin semver-ish tool versions (D9/D10).",
   invariant:
-    "D9: every package version pins existing tool versions; templates/skills are content-addressed (sha256); no dangling references (docs/solutions/2026-08-13-d9-work-packages.md)",
+    "D9/D10: every package version is content-addressed (sha256); no dangling references (docs/solutions/2026-08-13-d9-work-packages.md, docs/guides/00-shared-contracts.md)",
   run: async () => {
     const repoRoot = path.resolve(import.meta.dirname, "../../../..");
-    const schemaPath = path.join(repoRoot, "packages/db/src/schema/catalog.ts");
+    const catalogSchemaPath = path.join(repoRoot, "packages/db/src/schema/catalog.ts");
+    const artifactorySchemaPath = path.join(repoRoot, "packages/db/src/schema/artifactory.ts");
     const scans = profileScans(repoRoot);
 
     if (scans.length === 0) {
@@ -183,23 +193,30 @@ register({
 
     // ── DB substrate: manifest_sha256 nonNull on BOTH version tables ────────
     const tableIssues: string[] = [];
-    if (!fs.existsSync(schemaPath)) {
-      tableIssues.push(`catalog schema file not found: ${schemaPath}`);
+    const needle = 'text("manifest_sha256").notNull()';
+    let shaCount = 0;
+    if (!fs.existsSync(catalogSchemaPath)) {
+      tableIssues.push(`catalog schema file not found: ${catalogSchemaPath}`);
     } else {
-      const schema = fs.readFileSync(schemaPath, "utf-8");
-      const needle = 'text("manifest_sha256").notNull()';
-      const shaCount = schema.split(needle).length - 1;
-      if (!schema.includes("export const toolVersionTable")) {
-        tableIssues.push("toolVersionTable missing from catalog.ts");
-      }
+      const schema = fs.readFileSync(catalogSchemaPath, "utf-8");
+      shaCount += schema.split(needle).length - 1;
       if (!schema.includes("export const workPackageVersionTable")) {
         tableIssues.push("workPackageVersionTable missing from catalog.ts");
       }
-      if (shaCount < 2) {
-        tableIssues.push(
-          `nonNull manifest_sha256 asserted on ${shaCount} table(s) — required on both toolVersionTable and workPackageVersionTable`,
-        );
+    }
+    if (!fs.existsSync(artifactorySchemaPath)) {
+      tableIssues.push(`artifactory schema file not found: ${artifactorySchemaPath}`);
+    } else {
+      const schema = fs.readFileSync(artifactorySchemaPath, "utf-8");
+      shaCount += schema.split(needle).length - 1;
+      if (!schema.includes("export const componentVersionTable")) {
+        tableIssues.push("componentVersionTable missing from artifactory.ts (D10 — replaces toolVersionTable)");
       }
+    }
+    if (shaCount < 2) {
+      tableIssues.push(
+        `nonNull manifest_sha256 asserted on ${shaCount} table(s) — required on both componentVersionTable (artifactory.ts) and workPackageVersionTable (catalog.ts)`,
+      );
     }
 
     // ── Profile presets: workPackages blocks with pinned tool versions ──────
@@ -245,44 +262,18 @@ register({
       };
     }
 
-    // ── Shipped fixture rows: recompute real hashes + dangling-ref scan ─────
-    let fixturesScanned = 0;
-    try {
-      const catalog = await import("@arm/catalog");
-      const hashTools: ManifestHashTools = {
-        canonicalManifest: catalog.canonicalManifest as ManifestHashTools["canonicalManifest"],
-        manifestSha256: catalog.manifestSha256,
-      };
-      const knownToolIds = new Set(Object.values(catalog.toolIdFixtures));
-      const fixtureCheck = verifyFixtureIntegrity(
-        catalog.packageVersionFixtures,
-        hashTools,
-        knownToolIds,
-      );
-      fixturesScanned = fixtureCheck.scanned;
-      if (fixtureCheck.status === "fail") {
-        return {
-          id: "package-integrity",
-          status: "fail" as const,
-          detail: fixtureCheck.detail ?? "shipped fixture verification failed",
-          scanned: wpScans.length + fixturesScanned,
-          assertsNegative: true,
-        };
-      }
-    } catch (err) {
-      return {
-        id: "package-integrity",
-        status: "fail" as const,
-        detail: `@arm/catalog fixture verification unavailable: ${String(err)}`,
-        scanned: wpScans.length,
-        assertsNegative: true,
-      };
-    }
+    // NOTE (D10 mechanical update): the "shipped @arm/catalog fixture
+    // rehash + dangling-tool-ref" check that used to run here is removed —
+    // @arm/catalog's fixtures are still v1/tool-shaped pending `library`'s
+    // (Wave 1) migration to components (see file header). `verifyFixtureIntegrity`
+    // stays exported and mutation-proofed with synthetic data below; the
+    // D10 successor for real shipped-fixture verification is
+    // `artifact-integrity` (scripts/guardrails/src/checks/artifact-integrity.ts).
 
     return {
       id: "package-integrity",
       status: "pass" as const,
-      scanned: wpScans.length + fixturesScanned,
+      scanned: wpScans.length,
       assertsNegative: true,
     };
   },

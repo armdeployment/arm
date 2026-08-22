@@ -38,7 +38,12 @@ import {
   type ToolEndpointWireFixture,
 } from "../src/checks/tool-endpoint-scope.js";
 import { checkPackageDrift } from "../src/checks/package-drift.js";
-import { INIT_SQL, assertTenantMonthPartitioning } from "@arm/clickhouse";
+import { checkComponentReview } from "../src/checks/component-review.js";
+import { checkArtifactIntegrity } from "../src/checks/artifact-integrity.js";
+import { checkBlobResidency } from "../src/checks/blob-residency.js";
+import { checkQuestionnaireDeterminism } from "../src/checks/questionnaire-determinism.js";
+import { checkNoContentInActivation } from "../src/checks/no-content-in-activation.js";
+import { INIT_SQL, assertTenantMonthPartitioning, ADOPTION_SQL, assertAdoptionPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
   const clean = [
@@ -180,6 +185,99 @@ describe("mutation proof: boundaries (§14.3)", () => {
   it("PASSES on a clean dependency graph", () => {
     expect(checkBoundaries(clean).status).toBe("pass");
   });
+
+  // ── D10 additions (guide 00 §7) ─────────────────────────────────────────
+
+  it("FAILS when questionnaire imports something outside proto/config (e.g. @arm/db)", () => {
+    const broken = [
+      ...clean,
+      { path: "packages/questionnaire/src/index.ts", content: 'import {} from "@arm/db";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("restricted-package");
+    expect(r.detail).toContain("questionnaire");
+  });
+
+  it("PASSES when questionnaire imports only proto and config", () => {
+    const files = [
+      ...clean,
+      {
+        path: "packages/questionnaire/src/index.ts",
+        content: 'import {} from "@arm/proto";\nimport {} from "@arm/config";',
+      },
+    ];
+    expect(checkBoundaries(files).status).toBe("pass");
+  });
+
+  it("FAILS when artifactory imports catalog (asymmetric — only catalog->artifactory is allowed)", () => {
+    const broken = [
+      ...clean,
+      { path: "packages/artifactory/src/index.ts", content: 'import {} from "@arm/catalog";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("back-edge");
+    expect(r.detail).toContain("artifactory");
+  });
+
+  it("PASSES when catalog imports artifactory (D10 exception)", () => {
+    const files = [
+      ...clean,
+      { path: "packages/catalog/src/index.ts", content: 'import {} from "@arm/artifactory";' },
+    ];
+    expect(checkBoundaries(files).status).toBe("pass");
+  });
+
+  it("FAILS when discovery imports catalog", () => {
+    const broken = [
+      ...clean,
+      { path: "packages/discovery/src/index.ts", content: 'import {} from "@arm/catalog";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("back-edge");
+    expect(r.detail).toContain("discovery");
+  });
+
+  it("FAILS when discovery imports trpc", () => {
+    const broken = [
+      ...clean,
+      { path: "packages/discovery/src/index.ts", content: 'import {} from "@arm/trpc";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("back-edge");
+  });
+
+  it("PASSES when discovery imports artifactory and db", () => {
+    const files = [
+      ...clean,
+      {
+        path: "packages/discovery/src/index.ts",
+        content: 'import {} from "@arm/artifactory";\nimport {} from "@arm/db";',
+      },
+    ];
+    expect(checkBoundaries(files).status).toBe("pass");
+  });
+
+  it("FAILS when a data-plane app imports @arm/questionnaire (control-plane only, D10)", () => {
+    const broken = [
+      ...clean,
+      { path: "apps/data-plane/proxy/src/index.ts", content: 'import {} from "@arm/questionnaire";' }, // mutation
+    ];
+    const r = checkBoundaries(broken);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("data-plane-imports-control");
+  });
+
+  it("PASSES when profiles (moved to rank 2, D10) imports nothing internal — no-op move", () => {
+    const files = [
+      ...clean,
+      { path: "packages/profiles/src/index.ts", content: "export const x = 1;" },
+    ];
+    expect(checkBoundaries(files).status).toBe("pass");
+  });
 });
 
 describe("mutation proof: ClickHouse partitioning (§11.6)", () => {
@@ -193,6 +291,28 @@ describe("mutation proof: ClickHouse partitioning (§11.6)", () => {
       "PARTITION BY (toYYYYMM(ts))", // mutation — drops tenant_id partitioning on BOTH tables
     );
     expect(() => assertTenantMonthPartitioning(broken)).toThrow(/Invariant 6 violated/);
+  });
+});
+
+describe("mutation proof: ClickHouse adoption-event partitioning (§11.6, D10 guide 00 §6)", () => {
+  it("PASSES on the shipped 0003_adoption.sql", () => {
+    expect(() => assertAdoptionPartitioning()).not.toThrow();
+  });
+
+  it("THROWS when the partition clause is removed", () => {
+    const broken = ADOPTION_SQL.replaceAll(
+      "PARTITION BY (tenant_id, toYYYYMM(ts))",
+      "PARTITION BY (toYYYYMM(ts))", // mutation — drops tenant_id partitioning on BOTH tables
+    );
+    expect(() => assertAdoptionPartitioning(broken)).toThrow(/Invariant 6 violated/);
+  });
+
+  it("THROWS when a table is dropped from the migration", () => {
+    const broken = ADOPTION_SQL.replace(
+      /CREATE TABLE IF NOT EXISTS component_pull_event[\s\S]*?ORDER BY \(tenant_id, ts\);\n/,
+      "", // mutation — drops component_pull_event entirely
+    );
+    expect(() => assertAdoptionPartitioning(broken)).toThrow(/Expected 2 adoption event tables/);
   });
 });
 
@@ -715,12 +835,15 @@ describe("mutation proof: verifyToolEndpoints over shipped fixtures (D9)", () =>
     expect(r.scanned).toBe(1);
   });
 
-  it("PASSES on the real @arm/catalog toolFixtures", async () => {
-    const catalog = await import("@arm/catalog");
-    const r = verifyToolEndpoints(catalog.toolFixtures);
-    expect(r.status).toBe("pass");
-    expect(r.scanned).toBeGreaterThanOrEqual(4);
-  });
+  // D10 mechanical update (contracts, Wave 0): the "real @arm/catalog
+  // toolFixtures" run that used to live here is removed. @arm/catalog's
+  // fixtures are still v1/tool-shaped pending `library`'s (Wave 1)
+  // migration to components (docs/guides/01-library-artifactory.md) —
+  // importing @arm/catalog here would exercise stale, soon-to-be-replaced
+  // data, not a meaningful proof. `verifyToolEndpoints` itself is unchanged
+  // and fully covered by the synthetic-fixture tests above; re-add a
+  // real-fixture proof once `library` ships component fixtures (the D10
+  // successor lives in scripts/guardrails/src/checks/component-review.ts).
 });
 
 describe("mutation proof: verifyFixtureIntegrity over shipped fixtures (D9)", () => {
@@ -787,17 +910,191 @@ describe("mutation proof: verifyFixtureIntegrity over shipped fixtures (D9)", ()
     expect(r.scanned).toBe(1);
   });
 
-  it("PASSES on the real @arm/catalog packageVersionFixtures + toolIdFixtures", async () => {
-    const catalog = await import("@arm/catalog");
-    const r = verifyFixtureIntegrity(
-      catalog.packageVersionFixtures,
-      {
-        canonicalManifest: catalog.canonicalManifest as ManifestHashTools["canonicalManifest"],
-        manifestSha256: catalog.manifestSha256,
-      },
-      new Set(Object.values(catalog.toolIdFixtures)),
-    );
+  // D10 mechanical update (contracts, Wave 0): the "real @arm/catalog
+  // packageVersionFixtures + toolIdFixtures" run that used to live here is
+  // removed — see the matching note in the verifyToolEndpoints describe
+  // block above. `verifyFixtureIntegrity` itself is unchanged and fully
+  // covered by the synthetic-fixture tests above.
+});
+
+// ── D10 new guardrail stubs (guide 00 §9) ───────────────────────────────────
+//
+// These 5 checks are landed by `contracts` (Wave 0) as STUBS: the pure rule
+// function is real and mutation-proofed here; the REGISTERED check (run.ts)
+// has no real component/work_package_version/component_blob data to scan
+// yet (component-review, artifact-integrity, blob-residency) or no
+// packages/questionnaire yet (questionnaire-determinism) — both correctly
+// FAIL LOUD as vacuous guards (spec §14.2) until `library`/`client`
+// (Wave 1) land real substrate. `no-content-in-activation` is the one
+// exception: it scans real @arm/proto schemas landed in this same PR, so
+// it is genuinely PASSING today — see its own test block below.
+
+describe("mutation proof: component-review (D10)", () => {
+  it("FAILS when a component ref's review_status is not 'approved'", () => {
+    const r = checkComponentReview([
+      { componentId: "c1", reviewStatus: "approved" },
+      { componentId: "c2", reviewStatus: "in_review" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("c2");
+    expect(r.detail).toContain("in_review");
+  });
+
+  it("PASSES when every referenced component is approved", () => {
+    const r = checkComponentReview([
+      { componentId: "c1", reviewStatus: "approved" },
+      { componentId: "c2", reviewStatus: "approved" },
+    ]);
     expect(r.status).toBe("pass");
-    expect(r.scanned).toBeGreaterThanOrEqual(6);
+    expect(r.scanned).toBe(2);
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative)", () => {
+    const r = checkComponentReview([]);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: artifact-integrity (D10)", () => {
+  const cleanDigest = `sha256:${"a".repeat(64)}`;
+
+  it("FAILS when blob_digest is a mutable URL instead of a content hash", () => {
+    const r = checkArtifactIntegrity([
+      { componentVersionId: "cv1", blobDigest: cleanDigest },
+      { componentVersionId: "cv2", blobDigest: "https://cdn.example.com/blob.tar" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("mutable URL");
+  });
+
+  it("FAILS when blob_digest is malformed (not sha256:<64-hex>)", () => {
+    const r = checkArtifactIntegrity([
+      { componentVersionId: "cv1", blobDigest: "sha256:not-hex" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("not a well-formed");
+  });
+
+  it("PASSES when every blob digest is well-formed or null (no-blob component)", () => {
+    const r = checkArtifactIntegrity([
+      { componentVersionId: "cv1", blobDigest: cleanDigest },
+      { componentVersionId: "cv2", blobDigest: null },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(2);
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative)", () => {
+    const r = checkArtifactIntegrity([]);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: blob-residency (D10, Invariant 1)", () => {
+  it("FAILS when a tenant_authored blob has control_plane residency", () => {
+    const r = checkBlobResidency([
+      { digest: "sha256:aaa", sourceKind: "first_party", residency: "control_plane" },
+      { digest: "sha256:bbb", sourceKind: "tenant_authored", residency: "control_plane" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("sha256:bbb");
+  });
+
+  it("PASSES when tenant_authored blobs stay at tenant residency", () => {
+    const r = checkBlobResidency([
+      { digest: "sha256:aaa", sourceKind: "first_party", residency: "control_plane" },
+      { digest: "sha256:bbb", sourceKind: "tenant_authored", residency: "tenant" },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(2);
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative)", () => {
+    const r = checkBlobResidency([]);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: questionnaire-determinism (D10)", () => {
+  it("FAILS when the mapping module calls Math.random()", () => {
+    const r = checkQuestionnaireDeterminism([
+      { path: "packages/questionnaire/src/recommend.ts", content: "export const x = Math.random();" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("Math.random(");
+  });
+
+  it("FAILS when the mapping module calls fetch()", () => {
+    const r = checkQuestionnaireDeterminism([
+      { path: "packages/questionnaire/src/recommend.ts", content: "export const x = fetch('/api');" }, // mutation
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("fetch(");
+  });
+
+  it("FAILS when the mapping module imports outside proto/config", () => {
+    const r = checkQuestionnaireDeterminism([
+      {
+        path: "packages/questionnaire/src/recommend.ts",
+        content: 'import {} from "@arm/db";', // mutation
+      },
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("only proto/config allowed");
+  });
+
+  it("PASSES on a pure module importing only proto/config", () => {
+    const r = checkQuestionnaireDeterminism([
+      {
+        path: "packages/questionnaire/src/recommend.ts",
+        content: 'import {} from "@arm/proto";\nimport {} from "@arm/config";\nexport const x = 1;',
+      },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative) — packages/questionnaire doesn't exist yet", () => {
+    const r = checkQuestionnaireDeterminism([]);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: no-content-in-activation (D10, Invariant 1 / A5)", () => {
+  it("FAILS when activationEventSchema carries a content-bearing field name", () => {
+    const r = checkNoContentInActivation({
+      activationFields: ["ts", "tenant_id", "prompt_snippet"], // mutation
+      questionKinds: ["single", "multi", "scale"],
+    });
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("prompt_snippet");
+  });
+
+  it("FAILS when questionNodeSchema.kind re-admits a free-text question kind", () => {
+    const r = checkNoContentInActivation({
+      activationFields: ["ts", "tenant_id"],
+      questionKinds: ["single", "multi", "scale", "text"], // mutation
+    });
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("A5 forbids free-text");
+  });
+
+  it("PASSES on the real shipped @arm/proto schemas", async () => {
+    const proto = await import("@arm/proto");
+    const r = checkNoContentInActivation({
+      activationFields: Object.keys(proto.activationEventSchema.shape),
+      questionKinds: [...proto.questionNodeSchema.shape.kind.options] as string[],
+    });
+    expect(r.status).toBe("pass");
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative)", () => {
+    const r = checkNoContentInActivation({ activationFields: [], questionKinds: [] });
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
   });
 });

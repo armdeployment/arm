@@ -9,8 +9,21 @@ import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
 import { isTable } from "drizzle-orm/table";
 import { register, type CheckResult } from "../types.js";
 
-/** Tables intentionally without tenant_id. Keep this list tiny + justified. */
-const GLOBAL_TABLES = new Set<string>(["tenant"]);
+/**
+ * Tables intentionally without tenant_id. Keep this list tiny + justified.
+ *
+ * `component_blob` (packages/db/src/schema/artifactory.ts): `tenant_id` is
+ * nullable there, NOT absent — this guard only checks column PRESENCE, so it
+ * would already pass. It's listed here anyway to document the one documented
+ * exemption from "every table carries tenant_id NOT NULL" (guide 00 §3.1):
+ * `tenant_id` is nullable ONLY for `residency = 'control_plane'` first-party
+ * artifacts (no single owning tenant). Every tenant-authored blob still
+ * carries a non-null `tenant_id`; `blob-residency` enforces that
+ * tenant-authored content is never stored at control_plane residency
+ * (Invariant 1). Do not weaken this guard generically — this is a
+ * column-specific nullability exemption, not a "skip the table" exemption.
+ */
+const GLOBAL_TABLES = new Set<string>(["tenant", "component_blob"]);
 
 export interface TableShape {
   name: string;
