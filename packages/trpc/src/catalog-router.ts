@@ -1,18 +1,32 @@
 /**
- * Catalog router — D9 Work Packages (docs/solutions/2026-08-13-d9-work-packages.md).
+ * Catalog router — D9 Work Packages, updated D10 (docs/solutions/
+ * 2026-08-13-d9-work-packages.md, docs/guides/00-shared-contracts.md).
  *
- * Tool Registry + Work Package listing + package assignments. Tool, tool
- * version, and package version fixtures come from @arm/catalog (plain-data
- * fixtures with REAL manifest sha256 hashes — B1) and are parsed through the
+ * Work Package listing + package assignments. Package version fixtures come
+ * from @arm/catalog (plain-data fixtures) and are parsed through the
  * @arm/proto zod contracts at module load. No live DB — TODO(1.1): replace
  * fixtures with Postgres.
+ *
+ * D10 MECHANICAL UPDATE (contracts, Wave 0 — NOT a reimplementation): `tool`
+ * generalizes to `component` (A3) and the Tool Registry moves out of this
+ * router. `listTools` is REMOVED — its D10 successor is `library.search` /
+ * `library.getComponent` (packages/trpc/src/library-router.ts, filled by the
+ * `library` Wave-1 agent against packages/artifactory). `getPackage` and
+ * `listPackages` are updated to the new `work_package_version` shape
+ * (`components`/`job_functions` replace `tools`/`skills`/`subagent_configs`/
+ * `template_refs`) — but @arm/catalog's fixtures themselves are NOT yet
+ * migrated to that shape (that migration is `library`'s job too), so
+ * `components`/`job_functions` read as empty and `integrity_ok` reads as
+ * `false` for every fixture version until then. This is expected, tracked
+ * collateral of the contracts-only Wave-0 cutover — not a regression to fix
+ * here.
  *
  * `catalog.getPackage` re-verifies manifest integrity server-side: it
  * recomputes `manifestSha256(canonicalManifest(version))` via @arm/catalog
  * and returns `integrity_ok` per version (true = stored hash covers the
  * served content exactly).
  *
- * Assignment state machine (D9 §Consequences):
+ * Assignment state machine (D9 §Consequences, unaffected by the D10 cutover):
  *
  *   requested ── approveAssignment(true) ──▶ approved ── approveAssignment(true) ──▶ active
  *        │                                        │                                         │
@@ -28,21 +42,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { ARMContext } from "./index.js";
-import {
-  toolSchema,
-  toolVersionSchema,
-  workPackageSchema,
-  workPackageVersionSchema,
-  packageAssignmentSchema,
-} from "@arm/proto";
-import {
-  toolFixtures,
-  toolIdFixtures,
-  toolVersionFixtures,
-  packageVersionFixtures,
-  manifestSha256,
-  canonicalManifest,
-} from "@arm/catalog";
+import { workPackageSchema, workPackageVersionSchema, packageAssignmentSchema } from "@arm/proto";
+import { packageVersionFixtures, manifestSha256, canonicalManifest } from "@arm/catalog";
 
 // ── tRPC setup (mirrors src/index.ts; routers must not import runtime values back) ──
 
@@ -62,8 +63,6 @@ const tenantProcedure = t.procedure.use(async (opts) => {
 
 // ── Fixtures (parsed at module load — type safety from @arm/proto) ─────────
 
-type Tool = z.infer<typeof toolSchema>;
-type ToolVersion = z.infer<typeof toolVersionSchema>;
 type WorkPackage = z.infer<typeof workPackageSchema>;
 type WorkPackageVersion = z.infer<typeof workPackageVersionSchema>;
 type PackageAssignment = z.infer<typeof packageAssignmentSchema>;
@@ -77,30 +76,18 @@ function localNow(): string {
   return new Date().toISOString().slice(0, 19);
 }
 
-/** @arm/catalog fixtures, re-validated against the proto wire contracts. */
-const TOOL_FIXTURES: Tool[] = toolSchema.array().parse(toolFixtures);
-const TOOL_VERSION_FIXTURES: ToolVersion[] = toolVersionSchema.array().parse(toolVersionFixtures);
+/**
+ * @arm/catalog fixtures, re-validated against the proto wire contracts.
+ * NOTE (D10 mechanical update): @arm/catalog's fixtures are still shaped
+ * for the v1 manifest (tools/skills/subagent_configs/template_refs) — the
+ * `library` Wave-1 agent migrates them to `components`/`job_functions`
+ * (manifest v2). Until then, unknown v1 fields are silently dropped by zod
+ * and `components`/`job_functions` parse to their empty defaults below —
+ * expected, not a bug in this router.
+ */
 const PACKAGE_VERSION_FIXTURES: WorkPackageVersion[] = workPackageVersionSchema.array().parse(
   packageVersionFixtures,
 );
-
-// M5 fixture consistency: every package tool ref must resolve through the
-// slug→id map to a registered tool — the same mapping slug-based seeds use
-// at provisioning time. A ref outside the map is a fixture bug and fails
-// loudly at module load instead of serving an unresolvable pin.
-const TOOL_SLUG_BY_ID = new Map<string, string>(
-  Object.entries(toolIdFixtures).map(([slug, id]) => [id, slug]),
-);
-for (const version of PACKAGE_VERSION_FIXTURES) {
-  for (const ref of version.tools) {
-    if (!TOOL_SLUG_BY_ID.has(ref.tool_id)) {
-      throw new Error(
-        `catalog fixture bug: package version ${version.id} refs tool ${ref.tool_id}, ` +
-          `which has no slug mapping in toolIdFixtures (M5)`,
-      );
-    }
-  }
-}
 
 const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
   {
@@ -254,26 +241,10 @@ function precondition(message: string): never {
 // ── Router ─────────────────────────────────────────────────────────────────
 
 export const catalogRouter = t.router({
-  /** List all tools in the Tool Registry with their version pins. */
-  listTools: tenantProcedure.query(async (opts) => {
-    return {
-      tenantId: opts.ctx.tenantId!,
-      tools: TOOL_FIXTURES.map((tool) => ({
-        id: tool.id,
-        name: tool.name,
-        kind: tool.kind,
-        endpoint: tool.endpoint,
-        authStrategy: tool.auth_strategy,
-        dataClassification: tool.data_classification,
-        reviewStatus: tool.review_status,
-        versions: TOOL_VERSION_FIXTURES.filter((v) => v.tool_id === tool.id).map((v) => ({
-          id: v.id,
-          version: v.version,
-          manifestSha256: v.manifest_sha256,
-        })),
-      })),
-    };
-  }),
+  // NOTE (D10): Tool Registry browsing (`listTools`) moved to the Component
+  // Registry — see `library.search` / `library.getComponent`
+  // (packages/trpc/src/library-router.ts, filled in by the `library`
+  // Wave-1 agent). No replacement lives in this router.
 
   /** List all work packages with their latest published version. */
   listPackages: tenantProcedure.query(async (opts) => {
@@ -289,16 +260,17 @@ export const catalogRouter = t.router({
           family: pkg.family,
           mode: pkg.mode,
           description: pkg.description,
+          approvalRequired: pkg.approval_required,
           versionCount: versions.length,
           latestVersion: latest?.version ?? null,
-          toolCount: latest?.tools.length ?? 0,
+          componentCount: latest?.components.length ?? 0,
           monthlyUsdCap: monthlyUsdCap(latest),
         };
       }),
     };
   }),
 
-  /** Fetch one package with its versions and resolved tool details. */
+  /** Fetch one package with its versions and pinned component refs. */
   getPackage: tenantProcedure
     .input(z.object({ packageId: z.string().uuid() }))
     .query(async (opts) => {
@@ -311,26 +283,18 @@ export const catalogRouter = t.router({
         versions: versions.map((v) => ({
           id: v.id,
           version: v.version,
-          tools: v.tools.map((ref) => {
-            const tool = TOOL_FIXTURES.find((t) => t.id === ref.tool_id);
-            const toolVersion = TOOL_VERSION_FIXTURES.find((tv) => tv.tool_id === ref.tool_id && tv.version === ref.tool_version);
-            return {
-              toolId: ref.tool_id,
-              toolVersion: ref.tool_version,
-              scopes: ref.scopes,
-              name: tool?.name ?? null,
-              kind: tool?.kind ?? null,
-              dataClassification: tool?.data_classification ?? null,
-              manifestSha256: toolVersion?.manifest_sha256 ?? null,
-            };
-          }),
-          skills: v.skills,
-          subagentConfigs: v.subagent_configs,
+          manifestVersion: v.manifest_version,
+          // NOTE (D10): component refs are NOT resolved against the
+          // Component Registry here (that join belongs to `library`'s
+          // component-review/artifact-integrity guardrails and
+          // library-router.ts once packages/artifactory lands) — this is a
+          // plain passthrough of the pinned refs.
+          components: v.components,
+          jobFunctions: v.job_functions,
           permissions: v.permissions,
           modelRouting: v.model_routing,
           budgetTemplate: v.budget_template,
           starterPrompts: v.starter_prompts,
-          templateRefs: v.template_refs,
           minAgentVersion: v.min_agent_version,
           manifestSha256: v.manifest_sha256,
           integrity_ok: verifyManifestIntegrity(v),

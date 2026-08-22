@@ -18,6 +18,9 @@ import { z } from "zod";
 import type { ARMClaims } from "@arm/auth";
 import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 import { catalogRouter } from "./catalog-router.js";
+import { libraryRouter } from "./library-router.js";
+import { onboardingRouter } from "./onboarding-router.js";
+import { adoptionRouter } from "./adoption-router.js";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -909,6 +912,13 @@ const securityRouter = t.router({
 });
 
 
+// ── ROUTER REGISTRATION BLOCK — only the `server` agent edits below ──────────
+// (docs/guides/00-shared-contracts.md §8; docs/guides/README.md file-ownership
+// table: `packages/trpc/src/index.ts` router-registration block is the ONE
+// part of this file `server` may touch. `library`/`onboarding`/`adoption` are
+// placeholder routers landed by `contracts` (Wave 0) — see library-router.ts,
+// onboarding-router.ts, adoption-router.ts. Each Wave-1 agent replaces its
+// own router file's contents; none of them edit this registration block.)
 export const appRouter = t.router({
   health: healthRouter,
   orgTree: orgTreeRouter,
@@ -921,6 +931,10 @@ export const appRouter = t.router({
   gpu: gpuRouter,
   anomaly: anomalyRouter,
   catalog: catalogRouter,
+  library: libraryRouter,
+  onboarding: onboardingRouter,
+  adoption: adoptionRouter,
 });
+// ── END ROUTER REGISTRATION BLOCK ────────────────────────────────────────────
 
 export type AppRouter = typeof appRouter;
