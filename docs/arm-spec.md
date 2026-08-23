@@ -563,31 +563,31 @@ erDiagram
 
 ### 5.3 Web UI (Next.js)
 
-**Information architecture** — one shell, role-scoped views; URL-driven, SSR-first:
+**Information architecture** (updated D10, docs/guides/02-server-panels.md §1 — adoption-first restructure, docs/solutions/2026-08-21-d10-adoption-first-restructure.md). A1: agent adoption at scale is the PRIMARY value prop, cost is secondary, on-prem is a tracked-not-targeted detail — the nav order below is that thesis made literal:
 
 ```
-/                     → role home (engineer: my agents + my spend/quota; manager: subtree rollup;
-                        admin: org health; InfoSec: audit)
-/org                  → org-tree explorer (agent counts user- vs scope-owned, active vs idle,
-                        model mix, priority-tier mix)
-/cost                 → rollups per node/model/user/tier/stakeholder; trend; 30-day forecast;
-                        budget burndown
-/savings              → estimator, switch recommendations, one-click policy change
-/agents/:id           → agent detail (identity, stakeholder, tier, quota, spend, recent audit)
-/resources            → resource catalog (type, classification, connector, grants)
-/resources/:id/grants → grant authoring with tiered delegation + deny-override preview
-/audit                → access audit + metering ledger views (InfoSec surface)
-/approvals            → JIT inbox (approver) + my requests (requester)
-/settings             → org tree, IdP federation, master keys, budgets, LLM policy, tenants
+Adoption    /              role home — adoption + approvals lead; spend is a single strip, not the headline
+            /adoption      activation funnel, stalls, time-to-value, coverage, gaps, recent activations
+            /rollout       questionnaire designer, campaigns, download artifacts, live campaign funnel
+Library     /library       search + facet rail over packages and components (kind, job function,
+                            data classification, mode, source); Packages / Components / Discovery tabs
+            /library/[slug] component or package detail
+            /assignments   org tree × package matrix
+Governance  /governance /access /resources /idp /audit /organization
+Cost        /spend /savings   — cost per active seat + cost per work product lead; closed-vs-self-hosted
+                                 model mix is a secondary, reported-not-campaigned-for panel (A1)
+Admin       /admin/roles /provisioning /agents
 ```
 
-**View model**: UI RBAC mirrors `Role.permissions[]`; routes guard server-side, never client-only. Each persona lands on a different home; InfoSec gets read + audit only.
+`/catalog` is retired (redirects to `/library`, guide 02 §1). Superseded route names from the pre-D9/D10 sketch above (`/org`, `/cost`, `/savings` as top-level, `/approvals`, `/settings`) — the shipped routes are `/organization`, `/spend`, `/access`, `/admin/roles` + `/provisioning`; kept here only as historical context for the design intent (subtree rollup, JIT inbox, tiered settings) that the shipped routes fulfill.
+
+**View model**: UI RBAC mirrors `Role.permissions[]`; routes guard server-side, never client-only. Each persona lands on a different home; InfoSec gets read + audit only. **Known gap** (guide 02 §1): persona-based home routing is not wired in the current fixture-only dev build — there is no real session/persona to branch on yet (`apps/control-plane/web/src/app/api/trpc/[trpc]/route.ts` hardcodes one dev claims object pending real OIDC). The single home today leads with adoption for everyone, satisfying the exec/admin default; InfoSec-lands-on-audit remains unwired until real auth sessions exist.
 
 **High-stakes action pattern** — any mutation with spend/access impact (policy switch, budget change, tier change, grant, key rotation) follows: **impact preview** (affected agents/resources, $ delta) → explicit confirm → audit event → reversible window where applicable.
 
 **Policy simulator** (ships with 1.3): what-if evaluator — "would agent X get action A on resource R under current policy?" — reusing the same resolver as enforcement, rendering the decision path (which rank/rule decided). The deny-override preview is this simulator's first consumer.
 
-**Realtime**: tRPC subscriptions (SSE) for ledger-fed views (spend, quota burn, tier actions); 10–30 s polling fallback; everything else SSR + revalidate. Dashboards are read models over ClickHouse — the UI never blocks on ingest.
+**Realtime**: tRPC subscriptions (SSE) for ledger-fed views (spend, quota burn, tier actions); 10–30 s polling fallback; everything else SSR + revalidate. Dashboards are read models over ClickHouse — the UI never blocks on ingest. **`/adoption`'s two live panels** (funnel, recent activations — guide 02 §6.3) currently use the polling fallback only (15 s `refetchInterval`), not a true SSE subscription — a deliberate scope-trim documented in `components/adoption/recent-activations-panel.tsx`; upgrading to `unstable_httpSubscriptionLink` is tracked, not silently skipped.
 
 **UI stability** (worldmonitor lesson): deferred-shell panels — footprint-matched skeletons reserve layout before async content lands, so the grid never shifts; explicit loading/empty/error states per panel; stale-data badges when ledger freshness exceeds threshold.
 
@@ -890,20 +890,21 @@ gantt
 
 ### 1.y — Success criteria & exit gates (Phase 1)
 
-Phase 1 is measured on outcomes, not feature completion. The program succeeds if, by end of 1.4:
+Phase 1 is measured on outcomes, not feature completion. **Updated D10** (docs/guides/README.md A1, docs/solutions/2026-08-21-d10-adoption-first-restructure.md §8): adoption-first means the top-line metric changed — agent adoption at scale is now the primary success signal, cost is secondary, on-prem model share is tracked, not targeted:
 
 | Metric | Target | Measured by |
 |---|---|---|
-| Agents onboarded (pilot tenants) | ≥ 2 pilot tenants, ≥ 50 agents registered | Postgres |
-| Proxied-traffic share | ≥ 80% of metered LLM calls via proxy/gateway (vs billing-API fallback) | `token_usage_event.source` |
-| Metering accuracy | dashboard spend within 3% of provider bill per tenant-month | reconciliation job |
-| Enforcement latency | quota/routing decisions within §5.2 budget (p99 < 100 ms added) | proxy telemetry |
-| Policy propagation | DENY-class ≤ 15 s (D5 SLA) | policy-freshness health surface |
-| Cost steering | ≥ 1 workstream switched to open models via the savings flow; $ delta tracked vs 30-day baseline | savings dashboard |
-| Access governance | 100% of resource-access decisions audited; JIT grant → audit visible < 1 min | `access_audit_event` |
-| Onboarding friction | `arm agent init`: SSO → first metered call < 5 min | onboarding funnel events |
+| Activated seats / eligible seats (per tenant, 90 days) | primary top-line | `adoption.coverage`, `adoption.activeUsers` |
+| Time-to-first-value (questionnaire start → first metered call) | < 10 min, unassisted | `adoption.timeToValue` |
+| Questionnaire → download → install completion | ≥ 70% | `adoption.funnel` |
+| Job functions with ≥ 1 published package | ≥ 60% of the tenant's headcount-weighted functions | `adoption.coverage` / `library.gaps` |
+| Weekly active agent users / activated seats | ≥ 50% | `adoption.activeUsers` |
+| *(secondary)* cost per active seat, `$/work-product` | trending down | `/spend` (guide 02 §1 reframe) |
+| *(nice-to-have)* share of traffic on self-hosted models | tracked, not targeted | `/spend` model-mix panel (secondary) |
 
-Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrails mutation-proofed; **1.1** = dashboards live on real metering for ≥ 1 internal tenant; **1.2** = vertical slice E2E + performance budget; **1.3** = live Okta/Entra federation test passing + policy simulator shipped; **1.4** = JIT approval round-trip + SharePoint drift detection running 7 days clean.
+Superseded (pre-D10) targets — proxied-traffic share, metering accuracy, enforcement latency, policy propagation, JIT audit coverage — remain live operational SLOs (spec §7, §6) but are no longer the Phase-1 headline; see `/governance`, `/access`, `/audit` for their dashboards.
+
+Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrails mutation-proofed; **1.1** = dashboards live on real metering for ≥ 1 internal tenant; **1.2** = vertical slice E2E + performance budget; **1.3** = live Okta/Entra federation test passing + policy simulator shipped; **1.4** = JIT approval round-trip + SharePoint drift detection running 7 days clean; **D10 Wave 1** (docs/guides/README.md) = `pnpm typecheck && pnpm test && pnpm guardrails` green per module, `/adoption` live on the fixture-mode activation funnel with real deferred-shell states.
 
 ### Phases 2–5 (deferred)
 - **Phase 2**: SAML/SCIM, DLP content hooks, full approval workflow UX.
@@ -963,7 +964,7 @@ Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrail
 | Priority-tier abuse (self-marked critical) | Budget bypass, critical-tier crowding | Tier assignment is policy (§6.6); `critical` requires scope-admin approval; tier changes audited |
 | Background-tier starvation under chronic budget pressure | Optimization/upgrade work never runs | Minimum floor / scheduled windows per scope; starvation metric in dashboards |
 | Orphaned scope-owned agents (scope deleted/reorged, stakeholder departs) | Zombie spend, dangling access, no accountable human | Cascade-disable on scope delete; stakeholder re-attestation on departure (transfer or retire); TTL for automation-spawned agents |
-| Agent adoption failure (agents not routed through ARM) | Metering backbone collapses to the lagging billing-API path; "live enforcement" claims die | `arm agent init` + `/.well-known/arm-agent` discovery minimize onboarding friction; plugin fallback for non-proxy agents; bypass spend capped provider-side; proxied-traffic share is a first-class success metric (§9 exit gates) |
+| **Agent adoption failure** (employees never activate, or activate and go dormant) | **This is now the thesis-level risk (D10, §9/1.y), not a secondary one** — if adoption stalls, the metering backbone still collapses to the lagging billing-API path AND the primary success metric (activated/eligible seats) misses regardless of platform correctness | `/adoption` (docs/guides/02-server-panels.md) makes stall points visible by construction — funnel + stall-breakdown + time-to-value + coverage panels surface WHERE and WHY adoption fails (not just that spend is low); `arm agent init` + `/.well-known/arm-agent` discovery minimize onboarding friction; plugin fallback for non-proxy agents; bypass spend capped provider-side; proxied-traffic share remains a secondary operational SLO (§9 exit gates) |
 
 ---
 

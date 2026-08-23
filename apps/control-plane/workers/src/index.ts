@@ -5,10 +5,17 @@
  *   - Daily usage pull: fetches provider billing-API data for all tenants.
  *   - Reconciliation: compares provider totals vs proxy/gateway metering.
  *   - Drift alerts: pages tenant admin when drift >5%.
+ *   - Adoption rollup (docs/guides/02-server-panels.md §5.1): materializes
+ *     daily per-(tenant, org_node, job_function) activation counts — see
+ *     ./adoption-rollup-job.ts for the real implementation (the other
+ *     three jobs below are still skeletons pending DB wiring; this one
+ *     isn't).
  *
  * Skeleton for 1.1 — real scheduling lands when DB/ClickHouse wired.
  * For now: exports the job types and a manual trigger for testing.
  */
+
+import { runAdoptionRollupJob } from "./adoption-rollup-job.js";
 
 // ── Job types ──────────────────────────────────────────────────────────────
 
@@ -34,7 +41,15 @@ export interface DriftAlertJob {
   message: string;
 }
 
-export type WorkerJob = DailyUsagePullJob | ReconciliationJob | DriftAlertJob;
+export interface AdoptionRollupJob {
+  job: "adoption_rollup";
+  tenantId: string;
+  day: string;
+}
+
+export type WorkerJob = DailyUsagePullJob | ReconciliationJob | DriftAlertJob | AdoptionRollupJob;
+
+export { computeAdoptionRollup, runAdoptionRollupJob, type AdoptionRollupRow, type AdoptionRollupJobResult } from "./adoption-rollup-job.js";
 
 // ── Worker runner (stub — lands 1.1 when DB wired) ────────────────────────
 
@@ -57,6 +72,10 @@ export async function processJob(job: WorkerJob): Promise<{ status: string; deta
       return { status: "ok", detail: `Reconciled ${job.tenantId} period ${job.periodStart}–${job.periodEnd} — fixture data, pending DB wire` };
     case "drift_alert":
       return { status: job.status, detail: `Alert sent for ${job.tenantId}: ${job.message}` };
+    case "adoption_rollup": {
+      const result = await runAdoptionRollupJob(job.tenantId);
+      return { status: result.status, detail: result.detail };
+    }
   }
 }
 
@@ -72,6 +91,7 @@ export async function handleCronTrigger(cronType: "daily" | "hourly"): Promise<W
     // All tenants (in production: SELECT tenant_id FROM tenant WHERE deployment = 'saas')
     baseJobs.push({ job: "daily_usage_pull", tenantId: "tn_demo", startDate: today, endDate: today });
     baseJobs.push({ job: "reconciliation", tenantId: "tn_demo", periodStart: today, periodEnd: today });
+    baseJobs.push({ job: "adoption_rollup", tenantId: "tn_demo", day: today });
   }
 
   if (cronType === "hourly") {

@@ -13,6 +13,10 @@
     "@arm/config": "workspace:*",
     "@arm/db": "workspace:*",
     "@arm/clickhouse": "workspace:*",
-    "@arm/billing": "workspace:*"
+    "@arm/billing": "workspace:*",
+    "@arm/trpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1"
   }
 }

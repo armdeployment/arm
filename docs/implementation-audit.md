@@ -161,6 +161,33 @@ These were added as differentiators identified in the competitive analysis:
 
 ---
 
+## D10 — Adoption-First Restructure, Wave 1 `server` (docs/guides/02-server-panels.md)
+
+Rows turned green by this PR series (branch `feat/server-adoption-panels`).
+Supersedes/refines the two 🔴 rows above it lists explicitly.
+
+| Deliverable | Status | Evidence |
+|---|---|---|
+| Sidebar IA — Adoption/Library/Governance/Cost/Admin (guide 02 §1) | ✅ | components/sidebar.tsx |
+| `/adoption` — funnel, stalls, time-to-value, coverage, gaps, recent activations | ✅ | app/adoption/page.tsx + components/adoption/* |
+| `adoption-router` — all 6 procedures, fixture + ClickHouse modes | ✅ | packages/trpc/src/adoption-router.ts, 48 tests |
+| `adoptionRollupJob` — real (not skeleton) daily rollup aggregation | ✅ | apps/control-plane/workers/src/adoption-rollup-job.ts, 6 tests |
+| `/rollout` — admin side of adoption against placeholder onboarding router | ✅ (partial, flagged) | app/rollout/page.tsx — see file header for the guide-02/guide-00 contract-surface gap (no list/publish/campaign-batch/download-artifact procedures exist yet) |
+| `/library` — replaces `/catalog`; real `catalog.listPackages`/`requestAssignment`, placeholder-backed Components/Discovery tabs | ✅ | app/library/page.tsx, components/library/package-card.tsx |
+| `/catalog` retired → redirects to `/library`; `catalog-mock.ts` deleted | ✅ | app/catalog/page.tsx; assignments + governance pages migrated to real routers, one clearly-labeled sample-data file (lib/governance-fixtures.ts) for the one figure with no backing procedure yet (per-package metered spend) |
+| `/spend` reframed — cost-per-active-seat + cost-per-work-product primary, model-mix secondary | ✅ | app/spend/page.tsx |
+| `/` role home — adoption + approvals lead, spend condensed to a strip | ✅ (persona routing itself flagged as an unwired gap — no real auth session yet) | app/page.tsx |
+| Realtime for `/adoption`'s two live panels | ⚠️ partial | polling (`refetchInterval: 15_000`), not a true SSE subscription — deliberate scope-trim, documented in recent-activations-panel.tsx |
+| Real ClickHouse wiring for adoption reads | ⚠️ code path exists, unexercised | `ARM_FIXTURE_MODE=0` HTTP-query code path in adoption-router.ts; no live ClickHouse instance in this dev/test environment to run it against |
+| Component tests (loading/empty/error/populated) for every new panel | ✅ | apps/control-plane/web/test/components/*.test.tsx, jsdom + testing-library added |
+| Router tests incl. scope drill-down + cross-tenant isolation | ✅ | packages/trpc/test/adoption-router.test.ts |
+| Playwright e2e + axe accessibility checks for /adoption, /rollout, /library | ⚠️ written, unrun | e2e/adoption.spec.ts — blocked on a pre-existing `next build` failure, see note below |
+| Visual-regression snapshots on new panels | ❌ not added | the existing playwright.config.ts explicitly disables screenshots (`screenshot: "off"`) as a token-conservation decision — guide 02 §7's "the suite already does this for existing shells" does not match the actual repo state; flagged rather than silently worked around |
+
+**Pre-existing blocker (not introduced by this PR, confirmed by bisecting against the unmodified `feat/contracts-shared-schema` base):** `next build` (and therefore `next start` / the Playwright e2e suite, which depends on both) fails under BOTH Turbopack and webpack. `packages/trpc/src/index.ts` — a Wave-0 file this agent does not own — imports its sibling router files with the NodeNext-mandated explicit `.js` extension (`./adoption-router.js`, `./catalog-router.js`, etc.) referring to `.ts` source, per `tsconfig.base.json`'s `"module": "NodeNext"`. `tsc` resolves this correctly (typecheck is green); Next.js's bundler does not, under either backend, and this reproduces identically with zero Wave-1 changes applied. One related, real, in-scope bug WAS found and fixed during this investigation: `next.config.ts` let Turbopack misdetect the workspace root when the repo is checked out as a nested git worktree (it found two `pnpm-workspace.yaml` files and picked the wrong one) — fixed via an explicit `turbopack.root`. That fix alone does not unblock the build given the deeper NodeNext/bundler gap above, which sits outside this agent's file-ownership list (`packages/trpc/src/index.ts` body, and the wider "does Next's bundler support this TS convention at all" question, are not `server`-owned).
+
+---
+
 ## Known gaps → next phases
 
 ### 1.1 remaining
