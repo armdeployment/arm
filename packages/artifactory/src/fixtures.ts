@@ -1,0 +1,355 @@
+/**
+ * `@arm/artifactory` fixtures — seed components for tests + demo (guide 01
+ * §2 Slice A).
+ *
+ * Two families:
+ *   1. CALLABLE tool components (mcp/http_api/cli/connector) — migrated
+ *      byte-for-byte (same slugs, ids, endpoints, classifications) from the
+ *      pre-D10 `packages/catalog/src/fixtures.ts` Tool Registry landscape
+ *      (the Aug 2026 automotive OEM toolchain survey: 36 engineering tools +
+ *      4 original tools = 40). `kind: "cli"` tools are DESKTOP ENGINEERING
+ *      APPS invoked as local-process invocations on the operator workstation
+ *      — `auth_strategy: "none"` even when `data_classification` is
+ *      confidential; the OS/session login is the auth boundary there (the
+ *      documented exception the `tool-endpoint-scope` guardrail already
+ *      encodes).
+ *   2. INSTALLABLE components (skill/subagent/template) — the D10 successors
+ *      of the pre-D10 `skills`/`subagentConfigs`/`templateRefs` STRING lists
+ *      that used to live inline on `packages/catalog`'s package-version
+ *      seeds (A3: "tool generalizes to component... no parallel skill/plugin
+ *      tables" — every one of those strings becomes a real first-party
+ *      component here so `@arm/catalog`'s pilot work packages can reference
+ *      them as ordinary `ComponentRef`s instead of bare strings).
+ *
+ * Every `manifest_sha256` is a REAL sha256 (via `componentManifestSha256`)
+ * over the canonical `{ config_schema, changelog }` manifest of that
+ * version — recomputable client-side for integrity verification, not a
+ * placeholder (mirrors the pre-D10 convention).
+ *
+ * `componentBlobFixtures` seeds TWO real content-addressed blobs so the
+ * `artifact-integrity` and `blob-residency` guardrails (guide 01 §8) have
+ * genuine non-empty substrate to scan, not just an always-null-digest set:
+ *   - a first-party, `residency: "control_plane"` blob (the "8d-generator"
+ *     skill's packaged content)
+ *   - a `tenant_authored`, `residency: "tenant"` blob (a fictional internal
+ *     process-notes prompt pack — Invariant 1: tenant-authored content never
+ *     sits at control-plane residency)
+ */
+
+import { componentManifestSha256 } from "./manifest.js";
+import { digestOf } from "./digest.js";
+import type { ResolvableComponentVersion } from "./resolve.js";
+import type { Component, ComponentVersion, ComponentBlob } from "@arm/proto";
+
+export const FIXTURE_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001";
+const TENANT_ID = FIXTURE_TENANT_ID;
+const OWNER_ID = "60000000-0000-4000-8000-000000000001";
+const PUBLISHED_AT = "2026-08-01T00:00:00";
+
+interface VersionSeed {
+  id: string;
+  componentId: string;
+  version: string;
+  manifest: Record<string, unknown>;
+  configSchema: Record<string, unknown>;
+  changelog: string;
+  blobDigest?: string;
+  blobSizeBytes?: number;
+  blobMediaType?: string;
+}
+
+function makeVersion(seed: VersionSeed): ComponentVersion {
+  return {
+    id: seed.id,
+    tenant_id: TENANT_ID,
+    component_id: seed.componentId,
+    version: seed.version,
+    manifest: seed.manifest,
+    manifest_sha256: componentManifestSha256(seed.manifest),
+    blob_digest: seed.blobDigest ?? null,
+    blob_size_bytes: seed.blobSizeBytes ?? null,
+    blob_media_type: seed.blobMediaType ?? null,
+    config_schema: seed.configSchema,
+    requires: [],
+    changelog: seed.changelog,
+    yanked: false,
+    published_at: PUBLISHED_AT,
+    published_by: OWNER_ID,
+  };
+}
+
+// ── Real content-addressed blob bytes (computed, not hardcoded digests) ────
+
+const EIGHT_D_GENERATOR_BLOB_BYTES = new TextEncoder().encode(
+  "# 8D Report Generator\n\nSkill fixture: guided 8D (Eight Disciplines) problem-solving report drafting from a defect ticket + MES context.\n",
+);
+const EIGHT_D_GENERATOR_BLOB_DIGEST = digestOf(EIGHT_D_GENERATOR_BLOB_BYTES);
+
+const INTERNAL_PROCESS_NOTES_BLOB_BYTES = new TextEncoder().encode(
+  "# Internal Process Notes (tenant-authored)\n\nFixture-only tenant content — line changeover checklist. Never control-plane residency (Invariant 1).\n",
+);
+const INTERNAL_PROCESS_NOTES_BLOB_DIGEST = digestOf(INTERNAL_PROCESS_NOTES_BLOB_BYTES);
+
+// ── Callable components (mcp/http_api/cli/connector) ───────────────────────
+
+export const componentFixtures: Component[] = [
+  { id: "10000000-0000-4000-8000-000000000001", tenant_id: TENANT_ID, slug: "jira", kind: "mcp", name: "jira", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "mcp://mcp.jira.internal", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "10000000-0000-4000-8000-000000000002", tenant_id: TENANT_ID, slug: "github", kind: "mcp", name: "github", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://api.github.com/mcp", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "10000000-0000-4000-8000-000000000003", tenant_id: TENANT_ID, slug: "cmms", kind: "connector", name: "cmms", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cmms.internal:8443", auth_strategy: "pat", data_classification: "confidential", homepage_url: null },
+  { id: "10000000-0000-4000-8000-000000000004", tenant_id: TENANT_ID, slug: "historian-pi", kind: "connector", name: "historian-pi", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "pi.internal:5450", auth_strategy: "pat", data_classification: "restricted", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000001", tenant_id: TENANT_ID, slug: "cad.nx", kind: "cli", name: "cad.nx", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://nx.open-api", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000002", tenant_id: TENANT_ID, slug: "cad.catia", kind: "cli", name: "cad.catia", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://catia.caa", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000003", tenant_id: TENANT_ID, slug: "cad.alias", kind: "cli", name: "cad.alias", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://alias.autodesk", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000004", tenant_id: TENANT_ID, slug: "ee.capital", kind: "cli", name: "ee.capital", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://capital.harness", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000005", tenant_id: TENANT_ID, slug: "ee.e3-series", kind: "cli", name: "ee.e3-series", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://e3.zuken", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000006", tenant_id: TENANT_ID, slug: "ee.preevision", kind: "cli", name: "ee.preevision", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://preevision.vector", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000007", tenant_id: TENANT_ID, slug: "plm.teamcenter", kind: "http_api", name: "plm.teamcenter", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "internal://teamcenter.aw:8443", auth_strategy: "pat", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000008", tenant_id: TENANT_ID, slug: "plm.windchill", kind: "http_api", name: "plm.windchill", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "internal://windchill.ptc:9443", auth_strategy: "pat", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000009", tenant_id: TENANT_ID, slug: "sim.ansa", kind: "cli", name: "sim.ansa", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://ansa.beta-cae", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000010", tenant_id: TENANT_ID, slug: "sim.gt-suite", kind: "cli", name: "sim.gt-suite", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://gt-suite.gtisoft", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000011", tenant_id: TENANT_ID, slug: "sim.star-ccm", kind: "cli", name: "sim.star-ccm", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://star-ccm.siemens", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000012", tenant_id: TENANT_ID, slug: "sim.ls-dyna", kind: "cli", name: "sim.ls-dyna", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://ls-dyna.ansys", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000013", tenant_id: TENANT_ID, slug: "sim.abaqus", kind: "cli", name: "sim.abaqus", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://abaqus.3ds", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000014", tenant_id: TENANT_ID, slug: "mdl.matlab-simulink", kind: "cli", name: "mdl.matlab-simulink", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://matlab.mathworks", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000015", tenant_id: TENANT_ID, slug: "test.canoe", kind: "cli", name: "test.canoe", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://canoe.vector", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000016", tenant_id: TENANT_ID, slug: "test.dspace", kind: "cli", name: "test.dspace", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://scalexio.dspace", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000017", tenant_id: TENANT_ID, slug: "cal.inca", kind: "cli", name: "cal.inca", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://inca.etas", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000018", tenant_id: TENANT_ID, slug: "autosar.tresos", kind: "cli", name: "autosar.tresos", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://tresos.elektrobit", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000019", tenant_id: TENANT_ID, slug: "autosar.davinci", kind: "cli", name: "autosar.davinci", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://davinci.vector", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000020", tenant_id: TENANT_ID, slug: "rm.jama", kind: "http_api", name: "rm.jama", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://tenant.jamacloud.com/rest", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000021", tenant_id: TENANT_ID, slug: "rm.polarion", kind: "http_api", name: "rm.polarion", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://polarion.tenant/polarion", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000022", tenant_id: TENANT_ID, slug: "rm.codebeamer", kind: "http_api", name: "rm.codebeamer", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://tenant.codebeamer.com", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000023", tenant_id: TENANT_ID, slug: "rm.doors", kind: "http_api", name: "rm.doors", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://doors-ng.tenant/rm", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000024", tenant_id: TENANT_ID, slug: "rm.valispace", kind: "http_api", name: "rm.valispace", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://tenant.valispace.com/api", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000025", tenant_id: TENANT_ID, slug: "docs.confluence", kind: "http_api", name: "docs.confluence", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://tenant.atlassian.net/wiki", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000026", tenant_id: TENANT_ID, slug: "pm.cplace", kind: "http_api", name: "pm.cplace", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://tenant.cplace.com/api", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000027", tenant_id: TENANT_ID, slug: "vcs.gitlab", kind: "http_api", name: "vcs.gitlab", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://gitlab.tenant/api/v4", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000028", tenant_id: TENANT_ID, slug: "vcs.azure-devops", kind: "http_api", name: "vcs.azure-devops", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://dev.azure.com/org", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000029", tenant_id: TENANT_ID, slug: "spc.minitab", kind: "cli", name: "spc.minitab", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://minitab.mtbpy", auth_strategy: "none", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000030", tenant_id: TENANT_ID, slug: "qms.aqua-pro", kind: "http_api", name: "qms.aqua-pro", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://aqua.tenant/api", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000031", tenant_id: TENANT_ID, slug: "qms.net-inspect", kind: "http_api", name: "qms.net-inspect", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://net-inspect.tenant/api", auth_strategy: "pat", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000032", tenant_id: TENANT_ID, slug: "qms.sap-qm", kind: "http_api", name: "qms.sap-qm", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "internal://sap-qm:44300", auth_strategy: "service_account", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000033", tenant_id: TENANT_ID, slug: "mfg.tecnomatix", kind: "cli", name: "mfg.tecnomatix", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://tecnomatix.siemens", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000034", tenant_id: TENANT_ID, slug: "mfg.delmia", kind: "cli", name: "mfg.delmia", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://delmia.3ds", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000035", tenant_id: TENANT_ID, slug: "dt.omniverse", kind: "http_api", name: "dt.omniverse", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "https://omniverse.tenant", auth_strategy: "oauth", data_classification: "internal", homepage_url: null },
+  { id: "a0000000-0000-4000-8000-000000000036", tenant_id: TENANT_ID, slug: "rt.qnx", kind: "cli", name: "rt.qnx", description: "", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: "cli://qnx.blackberry", auth_strategy: "none", data_classification: "confidential", homepage_url: null },
+
+  // ── Installable components (skill/subagent/template — the D10 successors
+  //    of the pre-D10 tools/skills/subagentConfigs/templateRefs STRING lists) ──
+  { id: "c0000000-0000-4000-8000-000000000001", tenant_id: TENANT_ID, slug: "8d-generator", kind: "skill", name: "8D Generator", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000002", tenant_id: TENANT_ID, slug: "8d-root-cause-solver", kind: "subagent", name: "8D Root Cause Solver", description: "First-party subagent fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000003", tenant_id: TENANT_ID, slug: "aoi-library", kind: "skill", name: "Aoi Library", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000004", tenant_id: TENANT_ID, slug: "approval-summaries", kind: "skill", name: "Approval Summaries", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000005", tenant_id: TENANT_ID, slug: "control-plan-editor", kind: "skill", name: "Control Plan Editor", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000006", tenant_id: TENANT_ID, slug: "diff-merge-reviewer", kind: "subagent", name: "Diff Merge Reviewer", description: "First-party subagent fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000007", tenant_id: TENANT_ID, slug: "doc-summarization", kind: "skill", name: "Doc Summarization", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000008", tenant_id: TENANT_ID, slug: "ecn-impact-alerts", kind: "skill", name: "Ecn Impact Alerts", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000009", tenant_id: TENANT_ID, slug: "eol-calculators", kind: "skill", name: "Eol Calculators", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000010", tenant_id: TENANT_ID, slug: "escalation-trees", kind: "skill", name: "Escalation Trees", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000011", tenant_id: TENANT_ID, slug: "exception-triage-batch", kind: "subagent", name: "Exception Triage Batch", description: "First-party subagent fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000012", tenant_id: TENANT_ID, slug: "exec-digest", kind: "skill", name: "Exec Digest", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000013", tenant_id: TENANT_ID, slug: "fault-fix-playbooks", kind: "skill", name: "Fault Fix Playbooks", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000014", tenant_id: TENANT_ID, slug: "fault-triage-agent", kind: "subagent", name: "Fault Triage Agent", description: "First-party subagent fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000015", tenant_id: TENANT_ID, slug: "iatf-clause-library", kind: "skill", name: "Iatf Clause Library", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000016", tenant_id: TENANT_ID, slug: "io-table-import", kind: "skill", name: "Io Table Import", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000017", tenant_id: TENANT_ID, slug: "kpi-analyst", kind: "subagent", name: "Kpi Analyst", description: "First-party subagent fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000018", tenant_id: TENANT_ID, slug: "kpi-briefing-generator", kind: "skill", name: "Kpi Briefing Generator", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000019", tenant_id: TENANT_ID, slug: "ladder-codegen", kind: "skill", name: "Ladder Codegen", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000020", tenant_id: TENANT_ID, slug: "mail-triage", kind: "skill", name: "Mail Triage", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000021", tenant_id: TENANT_ID, slug: "meeting-notes-actions", kind: "skill", name: "Meeting Notes Actions", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000022", tenant_id: TENANT_ID, slug: "mrp-exception-triage", kind: "skill", name: "Mrp Exception Triage", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000023", tenant_id: TENANT_ID, slug: "ppap-checklist", kind: "skill", name: "Ppap Checklist", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000024", tenant_id: TENANT_ID, slug: "sop-checklists", kind: "skill", name: "Sop Checklists", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000025", tenant_id: TENANT_ID, slug: "st-codegen", kind: "skill", name: "St Codegen", description: "First-party skill fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000026", tenant_id: TENANT_ID, slug: "tpl_8d_report", kind: "template", name: "Tpl 8D Report", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000027", tenant_id: TENANT_ID, slug: "tpl_alarm_templates", kind: "template", name: "Tpl Alarm Templates", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000028", tenant_id: TENANT_ID, slug: "tpl_control_plan", kind: "template", name: "Tpl Control Plan", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000029", tenant_id: TENANT_ID, slug: "tpl_ecn_impact", kind: "template", name: "Tpl Ecn Impact", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000030", tenant_id: TENANT_ID, slug: "tpl_exception_card", kind: "template", name: "Tpl Exception Card", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000031", tenant_id: TENANT_ID, slug: "tpl_exec_digest", kind: "template", name: "Tpl Exec Digest", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000032", tenant_id: TENANT_ID, slug: "tpl_fault_report", kind: "template", name: "Tpl Fault Report", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000033", tenant_id: TENANT_ID, slug: "tpl_kpi_brief", kind: "template", name: "Tpl Kpi Brief", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000034", tenant_id: TENANT_ID, slug: "tpl_ladder_patterns", kind: "template", name: "Tpl Ladder Patterns", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000035", tenant_id: TENANT_ID, slug: "tpl_mail_reply", kind: "template", name: "Tpl Mail Reply", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000036", tenant_id: TENANT_ID, slug: "tpl_meeting_notes", kind: "template", name: "Tpl Meeting Notes", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000037", tenant_id: TENANT_ID, slug: "tpl_ppap_submission", kind: "template", name: "Tpl Ppap Submission", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+  { id: "c0000000-0000-4000-8000-000000000038", tenant_id: TENANT_ID, slug: "tpl_sop_checklist", kind: "template", name: "Tpl Sop Checklist", description: "First-party template fixture for the pilot work packages.", owner_user_id: OWNER_ID, review_status: "approved", source_kind: "first_party", source_ref: "", endpoint: null, auth_strategy: null, data_classification: "internal", homepage_url: null },
+
+  // ── Tenant-authored component (blob-residency guardrail substrate) ──────
+  {
+    id: "e0000000-0000-4000-8000-000000000001",
+    tenant_id: TENANT_ID,
+    slug: "internal-process-notes",
+    kind: "prompt_pack",
+    name: "internal-process-notes",
+    description: "Tenant-authored internal process knowledge — must stay at tenant residency (Invariant 1).",
+    owner_user_id: OWNER_ID,
+    review_status: "approved",
+    source_kind: "tenant_authored",
+    source_ref: "",
+    endpoint: null,
+    auth_strategy: null,
+    data_classification: "confidential",
+    homepage_url: null,
+  },
+];
+
+// ── Component versions ──────────────────────────────────────────────────
+
+export const componentVersionFixtures: ComponentVersion[] = [
+  makeVersion({ id: "20000000-0000-4000-8000-000000000001", componentId: "10000000-0000-4000-8000-000000000001", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_key": "string"}, "changelog": "Initial registry snapshot: issue read/write/transition scopes."}, configSchema: {"base_url": "string", "project_key": "string"}, changelog: "Initial registry snapshot: issue read/write/transition scopes." }),
+  makeVersion({ id: "20000000-0000-4000-8000-000000000002", componentId: "10000000-0000-4000-8000-000000000002", version: "1.0.0", manifest: {"config_schema": {"org": "string", "default_repo": "string"}, "changelog": "Initial registry snapshot: repo read/write scopes."}, configSchema: {"org": "string", "default_repo": "string"}, changelog: "Initial registry snapshot: repo read/write scopes." }),
+  makeVersion({ id: "20000000-0000-4000-8000-000000000003", componentId: "10000000-0000-4000-8000-000000000003", version: "1.0.0", manifest: {"config_schema": {"site_url": "string", "asset_prefix": "string"}, "changelog": "Initial registry snapshot: work-order + inventory scopes."}, configSchema: {"site_url": "string", "asset_prefix": "string"}, changelog: "Initial registry snapshot: work-order + inventory scopes." }),
+  makeVersion({ id: "20000000-0000-4000-8000-000000000004", componentId: "10000000-0000-4000-8000-000000000004", version: "1.0.0", manifest: {"config_schema": {"af_server": "string", "tag_prefix": "string"}, "changelog": "Initial registry snapshot: tag read + archive scopes."}, configSchema: {"af_server": "string", "tag_prefix": "string"}, changelog: "Initial registry snapshot: tag read + archive scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000001", componentId: "a0000000-0000-4000-8000-000000000001", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "version": "string"}, "changelog": "Initial registry snapshot: NX CAD session automation scopes."}, configSchema: {"install_root": "string", "version": "string"}, changelog: "Initial registry snapshot: NX CAD session automation scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000002", componentId: "a0000000-0000-4000-8000-000000000002", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "environ_path": "string"}, "changelog": "Initial registry snapshot: CATIA CAA session automation scopes."}, configSchema: {"install_root": "string", "environ_path": "string"}, changelog: "Initial registry snapshot: CATIA CAA session automation scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000003", componentId: "a0000000-0000-4000-8000-000000000003", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: Alias surface/design scopes."}, configSchema: {"install_root": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: Alias surface/design scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000004", componentId: "a0000000-0000-4000-8000-000000000004", version: "1.0.0", manifest: {"config_schema": {"project_dir": "string", "library_dir": "string"}, "changelog": "Initial registry snapshot: Capital harness design scopes."}, configSchema: {"project_dir": "string", "library_dir": "string"}, changelog: "Initial registry snapshot: Capital harness design scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000005", componentId: "a0000000-0000-4000-8000-000000000005", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: E3.series schematic/cabling scopes."}, configSchema: {"install_root": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: E3.series schematic/cabling scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000006", componentId: "a0000000-0000-4000-8000-000000000006", version: "1.0.0", manifest: {"config_schema": {"workspace": "string", "model_file": "string"}, "changelog": "Initial registry snapshot: PREEvision E/E model scopes."}, configSchema: {"workspace": "string", "model_file": "string"}, changelog: "Initial registry snapshot: PREEvision E/E model scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000007", componentId: "a0000000-0000-4000-8000-000000000007", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "site": "string"}, "changelog": "Initial registry snapshot: Teamcenter BOM/CAD metadata scopes."}, configSchema: {"base_url": "string", "site": "string"}, changelog: "Initial registry snapshot: Teamcenter BOM/CAD metadata scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000008", componentId: "a0000000-0000-4000-8000-000000000008", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "wt_context": "string"}, "changelog": "Initial registry snapshot: Windchill part/BOM scopes."}, configSchema: {"base_url": "string", "wt_context": "string"}, changelog: "Initial registry snapshot: Windchill part/BOM scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000009", componentId: "a0000000-0000-4000-8000-000000000009", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "run_dir": "string"}, "changelog": "Initial registry snapshot: ANSA/META meshing scopes."}, configSchema: {"install_root": "string", "run_dir": "string"}, changelog: "Initial registry snapshot: ANSA/META meshing scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000010", componentId: "a0000000-0000-4000-8000-000000000010", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "model_dir": "string"}, "changelog": "Initial registry snapshot: GT-SUITE 1D simulation scopes."}, configSchema: {"install_root": "string", "model_dir": "string"}, changelog: "Initial registry snapshot: GT-SUITE 1D simulation scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000011", componentId: "a0000000-0000-4000-8000-000000000011", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "case_dir": "string"}, "changelog": "Initial registry snapshot: STAR-CCM+ CFD scopes."}, configSchema: {"install_root": "string", "case_dir": "string"}, changelog: "Initial registry snapshot: STAR-CCM+ CFD scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000012", componentId: "a0000000-0000-4000-8000-000000000012", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "solver": "string"}, "changelog": "Initial registry snapshot: LS-DYNA crash/solver scopes."}, configSchema: {"install_root": "string", "solver": "string"}, changelog: "Initial registry snapshot: LS-DYNA crash/solver scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000013", componentId: "a0000000-0000-4000-8000-000000000013", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "odb_dir": "string"}, "changelog": "Initial registry snapshot: Abaqus FEA scopes."}, configSchema: {"install_root": "string", "odb_dir": "string"}, changelog: "Initial registry snapshot: Abaqus FEA scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000014", componentId: "a0000000-0000-4000-8000-000000000014", version: "1.0.0", manifest: {"config_schema": {"matlab_root": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: MATLAB/Simulink model scopes."}, configSchema: {"matlab_root": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: MATLAB/Simulink model scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000015", componentId: "a0000000-0000-4000-8000-000000000015", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "config_dir": "string"}, "changelog": "Initial registry snapshot: CANoe test-environment scopes."}, configSchema: {"install_root": "string", "config_dir": "string"}, changelog: "Initial registry snapshot: CANoe test-environment scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000016", componentId: "a0000000-0000-4000-8000-000000000016", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: dSPACE HIL/ControlDesk scopes."}, configSchema: {"install_root": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: dSPACE HIL/ControlDesk scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000017", componentId: "a0000000-0000-4000-8000-000000000017", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "experiment_dir": "string"}, "changelog": "Initial registry snapshot: INCA calibration scopes."}, configSchema: {"install_root": "string", "experiment_dir": "string"}, changelog: "Initial registry snapshot: INCA calibration scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000018", componentId: "a0000000-0000-4000-8000-000000000018", version: "1.0.0", manifest: {"config_schema": {"workspace": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: EB tresos AUTOSAR config scopes."}, configSchema: {"workspace": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: EB tresos AUTOSAR config scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000019", componentId: "a0000000-0000-4000-8000-000000000019", version: "1.0.0", manifest: {"config_schema": {"workspace": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: DaVinci AUTOSAR config scopes."}, configSchema: {"workspace": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: DaVinci AUTOSAR config scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000020", componentId: "a0000000-0000-4000-8000-000000000020", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_id": "string"}, "changelog": "Initial registry snapshot: Jama requirements read/write scopes."}, configSchema: {"base_url": "string", "project_id": "string"}, changelog: "Initial registry snapshot: Jama requirements read/write scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000021", componentId: "a0000000-0000-4000-8000-000000000021", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_id": "string"}, "changelog": "Initial registry snapshot: Polarion requirements scopes."}, configSchema: {"base_url": "string", "project_id": "string"}, changelog: "Initial registry snapshot: Polarion requirements scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000022", componentId: "a0000000-0000-4000-8000-000000000022", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_id": "string"}, "changelog": "Initial registry snapshot: Codebeamer tracker scopes."}, configSchema: {"base_url": "string", "project_id": "string"}, changelog: "Initial registry snapshot: Codebeamer tracker scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000023", componentId: "a0000000-0000-4000-8000-000000000023", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "oslc_project": "string"}, "changelog": "Initial registry snapshot: DOORS Next RM scopes."}, configSchema: {"base_url": "string", "oslc_project": "string"}, changelog: "Initial registry snapshot: DOORS Next RM scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000024", componentId: "a0000000-0000-4000-8000-000000000024", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_id": "string"}, "changelog": "Initial registry snapshot: Valispace requirements/analysis scopes."}, configSchema: {"base_url": "string", "project_id": "string"}, changelog: "Initial registry snapshot: Valispace requirements/analysis scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000025", componentId: "a0000000-0000-4000-8000-000000000025", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "space_key": "string"}, "changelog": "Initial registry snapshot: Confluence page/space scopes."}, configSchema: {"base_url": "string", "space_key": "string"}, changelog: "Initial registry snapshot: Confluence page/space scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000026", componentId: "a0000000-0000-4000-8000-000000000026", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "project_space": "string"}, "changelog": "Initial registry snapshot: cplace project scopes."}, configSchema: {"base_url": "string", "project_space": "string"}, changelog: "Initial registry snapshot: cplace project scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000027", componentId: "a0000000-0000-4000-8000-000000000027", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "group": "string"}, "changelog": "Initial registry snapshot: GitLab repo/CI scopes."}, configSchema: {"base_url": "string", "group": "string"}, changelog: "Initial registry snapshot: GitLab repo/CI scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000028", componentId: "a0000000-0000-4000-8000-000000000028", version: "1.0.0", manifest: {"config_schema": {"org_url": "string", "project": "string"}, "changelog": "Initial registry snapshot: Azure DevOps repo/work-item scopes."}, configSchema: {"org_url": "string", "project": "string"}, changelog: "Initial registry snapshot: Azure DevOps repo/work-item scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000029", componentId: "a0000000-0000-4000-8000-000000000029", version: "1.0.0", manifest: {"config_schema": {"python_env": "string", "project_dir": "string"}, "changelog": "Initial registry snapshot: Minitab mtbpy SPC scopes."}, configSchema: {"python_env": "string", "project_dir": "string"}, changelog: "Initial registry snapshot: Minitab mtbpy SPC scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000030", componentId: "a0000000-0000-4000-8000-000000000030", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "tenant": "string"}, "changelog": "Initial registry snapshot: AQuA Pro APQP/PPAP scopes."}, configSchema: {"base_url": "string", "tenant": "string"}, changelog: "Initial registry snapshot: AQuA Pro APQP/PPAP scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000031", componentId: "a0000000-0000-4000-8000-000000000031", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "plant": "string"}, "changelog": "Initial registry snapshot: Net-Inspect supplier quality scopes."}, configSchema: {"base_url": "string", "plant": "string"}, changelog: "Initial registry snapshot: Net-Inspect supplier quality scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000032", componentId: "a0000000-0000-4000-8000-000000000032", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "client": "string"}, "changelog": "Initial registry snapshot: SAP QM inspection-lot scopes."}, configSchema: {"base_url": "string", "client": "string"}, changelog: "Initial registry snapshot: SAP QM inspection-lot scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000033", componentId: "a0000000-0000-4000-8000-000000000033", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "station_dir": "string"}, "changelog": "Initial registry snapshot: Tecnomatix process-simulation scopes."}, configSchema: {"install_root": "string", "station_dir": "string"}, changelog: "Initial registry snapshot: Tecnomatix process-simulation scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000034", componentId: "a0000000-0000-4000-8000-000000000034", version: "1.0.0", manifest: {"config_schema": {"install_root": "string", "station_dir": "string"}, "changelog": "Initial registry snapshot: DELMIA manufacturing scopes."}, configSchema: {"install_root": "string", "station_dir": "string"}, changelog: "Initial registry snapshot: DELMIA manufacturing scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000035", componentId: "a0000000-0000-4000-8000-000000000035", version: "1.0.0", manifest: {"config_schema": {"base_url": "string", "stage": "string"}, "changelog": "Initial registry snapshot: Omniverse digital-twin scopes."}, configSchema: {"base_url": "string", "stage": "string"}, changelog: "Initial registry snapshot: Omniverse digital-twin scopes." }),
+  makeVersion({ id: "b0000000-0000-4000-8000-000000000036", componentId: "a0000000-0000-4000-8000-000000000036", version: "1.0.0", manifest: {"config_schema": {"sdp_root": "string", "target_dir": "string"}, "changelog": "Initial registry snapshot: QNX build/target scopes."}, configSchema: {"sdp_root": "string", "target_dir": "string"}, changelog: "Initial registry snapshot: QNX build/target scopes." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000001", componentId: "c0000000-0000-4000-8000-000000000001", version: "1.0.0", manifest: {"description": "8D Generator"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000002", componentId: "c0000000-0000-4000-8000-000000000002", version: "1.0.0", manifest: {"description": "8D Root Cause Solver"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000003", componentId: "c0000000-0000-4000-8000-000000000003", version: "1.0.0", manifest: {"description": "Aoi Library"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000004", componentId: "c0000000-0000-4000-8000-000000000004", version: "1.0.0", manifest: {"description": "Approval Summaries"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000005", componentId: "c0000000-0000-4000-8000-000000000005", version: "1.0.0", manifest: {"description": "Control Plan Editor"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000006", componentId: "c0000000-0000-4000-8000-000000000006", version: "1.0.0", manifest: {"description": "Diff Merge Reviewer"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000007", componentId: "c0000000-0000-4000-8000-000000000007", version: "1.0.0", manifest: {"description": "Doc Summarization"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000008", componentId: "c0000000-0000-4000-8000-000000000008", version: "1.0.0", manifest: {"description": "Ecn Impact Alerts"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000009", componentId: "c0000000-0000-4000-8000-000000000009", version: "1.0.0", manifest: {"description": "Eol Calculators"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000010", componentId: "c0000000-0000-4000-8000-000000000010", version: "1.0.0", manifest: {"description": "Escalation Trees"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000011", componentId: "c0000000-0000-4000-8000-000000000011", version: "1.0.0", manifest: {"description": "Exception Triage Batch"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000012", componentId: "c0000000-0000-4000-8000-000000000012", version: "1.0.0", manifest: {"description": "Exec Digest"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000013", componentId: "c0000000-0000-4000-8000-000000000013", version: "1.0.0", manifest: {"description": "Fault Fix Playbooks"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000014", componentId: "c0000000-0000-4000-8000-000000000014", version: "1.0.0", manifest: {"description": "Fault Triage Agent"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000015", componentId: "c0000000-0000-4000-8000-000000000015", version: "1.0.0", manifest: {"description": "Iatf Clause Library"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000016", componentId: "c0000000-0000-4000-8000-000000000016", version: "1.0.0", manifest: {"description": "Io Table Import"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000017", componentId: "c0000000-0000-4000-8000-000000000017", version: "1.0.0", manifest: {"description": "Kpi Analyst"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000018", componentId: "c0000000-0000-4000-8000-000000000018", version: "1.0.0", manifest: {"description": "Kpi Briefing Generator"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000019", componentId: "c0000000-0000-4000-8000-000000000019", version: "1.0.0", manifest: {"description": "Ladder Codegen"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000020", componentId: "c0000000-0000-4000-8000-000000000020", version: "1.0.0", manifest: {"description": "Mail Triage"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000021", componentId: "c0000000-0000-4000-8000-000000000021", version: "1.0.0", manifest: {"description": "Meeting Notes Actions"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000022", componentId: "c0000000-0000-4000-8000-000000000022", version: "1.0.0", manifest: {"description": "Mrp Exception Triage"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000023", componentId: "c0000000-0000-4000-8000-000000000023", version: "1.0.0", manifest: {"description": "Ppap Checklist"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000024", componentId: "c0000000-0000-4000-8000-000000000024", version: "1.0.0", manifest: {"description": "Sop Checklists"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000025", componentId: "c0000000-0000-4000-8000-000000000025", version: "1.0.0", manifest: {"description": "St Codegen"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000026", componentId: "c0000000-0000-4000-8000-000000000026", version: "1.0.0", manifest: {"description": "Tpl 8D Report"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000027", componentId: "c0000000-0000-4000-8000-000000000027", version: "1.0.0", manifest: {"description": "Tpl Alarm Templates"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000028", componentId: "c0000000-0000-4000-8000-000000000028", version: "1.0.0", manifest: {"description": "Tpl Control Plan"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000029", componentId: "c0000000-0000-4000-8000-000000000029", version: "1.0.0", manifest: {"description": "Tpl Ecn Impact"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000030", componentId: "c0000000-0000-4000-8000-000000000030", version: "1.0.0", manifest: {"description": "Tpl Exception Card"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000031", componentId: "c0000000-0000-4000-8000-000000000031", version: "1.0.0", manifest: {"description": "Tpl Exec Digest"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000032", componentId: "c0000000-0000-4000-8000-000000000032", version: "1.0.0", manifest: {"description": "Tpl Fault Report"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000033", componentId: "c0000000-0000-4000-8000-000000000033", version: "1.0.0", manifest: {"description": "Tpl Kpi Brief"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000034", componentId: "c0000000-0000-4000-8000-000000000034", version: "1.0.0", manifest: {"description": "Tpl Ladder Patterns"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000035", componentId: "c0000000-0000-4000-8000-000000000035", version: "1.0.0", manifest: {"description": "Tpl Mail Reply"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000036", componentId: "c0000000-0000-4000-8000-000000000036", version: "1.0.0", manifest: {"description": "Tpl Meeting Notes"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000037", componentId: "c0000000-0000-4000-8000-000000000037", version: "1.0.0", manifest: {"description": "Tpl Ppap Submission"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  makeVersion({ id: "d0000000-0000-4000-8000-000000000038", componentId: "c0000000-0000-4000-8000-000000000038", version: "1.0.0", manifest: {"description": "Tpl Sop Checklist"}, configSchema: {}, changelog: "Initial fixture seed." }),
+  // Bonus release: 8d-generator v1.1.0 ships packaged content (first-party,
+  // control-plane residency blob) — its v1.0.0 sibling above is manifest-only.
+  makeVersion({
+    id: "d0000000-0000-4000-8000-000000000101",
+    componentId: "c0000000-0000-4000-8000-000000000001",
+    version: "1.1.0",
+    manifest: { description: "8d generator", packaged: true },
+    configSchema: {},
+    changelog: "Adds packaged skill content (previously manifest-only).",
+    blobDigest: EIGHT_D_GENERATOR_BLOB_DIGEST,
+    blobSizeBytes: EIGHT_D_GENERATOR_BLOB_BYTES.byteLength,
+    blobMediaType: "text/markdown",
+  }),
+  makeVersion({
+    id: "e0000000-0000-4000-8000-000000000101",
+    componentId: "e0000000-0000-4000-8000-000000000001",
+    version: "1.0.0",
+    manifest: { description: "internal-process-notes" },
+    configSchema: {},
+    changelog: "Initial fixture seed.",
+    blobDigest: INTERNAL_PROCESS_NOTES_BLOB_DIGEST,
+    blobSizeBytes: INTERNAL_PROCESS_NOTES_BLOB_BYTES.byteLength,
+    blobMediaType: "text/markdown",
+  }),
+];
+
+// ── Component blobs ─────────────────────────────────────────────────────
+
+export const componentBlobFixtures: ComponentBlob[] = [
+  {
+    digest: EIGHT_D_GENERATOR_BLOB_DIGEST,
+    tenant_id: null, // first-party, control-plane residency — the one documented tenant_id-nullable exemption
+    media_type: "text/markdown",
+    size_bytes: EIGHT_D_GENERATOR_BLOB_BYTES.byteLength,
+    storage_backend: "fs",
+    residency: "control_plane",
+    storage_key: EIGHT_D_GENERATOR_BLOB_DIGEST,
+    uploaded_by: OWNER_ID,
+  },
+  {
+    digest: INTERNAL_PROCESS_NOTES_BLOB_DIGEST,
+    tenant_id: TENANT_ID,
+    media_type: "text/markdown",
+    size_bytes: INTERNAL_PROCESS_NOTES_BLOB_BYTES.byteLength,
+    storage_backend: "fs",
+    residency: "tenant",
+    storage_key: INTERNAL_PROCESS_NOTES_BLOB_DIGEST,
+    uploaded_by: OWNER_ID,
+  },
+];
+
+// ── Resolvable-version view (for `resolve()` — guide 01 §2.3) ──────────────
+
+/** Every fixture component/version flattened into `resolve()`'s input shape.
+ *  `tenantId: null` marks the first-party fallback pool (all fixtures here
+ *  are first-party except `internal-process-notes`, which is tenant-owned). */
+export const fixtureResolvableVersions: ResolvableComponentVersion[] = componentVersionFixtures.map(
+  (v): ResolvableComponentVersion => {
+    const component = componentFixtures.find((c) => c.id === v.component_id);
+    if (!component) {
+      throw new Error(`fixtureResolvableVersions: dangling component_id ${v.component_id} on version ${v.id}`);
+    }
+    return {
+      componentId: component.id,
+      slug: component.slug,
+      version: v.version,
+      yanked: v.yanked,
+      tenantId: component.source_kind === "first_party" ? null : component.tenant_id,
+      sourceKind: component.source_kind,
+    };
+  },
+);
+
+/** Convenience: slug -> component fixture, for tests + the catalog package's
+ *  seed-building code. */
+export const componentFixturesBySlug: Record<string, Component> = Object.fromEntries(
+  componentFixtures.map((c) => [c.slug, c]),
+);
