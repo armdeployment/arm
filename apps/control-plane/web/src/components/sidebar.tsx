@@ -2,18 +2,38 @@
 
 import { usePathname } from "next/navigation";
 
+/**
+ * Information architecture — docs/guides/02-server-panels.md §1.
+ *
+ * A1 (locked assumption, docs/guides/README.md): agent adoption at scale is
+ * the PRIMARY value prop, cost is secondary, on-prem is a tracked-not-
+ * targeted detail. That order is now literal in the nav: Adoption leads,
+ * Library (the artifactory browse surface, D10) follows, Governance keeps
+ * its existing routes, Cost (formerly "Platform"/Spend) moves down, Admin
+ * stays last. `/catalog` is retired — see app/catalog/page.tsx, which now
+ * redirects to `/library` (guide 02 §1: "`/catalog` is retired; its route
+ * redirects to `/library`").
+ */
 const NAV_SECTIONS = [
   {
-    title: "Platform",
+    title: "Adoption",
     items: [
       { label: "Dashboard", href: "/", icon: DashboardIcon },
-      { label: "Agents", href: "/agents", icon: AgentsIcon },
-      { label: "Spend", href: "/spend", icon: SpendIcon },
+      { label: "Adoption", href: "/adoption", icon: AdoptionIcon },
+      { label: "Rollout", href: "/rollout", icon: RolloutIcon },
+    ],
+  },
+  {
+    title: "Library",
+    items: [
+      { label: "Library", href: "/library", icon: CatalogIcon },
+      { label: "Assignments", href: "/assignments", icon: AssignmentsIcon },
     ],
   },
   {
     title: "Governance",
     items: [
+      { label: "Governance", href: "/governance", icon: GovernanceIcon },
       { label: "Organization", href: "/organization", icon: OrgIcon },
       { label: "Access", href: "/access", icon: AccessIcon },
       { label: "Resources", href: "/resources", icon: ResourcesIcon },
@@ -22,11 +42,10 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    title: "Work Packages",
+    title: "Cost",
     items: [
-      { label: "Catalog", href: "/catalog", icon: CatalogIcon },
-      { label: "Assignments", href: "/assignments", icon: AssignmentsIcon },
-      { label: "Governance", href: "/governance", icon: GovernanceIcon },
+      { label: "Agents", href: "/agents", icon: AgentsIcon },
+      { label: "Spend", href: "/spend", icon: SpendIcon },
     ],
   },
   {
@@ -232,6 +251,22 @@ function AssignmentsIcon({ active }: IconProps) {
   return (
     <svg className="h-[17px] w-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0118 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3l1.5 1.5 3-3.75" />
+    </svg>
+  );
+}
+
+function AdoptionIcon({ active }: IconProps) {
+  return (
+    <svg className="h-[17px] w-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l3-3 3 3 4.5-4.5L18 13.5m-15 6h18M3 4.5h18" />
+    </svg>
+  );
+}
+
+function RolloutIcon({ active }: IconProps) {
+  return (
+    <svg className="h-[17px] w-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5M4.5 6l4.5 4.5" />
     </svg>
   );
 }
