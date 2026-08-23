@@ -119,6 +119,30 @@ node packaging/build-sea.mjs   # → packaging/dist/arm(.exe), unsigned-dev unle
 See `packaging/README.md` for the full release/signing runbook and
 `docs/agent-onboarding-guide.md` for the end-to-end employee guide.
 
+## Public Site + Live Demo
+
+`apps/public` is the marketing site (`docs/guides/04-public-site-demo.md`) — the
+ninety-second story, the product deep-dive, architecture and security pages, and a
+`/demo` landing page that links out to the dashboard above. Statically exported, no
+external hosts besides Google Fonts, no fabricated data.
+
+```bash
+cd apps/public
+pnpm build             # next build (output: "export" — writes ./out)
+pnpm start             # serve ./out on http://localhost:3200
+
+# or, for local editing:
+pnpm dev                # next dev --port 3200
+```
+
+Routes: `/`, `/product`, `/architecture`, `/security`, `/demo`, `/faq`.
+
+```bash
+pnpm --filter @arm-app/public test      # vitest — content-driven component tests
+pnpm --filter @arm-app/public e2e       # playwright — nav, a11y (axe), overflow, links
+pnpm --filter @arm-app/public figures   # regenerate docs/figures/*.svg from src/content
+```
+
 ---
 
 ## Full Monorepo Commands

@@ -1120,6 +1120,7 @@ arm/
       artifact-cache/ # (D10) tenant-VPC pull-through component/blob cache — GET/HEAD /artifacts/:digest
     cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (--token primary, --role advanced)
     onboarding/       # (D10) web questionnaire → recommendation → setup-token download, port 3300 (A7: no Desktop GUI)
+    public/           # (D10) marketing site + live demo landing page — port 3200, static export
   packages/
     db/               # Drizzle schema + migrations (Postgres) — includes artifactory.ts, onboarding.ts (D10)
     clickhouse/       # ClickHouse schema + migrations — includes 0003_adoption.sql (D10)
@@ -1157,7 +1158,7 @@ arm/
     open-decisions.md     # review-derived decisions to lock (D1/D2/D5)
     CONCEPTS.md           # shared domain vocabulary
     solutions/            # dated decision/solution records (frontmatter: title/date/status)
-    figures/              # rendered architecture diagrams (mermaid + PNG)
+    figures/              # rendered architecture diagrams (mermaid + PNG + SVG, exported from apps/public/src/content)
 ```
 
 ---

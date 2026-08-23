@@ -20,6 +20,10 @@ next-env.d.ts
 apps/control-plane/web/test-results/
 apps/control-plane/web/playwright-report/
 apps/control-plane/web/.next/
+apps/public/test-results/
+apps/public/playwright-report/
+apps/public/.next/
+apps/public/out/
 .gstack/
 demo/arm-demo.mp4
 skills-lock.json
