@@ -20,6 +20,9 @@
     "@arm/policy": "workspace:*",
     "@arm/auth": "workspace:*",
     "@arm/catalog": "workspace:*",
+    "@arm/artifactory": "workspace:*",
+    "@arm/discovery": "workspace:*",
+    "@arm/profiles": "workspace:*",
     "@trpc/server": "11.18.0",
     "zod": "4.4.3"
   },
