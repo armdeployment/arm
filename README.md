@@ -51,11 +51,19 @@ Same URL: **http://localhost:3100**
 
 ## What You'll See
 
+Updated D10 (docs/guides/02-server-panels.md §1) — adoption leads, cost
+moved down (A1: agent adoption at scale is the primary value prop):
+
 | Route | Description |
 |---|---|
-| `/` | Dashboard — spend stats, trend chart, model breakdown, agent table |
+| `/` | Role home — adoption + approvals lead, spend condensed to a strip |
+| `/adoption` | Activation funnel, stall breakdown, time-to-value, coverage, gaps, recent activations |
+| `/rollout` | Questionnaire designer, campaigns, download artifacts, live campaign funnel |
+| `/library` | Search + facets over packages and components (replaces the retired `/catalog`) |
+| `/assignments` | Org tree × package assignment matrix |
+| `/governance` | Package budgets, approvals inbox, cost-per-work-product |
 | `/agents` | Agent registry with status filters |
-| `/spend` | Cost analysis: closed vs self-hosted, savings opportunities |
+| `/spend` | Cost per active seat & per work product (primary); closed-vs-self-hosted model mix (secondary) |
 | `/access` | JIT access request approval queue |
 | `/audit` | Access audit log viewer (placeholder — lands 1.1) |
 
