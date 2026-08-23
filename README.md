@@ -77,6 +77,42 @@ pnpm e2e
 
 ---
 
+## Employee Onboarding (questionnaire → download → first value)
+
+The employee-facing path is a web questionnaire, not a CLI role key
+(D10/D11 — `docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`,
+`docs/guides/03-client-downloader.md`):
+
+```bash
+cd apps/onboarding
+pnpm build && pnpm start   # port 3300
+```
+
+Open **http://localhost:3300** → answer a few multiple-choice questions
+(no free text — Invariant 1) → get a package recommendation → download a
+`.armsetup` file or a 6-character activation code. The employee's machine
+then runs the ONE signed generic `arm` client (never a per-user compiled
+binary — A4):
+
+```bash
+arm setup --token <jwt-or-6-char-code> --tenant-url <url>   # non-interactive
+arm setup --setup-file path/to/downloaded.armsetup           # double-click target
+arm setup                                                     # interactive prompt
+arm setup --role <key> --tenant-url <url>                     # advanced/CI path (unchanged D9 behaviour)
+arm doctor                                                    # re-run verification, print the failure taxonomy
+```
+
+Build the signed platform installer for the current OS:
+
+```bash
+node packaging/build-sea.mjs   # → packaging/dist/arm(.exe), unsigned-dev unless signing env vars are set
+```
+
+See `packaging/README.md` for the full release/signing runbook and
+`docs/agent-onboarding-guide.md` for the end-to-end employee guide.
+
+---
+
 ## Full Monorepo Commands
 
 ```bash

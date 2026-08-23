@@ -547,6 +547,27 @@ erDiagram
 - Sealed storage for secrets (legacy DB creds where OIDC not supported).
 - Short-lived delegate key cache.
 
+**ARM Client Engine** (`packages/client-core`, D9 Phase 1.6 / D10) — shared
+layer, importable by data-plane apps (boundaries guardrail rank 1, alongside
+`config`); talks to the control plane and data plane over plain HTTP, never
+imports `@arm/trpc`/`@arm/db` directly.
+- One engine, every shape: `arm` CLI (`apps/cli`) and future platform
+  installers (`packaging/`) all run this code — never a per-user compiled
+  binary (A4).
+- Manifest v2 fetch + integrity verification (`buildCanonicalManifest` +
+  `manifestSha256`, byte-identical to `@arm/catalog`'s server-side
+  canonicalizer, proved against a shared golden vector).
+- Component resolution: pulls each `components[]` entry's blob from the
+  data-plane artifact cache (`GET /artifacts/:digest`) and verifies its
+  sha256 before installing — a mismatch is a hard `DIGEST_MISMATCH` failure.
+- The A4 token path (`resolveFromSetupToken`): redeems a setup token or
+  6-char activation code, verifies the returned manifest, and hands the
+  result to the same `runSetup` orchestration the advanced `--role` flags
+  path uses (§8.6/§8.7).
+- Renders the opencode runtime config with env-var-only credentials
+  (Invariants 4/5) and emits `activation_event`s for install/runtime/
+  connections/first-call milestones (metadata only — A5).
+
 ### 5.3 Web UI (Next.js)
 
 **Information architecture** — one shell, role-scoped views; URL-driven, SSR-first:
@@ -769,10 +790,15 @@ sequenceDiagram
    alerted at each tier action; every tier change emits audit + dashboard events
 ```
 
-### 8.6 Employee provisions a role Work Package (D9, Phase 1.6)
+### 8.6 Employee provisions a role Work Package — advanced/CI path (D9, Phase 1.6)
+
+**Superseded as the primary flow by §8.7 (D10/D11)** — retained as the
+advanced/CI path (`arm setup --role <key> --tenant-url <url>`, requires
+`ARM_TOKEN`) for power users and automated provisioning. Everything below
+is unchanged wire behaviour.
 
 ```
-1. Employee (any technical level) runs the ARM client — Desktop installer or `arm setup --role <key>`
+1. Employee (any technical level) runs the ARM client — `arm setup --role <key>`
 2. SSO login (browser flow) → role picker shows ONLY packages the employee is approved for
    (PackageAssignment rows: requested → approved → active)
 3. Client detects/installs the agent runtime (opencode first, version-pinned)
@@ -790,6 +816,55 @@ sequenceDiagram
 ```
 
 Governance loop (Phase 1.7): per-package + per-work-type budgets (`budget_reservation`), one-tap approvals inbox, `$/work-product` dashboards with rework-rate counterweight, causally-attributed savings ledger, cross-tenant anonymized benchmarks. Full plan: `docs/solutions/2026-08-13-work-package-roadmap.md`.
+
+### 8.7 Employee provisions via the questionnaire — primary path (D10/D11, `docs/guides/03-client-downloader.md`)
+
+**A4**: "custom downloader" is one signed generic client binary + a per-user
+signed setup token — never a per-user compiled binary. **A5**: questionnaire
+free text never reaches the control plane; only structured answers and
+derived keys are transmitted/stored (Invariant 1). **A6**: recommendations
+auto-approve when the package is `approval_required = false`, else route to
+an approver — the install never blocks on approval.
+
+```
+1. Employee opens a link (SSO-gated, or an invite code) → apps/onboarding /start
+2. Questionnaire: 6-9 multiple-choice questions, one per screen, no free text (A5).
+   packages/questionnaire's score() ranks job functions from the answers (pure,
+   deterministic — same answers + same catalog index ⇒ byte-identical output,
+   audit-friendly); recommend() maps the top job function to eligible packages
+3. /start/result: "We recommend the <Package> package" + a "something else" escape
+   to the full eligible list
+4. /download: setup token issued (onboarding-router.ts issueSetupToken) — a signed
+   JWT (15-min TTL, single-use, only its sha256 stored — Invariant 4) plus a
+   6-char activation code. Travels as a downloaded .armsetup file
+   ({version, token, control_plane_url}) or the code, read aloud/typed
+5. Employee double-clicks the .armsetup file (installer-registered file handler,
+   no terminal) — OR runs `arm setup` and types the activation code
+6. Client (packages/client-core resolveFromSetupToken) redeems the token exactly
+   once against the control plane, verifies the returned manifest's sha256
+   (manifest v2 — component refs sorted by id, permissions/job_functions sorted,
+   guide 00 §4), and proceeds through the SAME runSetup engine as §8.6 step 6-8:
+   render config, install components by verified digest (a mismatch is a hard
+   DIGEST_MISMATCH failure — never install unverified bytes), metered round-trip
+7. A6: package_assignment is created on redemption — `approved` immediately when
+   approval_required = false, else `requested` with pending_approval: true
+   surfaced to the employee ("your agent is installed; tool access is waiting
+   on your manager") — install never blocks on approval
+8. Activation events (metadata only — user_ref is pseudonymous, never an email)
+   land at each step: invited → questionnaire_started → questionnaire_completed →
+   token_issued → downloaded → installed → runtime_ready → connections_started →
+   connections_completed → first_metered_call → weekly_active. /adoption (A1,
+   primary value metric) reads the funnel and time-to-value from these.
+```
+
+Failure taxonomy (`packages/client-core/src/errors.ts`): every failure carries
+a stable code (`TOKEN_EXPIRED`, `TOKEN_ALREADY_USED`, `MANIFEST_TAMPERED`,
+`DIGEST_MISMATCH`, `PROXY_UNREACHABLE`, `RUNTIME_MISSING`, `RUNTIME_TOO_OLD`,
+`NO_AGENT_TOKEN`, `CONNECTION_DECLINED`, `DISK_PERMISSION`) and a plain-language
+fix — the same set drives `arm doctor`, `apps/onboarding`'s `/help/[step]`, and
+`activation_event.error_code` for the `/adoption` stall panel.
+
+Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`.
 
 ---
 
@@ -1027,8 +1102,8 @@ arm/
       plugin-ingest/  # OAuth issuer + plugin webhook + agent discovery
       meter-agent/    # event consolidator → control plane
       connectors/     # s3, gcs, db, sharepoint packages
-    cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (work packages)
-    onboarding/       # (D10) web questionnaire + signed platform installers (A7: no Desktop GUI)
+    cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (--token primary, --role advanced)
+    onboarding/       # (D10) web questionnaire → recommendation → setup-token download, port 3300 (A7: no Desktop GUI)
     artifact-cache/   # (D10, data-plane) local component/blob cache for the ARM client
   packages/
     db/               # Drizzle schema + migrations (Postgres) — includes artifactory.ts, onboarding.ts (D10)
@@ -1045,6 +1120,11 @@ arm/
     policy/           # LLM + access policy resolver
     proto/            # event schemas (zod) shared across services
     config/           # env, validation, secrets
+  packaging/          # (D10, A4/A7) signed platform installers wrapping the ARM CLI
+    build-sea.mjs     # Node 22+ Single Executable Application build → arm(.exe)
+    windows/          # WiX MSI + EV signing, winget manifest
+    macos/            # pkg + notarization, homebrew formula
+    linux/            # deb + rpm + curl-install script
   scripts/
     guardrails/       # executable invariant checks (boundaries, egress, tenant isolation, ...)
   tests/              # unit/integration suites

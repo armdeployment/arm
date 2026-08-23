@@ -42,7 +42,7 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ## 3. Ease-of-use design principles (the "very very very easy" contract)
 
-1. **Zero decisions:** the client asks exactly two questions — who are you (SSO) and which role (pre-picked from their org assignment; only offered choices they're approved for). Everything else is fetched and written automatically.
+1. **Zero decisions:** **updated by D10/D11** (`docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`) — the *client* still asks zero questions; the questionnaire that resolves "which role" moved to the web, *before* the download (`apps/onboarding`, 6-9 multiple-choice questions, no free text — A5). What the employee runs (`arm setup`, or a double-clicked `.armsetup` file) presents a signed setup token, never a role picker. Everything else is still fetched and written automatically.
 2. **Zero config files:** config is generated server-side from the package manifest and signed; the employee never sees YAML/JSON. Power users can export for editing.
 3. **Chat-first, templates-first:** every package ships 5–10 starter prompts as tappable cards ("Draft an 8D for a seal leak", "Summarize today's andon stops"). The first successful task is one tap away.
 4. **Inline governance, not lectures:** the budget meter, approval prompts, and deny explanations appear inside the chat surface. Policy is experienced, not read.
@@ -61,7 +61,7 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 | `packages/profiles` | New `WorkPackageSeed` in the D6 profile bundle; Manufacturing + Tech presets ship 10 pilot packages (from research); pure-data rule preserved (JSON-serializable, never gate capabilities) |
 | `packages/catalog` (new) | Tool Registry + Work Package service: CRUD, versioning, integrity hashes, publish/approve workflow, package→config rendering (the signed config generator) |
 | `packages/client-core` (new) | Shared installer/provisioner engine used by Desktop + CLI: SSO, runtime ensure, package apply, connections wizard, config integrity checks, self-update |
-| `apps/desktop` (new) | `arm_client.exe` / `.app` / `.deb` — GUI wizard for non-technical employees: role picker, package install progress, connections center, tray status (budget meter + approvals) |
+| ~~`apps/desktop`~~ | **Superseded by A7 (D10/D11) — no Desktop GUI.** Replaced by `apps/onboarding` (web questionnaire + setup-token issuance) and signed platform installers wrapping the `arm` CLI (`packaging/`) — same "no terminal for the common path" bar via double-clicking a downloaded `.armsetup` file. |
 | Control plane (new service surface) | Connection catalog (tool → auth method → versioned guide content → required scopes), vendor OAuth app registrations (Jira/GitHub/Google), guide content service, MDM manifest endpoint |
 | `packages/policy` | `resolveToolAccess` (tool:invoke with tiered delegation + deny-override), package-aware `resolveLLMModel` (per-package allowlists + auto-downgrade) |
 | `packages/classifier` | `tool_calls` already flow through stage 1; add package-id as a structural feature (labels get sharper for free) |
@@ -76,24 +76,31 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ---
 
-## 5. Client packaging & connection wizard (the `arm_client`)
+## 5. Client packaging & connection wizard (the `arm` client)
 
-**Yes, we ship an employee-facing client.** Three artifacts, one engine (`packages/client-core`):
+**Reconciled with A4/A7 by D10/D11** (`docs/solutions/
+2026-08-21-d11-questionnaire-provisioning.md`,
+`docs/guides/03-client-downloader.md`): **no Desktop GUI app** (A7) and
+**no per-user compiled binary** (A4). What ships instead —
+
+**One signed generic client binary, one engine (`packages/client-core`), no per-employee build:**
 
 | Artifact | Audience | Role |
 |---|---|---|
-| **ARM Desktop** (`arm_client.exe` / `.app` / `.deb`) | Every non-technical employee (the default) | GUI wizard: no terminal, no config files, progress + status always visible |
-| **`arm` CLI** (`arm setup`, `arm package …`) | Power users, CI, automated-agent fleets | Same engine, headless |
-| **MDM packages** (Intune MSI, Jamf pkg, winget, homebrew) | IT org-wide rollout | Silent install; first launch = SSO + role picker only |
+| **`arm` CLI / SEA binary** (`arm`/`arm.exe`, `packaging/build-sea.mjs`) | Every employee, via a signed platform installer (MSI/pkg/deb/rpm) | No terminal needed for the common path: double-click a downloaded `.armsetup` file, or run `arm setup` and type a 6-char activation code |
+| **Web questionnaire** (`apps/onboarding`, port 3300) | Every employee, before the download | Resolves job function → recommended package → issues the signed setup token (replaces the "role picker" below) |
+| **`arm` CLI, advanced/CI path** (`arm setup --role <key>`) | Power users, CI, automated-agent fleets | Same engine, direct role-key provisioning (D9 Phase 1.6 behaviour, unchanged) |
+| **MDM packages** (Intune MSI, Jamf pkg, winget, homebrew) | IT org-wide rollout | Silent install of the SAME signed binary; per-user customization still travels via setup token, never a per-deployment build |
 
 ### 5.1 First-run experience (≤ 5 minutes, zero config)
 
-1. **SSO** (browser flow)
-2. **Role picker** — assignment-aware: the employee only sees packages they're approved for
-3. **Runtime ensure** — opencode auto-detected, installed if missing (version-pinned)
-4. **Package apply** — MCP servers, skills, sub-agents, permissions, starter prompts all installed from the signed package manifest; config integrity re-checked at every agent start (tamper detection)
-5. **Connections** — the credential wizard for package tools that need third-party auth (below)
-6. **Verify** — metered round-trip → *"Online. Dept budget remaining: $X. Tools connected: M/N. Starter tasks ready."*
+1. **Questionnaire** (browser, `apps/onboarding` — SSO or invite-code gated): 6-9 multiple-choice questions, no free text (A5) — replaces the old "SSO + role picker" step below the client
+2. **Download**: setup token issued, travels as a `.armsetup` file or a 6-char activation code
+3. **Double-click (or `arm setup --token`/interactive code prompt)** — the client itself asks nothing
+4. **Runtime ensure** — opencode auto-detected, installed if missing (version-pinned)
+5. **Package apply** — components installed by verified digest (manifest v2), MCP servers/skills/sub-agents/permissions/starter prompts all from the signed, redeemed manifest; config integrity re-checked at every agent start (tamper detection)
+6. **Connections** — the credential wizard for package tools that need third-party auth (below)
+7. **Verify** — metered round-trip → *"Online. Dept budget remaining: $X. Tools connected: M/N. Starter tasks ready."*
 
 ### 5.2 The connections wizard — "how do I get a Jira/GitHub/AWS/BigQuery token?"
 
