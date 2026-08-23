@@ -107,28 +107,33 @@ function QuestionnaireDesigner() {
 // ── Campaigns (single setup-token issuance — see file header) ──────────────
 
 function CampaignIssuer() {
-  const [orgNodeId, setOrgNodeId] = useState("");
+  const [packageVersionIds, setPackageVersionIds] = useState("");
   const issue = trpc.onboarding.issueSetupToken.useMutation();
+
+  const ids = packageVersionIds
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
   return (
     <section className="inst-card p-5">
       <h3 className="label-meta mb-1">Campaigns</h3>
       <p className="mb-4 text-[11px]" style={{ color: "var(--text-muted)" }}>
-        Issues a setup token + activation code for a target org node (single-token surface — see file header for the batch-campaign gap).
+        Issues a setup token + activation code for one or more work-package versions (single-token surface — see file header for the batch-campaign gap).
       </p>
 
       <div className="flex gap-2">
         <input
-          value={orgNodeId}
-          onChange={(e) => setOrgNodeId(e.target.value)}
-          placeholder="Org node id (e.g. dept_qa)"
-          aria-label="Org node id"
+          value={packageVersionIds}
+          onChange={(e) => setPackageVersionIds(e.target.value)}
+          placeholder="Package version id(s), comma-separated"
+          aria-label="Package version ids"
           className="flex-1 rounded-md border px-3 py-1.5 text-[12px]"
           style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)" }}
         />
         <button
-          onClick={() => issue.mutate()}
-          disabled={issue.isPending || orgNodeId.trim() === ""}
+          onClick={() => issue.mutate({ packageVersionIds: ids })}
+          disabled={issue.isPending || ids.length === 0}
           className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           style={{ backgroundColor: "var(--navy)" }}
         >
@@ -139,11 +144,14 @@ function CampaignIssuer() {
       {issue.data && (
         <div className="mt-4 rounded-md border p-3 text-[11px]" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}>
           <div>
-            Status: <strong>{issue.data.status}</strong>
+            Activation code: <strong>{issue.data.activationCode}</strong>
+          </div>
+          <div className="mt-1" style={{ color: "var(--text-muted)" }}>
+            Expires: {new Date(issue.data.expiresAt).toLocaleString()}
           </div>
           <p className="mt-1" style={{ color: "var(--text-muted)" }}>
-            `/start` link, per-user activation codes, and CSV export populate once
-            <code> issueSetupToken</code> has a real implementation (docs/guides/03-client-downloader.md).
+            `/start` link, per-user activation codes, and CSV export populate once a batch-campaign procedure lands
+            (docs/guides/03-client-downloader.md) — for now this issues one token per click.
           </p>
         </div>
       )}

@@ -52,6 +52,13 @@ import { tenantTable } from "./org-tree.js";
  * `data_classification` feeds the tool gate: a component touching
  * `restricted` data is never callable from a closed external model
  * (Invariant 1 + D2).
+ *
+ * DB-level only, not modeled here: migration 0004 adds a generated
+ * `search_vector` tsvector column (name/slug/description) + GIN index, plus
+ * a pg_trgm GIN index on `slug` — read by
+ * `packages/discovery/src/search.ts`'s `buildComponentSearchSql` (guide 01
+ * §6.1). Drizzle has no first-class tsvector column type, so it isn't
+ * declared as a field on this table.
  */
 export const componentTable = pgTable(
   "component",

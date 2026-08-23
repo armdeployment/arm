@@ -61,10 +61,19 @@ export function GapsPanelView({ status, rows, errorMessage }: GapsPanelViewProps
 }
 
 export function GapsPanel() {
-  const q = trpc.library.gaps.useQuery();
+  const gaps = trpc.library.gaps.useQuery();
+  const jobFunctions = trpc.library.listJobFunctions.useQuery();
 
-  if (q.isLoading) return <GapsPanelView status="loading" />;
-  if (q.isError) return <GapsPanelView status="error" errorMessage={q.error?.message} />;
+  if (gaps.isLoading || jobFunctions.isLoading) return <GapsPanelView status="loading" />;
+  if (gaps.isError) return <GapsPanelView status="error" errorMessage={gaps.error?.message} />;
+  if (jobFunctions.isError) return <GapsPanelView status="error" errorMessage={jobFunctions.error?.message} />;
 
-  return <GapsPanelView status="ready" rows={q.data!.gaps as GapRow[]} />;
+  const nameByKey = new Map(jobFunctions.data!.jobFunctions.map((jf) => [jf.key, jf.name]));
+  const rows: GapRow[] = gaps.data!.gaps.map((g) => ({
+    jobFunctionKey: g.key,
+    name: nameByKey.get(g.key) ?? g.key,
+    uncoveredWeight: g.headcountWeight,
+  }));
+
+  return <GapsPanelView status="ready" rows={rows} />;
 }

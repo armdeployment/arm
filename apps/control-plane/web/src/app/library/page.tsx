@@ -202,7 +202,7 @@ function PackagesTab({ query }: { query: string }) {
 // ── Components tab (Wave-0 placeholder — library.search/facets) ────────────
 
 function ComponentsTab({ query }: { query: string }) {
-  const search = trpc.library.search.useQuery();
+  const search = trpc.library.search.useQuery({ q: query || undefined });
 
   if (search.isLoading) {
     return <div className="h-48 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }} />;
@@ -211,8 +211,7 @@ function ComponentsTab({ query }: { query: string }) {
     return <div role="alert" className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>Couldn&apos;t load components.</div>;
   }
 
-  const results = search.data!.results as { id: string; name: string; kind: string }[];
-  void query; // client-side filtering wires up once `library.search` returns real rows
+  const results = search.data!.items;
 
   if (results.length === 0) {
     return (
@@ -230,7 +229,7 @@ function ComponentsTab({ query }: { query: string }) {
     <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {results.map((c) => (
         <li key={c.id} className="rounded-lg border p-4" style={{ borderColor: "var(--border)" }}>
-          {c.name} <span className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>{c.kind}</span>
+          {c.name} <span className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>{c.type}</span>
         </li>
       ))}
     </ul>
@@ -246,8 +245,11 @@ function DiscoveryTab() {
   const promote = trpc.library.promoteCandidate.useMutation({ onSuccess: () => void utils.library.listCandidates.invalidate() });
   const reject = trpc.library.rejectCandidate.useMutation({ onSuccess: () => void utils.library.listCandidates.invalidate() });
 
-  const rows = (candidates.data?.candidates ?? []) as { id: string; name: string; proposedKind: string; sourceId: string }[];
-  const srcCount = (sources.data?.sources as unknown[] | undefined)?.length ?? 0;
+  const rows = candidates.data?.candidates ?? [];
+  const srcCount = sources.data?.sources.length ?? 0;
+
+  const slugify = (name: string) =>
+    name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   return (
     <div className="space-y-4">
@@ -271,17 +273,17 @@ function DiscoveryTab() {
             <li key={c.id} className="flex items-center justify-between px-4 py-3">
               <div>
                 <div className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>{c.name}</div>
-                <div className="text-[11px] uppercase" style={{ color: "var(--text-muted)" }}>{c.proposedKind}</div>
+                <div className="text-[11px] uppercase" style={{ color: "var(--text-muted)" }}>{c.proposed_kind}</div>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => promote.mutate()}
+                  onClick={() => promote.mutate({ candidateId: c.id, slug: slugify(c.name) })}
                   className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-emerald-700"
                 >
                   Promote
                 </button>
                 <button
-                  onClick={() => reject.mutate()}
+                  onClick={() => reject.mutate({ candidateId: c.id })}
                   className="rounded-lg border px-2.5 py-1 text-[10px] font-bold hover:bg-red-50"
                   style={{ borderColor: "var(--border)", color: "var(--danger)" }}
                 >

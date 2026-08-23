@@ -10,12 +10,11 @@
  *
  * D10 MECHANICAL UPDATE (contracts, Wave 0): the Tool Registry
  * (`listTools`) is removed from this router — its D10 successor is
- * `library.search` / `library.getComponent`, filled in by the `library`
- * Wave-1 agent. @arm/catalog's own fixtures are NOT yet migrated to the
- * `components`/`job_functions` (manifest v2) shape — that migration is also
- * `library`'s job (docs/guides/01-library-artifactory.md) — so
- * `integrity_ok` is expected to read `false` here until then; see the
- * comment on that assertion below.
+ * `library.search` / `library.getComponent` (packages/trpc/src/
+ * library-router.ts). @arm/catalog's own fixtures were migrated to the
+ * `components`/`job_functions` (manifest v2) shape by the `library` Wave-1
+ * agent (docs/guides/01-library-artifactory.md), so `integrity_ok` reads
+ * `true` for all fixture versions again.
  *
  * Covers fixture listing (6 packages / 4 assignments), manifest hash
  * self-consistency, and the package-assignment state machine end to end:
@@ -76,31 +75,23 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
     expect(r.versions.length).toBe(1);
     const v = r.versions[0]!;
     expect(v.manifestVersion).toBe(2);
-    // @arm/catalog's fixtures are not yet migrated to the components/
-    // job_functions shape (library's job) — parses to the empty defaults.
     expect(Array.isArray(v.components)).toBe(true);
     expect(Array.isArray(v.jobFunctions)).toBe(true);
     expect(v.budgetTemplate.monthly_usd_cap).toBe(950);
   });
 
-  it("getPackage reports integrity_ok false for fixture versions (EXPECTED, D10 mechanical update)", async () => {
-    // @arm/catalog's fixtures + canonicalManifest are still v1-shaped
-    // (tools/skills/subagent_configs/template_refs); the router now parses
-    // them through the v2 workPackageVersionSchema (components/
-    // job_functions), so the server-side recomputed hash no longer matches
-    // the fixture's v1 hash. This is expected until `library` (Wave 1)
-    // migrates @arm/catalog's fixtures + canonicalizer to manifest v2
-    // (docs/guides/01-library-artifactory.md) — NOT a bug in this router.
-    // The fixture's OWN internal hash is still self-consistent (checked
-    // below via @arm/catalog's own canonicalManifest, independent of the
-    // router's parsed/re-shaped version).
+  it("getPackage reports integrity_ok true for fixture versions (library migrated to manifest v2)", async () => {
+    // @arm/catalog's fixtures + canonicalManifest were migrated to manifest
+    // v2 (components/job_functions) by the `library` Wave-1 agent
+    // (docs/guides/01-library-artifactory.md), so the router's server-side
+    // recomputed hash now matches the fixture's hash again.
     for (const spec of packageVersionFixtures) {
       const r = await caller(authedClaims).catalog.getPackage({ packageId: spec.package_id });
       const version = r.versions.find((v) => v.id === spec.id);
       expect(version).toBeDefined();
-      expect(version!.integrity_ok).toBe(false);
+      expect(version!.integrity_ok).toBe(true);
       // The RAW fixture (as @arm/catalog ships it) is still internally
-      // consistent under @arm/catalog's own (v1) canonicalizer + hash.
+      // consistent under @arm/catalog's own canonicalizer + hash.
       expect(manifestSha256(canonicalManifest(spec))).toBe(spec.manifest_sha256);
     }
   });

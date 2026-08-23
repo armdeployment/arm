@@ -346,7 +346,7 @@ interface ConnectionsManifestEntryWire {
   requiredScopes: string[];
 }
 
-interface RedemptionResult {
+export interface RedemptionResult {
   status: "ok" | "expired" | "already_used" | "invalid";
   message: string;
   manifest?: ManifestWire;

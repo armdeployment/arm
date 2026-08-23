@@ -61,7 +61,7 @@ export class S3StorageBackend implements StorageBackend {
     const res = await this.fetchImpl(req.url, {
       method: "PUT",
       headers: { ...req.headers, "content-type": mediaType },
-      body,
+      body: body as NonNullable<NonNullable<Parameters<typeof fetch>[1]>["body"]>,
     });
     if (!res.ok) {
       throw new Error(`s3 put failed for bucket ${this.bucket} key ${key}: HTTP ${res.status}`);

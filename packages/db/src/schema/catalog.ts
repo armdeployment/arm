@@ -30,6 +30,13 @@ import { tenantTable } from "./org-tree.js";
  * `approval_required` (A6): when false, questionnaire recommendations for this
  * package auto-approve; when true (the default), a recommendation routes to
  * an approver instead of auto-provisioning.
+ *
+ * DB-level only, not modeled here: migration 0004 adds a generated
+ * `search_vector` tsvector column (name/description) + GIN index, plus a
+ * pg_trgm GIN index on `role_key` — read by
+ * `packages/discovery/src/search.ts`'s `buildWorkPackageSearchSql` (guide 01
+ * §6.1). Drizzle has no first-class tsvector column type, so it isn't
+ * declared as a field on this table.
  */
 export const workPackageTable = pgTable(
   "work_package",
