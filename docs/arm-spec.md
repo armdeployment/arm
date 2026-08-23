@@ -509,6 +509,14 @@ erDiagram
 - Internal price model: `GPU_class $/hr × hours × concurrency → $/M-tokens`.
 - Drafts "switch" reminders to dept managers with $ delta + migration effort estimate + one-click policy change.
 
+**Component Registry / Artifactory** (`packages/artifactory`, D10 — docs/guides/01-library-artifactory.md)
+- Immutable, content-addressed artifact repository (A2): `Component` (identity/kind/owner/review-status) → `ComponentVersion` (immutable manifest + optional `sha256:<hex>` blob digest) → `ComponentBlob` (content-addressed bytes, pluggable backend). `tool` generalizes to `component` (A3) — one registry entity, `kind` discriminator, no parallel skill/plugin tables.
+- **Publish pipeline**: validate manifest → reject unless `component.review_status = approved` → reject if the version already exists (immutability) or isn't strictly semver-greater than the latest → verify blob digest → store transactionally. A published `ComponentVersion` row is never updated; corrections ship as a new version.
+- **Residency rule (Invariant 1)**: tenant-authored component blobs live at `residency = 'tenant'`; only `source_kind = 'first_party'` artifacts may sit at `residency = 'control_plane'` — enforced by the `blob-residency` guardrail.
+- **Storage backends**: filesystem (dev/self-hosted default) and S3-compatible (SaaS), behind one `StorageBackend` interface; OCI registry is a stub (out of scope — no cross-tenant sharing, no signature verification beyond sha256 yet).
+- **Discovery** (`packages/discovery`): internal search/facets over `component` + `work_package` (Postgres FTS + `pg_trgm`, no new search infra); deterministic ranking (job-function match + same-department install count + `approved`-required + recency tiebreak, no LLM on this path); gap analysis (job functions with headcount weight and zero published packages) feeds `/adoption` and the roadmap. External discovery adapters (public MCP registry, internal git-org scanner, generic JSON index) poll into `DiscoveryCandidate` rows — never directly into `Component` — and a candidate is promoted into a `review_status = 'draft'`, `source_kind = 'imported'` component only through the normal approval path.
+- **Job-function taxonomy** (`packages/profiles`, `docs/research/oem-job-taxonomy.md`): ~250 manufacturing job types across 20 functions, ~65 software-org roles for tech, minimal sets for finance/holding — the questionnaire/recommendation grouping key work packages and components attach to.
+
 **Dashboards** (Next.js) — feature inventory, information architecture, and UX plan live in §5.3.
 
 ### 5.2 Data Plane
@@ -530,6 +538,12 @@ erDiagram
 - OAuth issuer + webhook for agent-native plugins (opencode hooks, claude code MCP, copilot extensions).
 - Receives metadata events from plugins that report directly rather than going through the proxy.
 - Serves machine-readable agent discovery (`/.well-known/arm-agent`) so supported agents can self-configure against the tenant data plane.
+
+**Artifact Cache** (`apps/data-plane/artifact-cache`, Hono, D10 — docs/guides/01-library-artifactory.md §5)
+- Tenant-VPC pull-through cache for component blobs: `GET`/`HEAD /artifacts/:digest`, checking local cache → tenant blob backend → (first-party only) upstream control-plane CDN.
+- Digest-keyed, **no TTL** (content-addressed artifacts can't go stale) — LRU eviction on a size cap. Verifies sha256 on every cache fill before serving or storing; never re-signs, never rewrites.
+- Emits `component_pull_event` (metadata only) per served request.
+- Imports `@arm/proto`/`@arm/config` only — the data-plane boundary rule; digest verification is a small, independently-copied module rather than an import of `@arm/artifactory` (control-plane-only).
 
 **Resource Connectors** (per-type strategy)
 - **S3 connector** — *mint strategy*: STS AssumeRoleWithWebIdentity (federated OIDC), IAM policy templated from grant actions + tags.
@@ -1027,9 +1041,9 @@ arm/
       plugin-ingest/  # OAuth issuer + plugin webhook + agent discovery
       meter-agent/    # event consolidator → control plane
       connectors/     # s3, gcs, db, sharepoint packages
+      artifact-cache/ # (D10) tenant-VPC pull-through component/blob cache — GET/HEAD /artifacts/:digest
     cli/              # arm CLI: data-plane install + `arm agent init` + `arm setup` (work packages)
     onboarding/       # (D10) web questionnaire + signed platform installers (A7: no Desktop GUI)
-    artifact-cache/   # (D10, data-plane) local component/blob cache for the ARM client
   packages/
     db/               # Drizzle schema + migrations (Postgres) — includes artifactory.ts, onboarding.ts (D10)
     clickhouse/       # ClickHouse schema + migrations — includes 0003_adoption.sql (D10)
