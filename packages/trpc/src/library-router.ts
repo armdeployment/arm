@@ -26,6 +26,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { ARMContext } from "./index.js";
+import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 import {
   componentKindSchema,
   discoveryCandidateStatusSchema,
@@ -65,17 +66,27 @@ import {
 
 const t = initTRPC.context<ARMContext>().create();
 
-const tenantProcedure = t.procedure.use(async (opts) => {
-  const { ctx } = opts;
-  if (!ctx.claims || !ctx.tenantId) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message:
-        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
-    });
-  }
-  return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
-});
+const tenantProcedure = t.procedure
+  .use(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.claims || !ctx.tenantId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message:
+          "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      });
+    }
+    return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
+  })
+  .use(async (opts) => {
+    if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+    const snapshot = snapshotAllDemoStores();
+    try {
+      return await opts.next();
+    } finally {
+      restoreAllDemoStores(snapshot);
+    }
+  });
 
 /**
  * `tool:publish` gate (D8/D9 verb, unrenamed — guide 00 §1). Real role
@@ -139,6 +150,12 @@ export interface AuditEntry {
   detail: string;
 }
 const auditLog: AuditEntry[] = [];
+
+registerDemoArray(componentStore);
+registerDemoArray(componentVersionStore);
+registerDemoArray(componentBlobStore);
+registerDemoArray(discoveryCandidateStore);
+registerDemoArray(auditLog);
 
 function recordAudit(actor: string, action: string, targetType: string, targetId: string, detail: string): AuditEntry {
   const entry: AuditEntry = { id: randomUUID(), ts: new Date().toISOString(), actor, action, targetType, targetId, detail };

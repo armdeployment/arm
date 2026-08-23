@@ -21,6 +21,7 @@ import "./checks/artifact-integrity.js";
 import "./checks/blob-residency.js";
 import "./checks/questionnaire-determinism.js";
 import "./checks/no-content-in-activation.js";
+import "./checks/demo-mode-readonly.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -72,3 +73,4 @@ export {
   checkNoContentInActivation,
   type ActivationContentCheckInput,
 } from "./checks/no-content-in-activation.js";
+export { checkDemoModeReadonly, type DemoModeViolation } from "./checks/demo-mode-readonly.js";

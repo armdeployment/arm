@@ -44,22 +44,33 @@ import { randomUUID } from "node:crypto";
 import type { ARMContext } from "./index.js";
 import { workPackageSchema, workPackageVersionSchema, packageAssignmentSchema } from "@arm/proto";
 import { packageVersionFixtures, manifestSha256, canonicalManifest } from "@arm/catalog";
+import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 
 // ── tRPC setup (mirrors src/index.ts; routers must not import runtime values back) ──
 
 const t = initTRPC.context<ARMContext>().create();
 
-const tenantProcedure = t.procedure.use(async (opts) => {
-  const { ctx } = opts;
-  if (!ctx.claims || !ctx.tenantId) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message:
-        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
-    });
-  }
-  return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
-});
+const tenantProcedure = t.procedure
+  .use(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.claims || !ctx.tenantId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message:
+          "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      });
+    }
+    return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
+  })
+  .use(async (opts) => {
+    if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+    const snapshot = snapshotAllDemoStores();
+    try {
+      return await opts.next();
+    } finally {
+      restoreAllDemoStores(snapshot);
+    }
+  });
 
 // ── Fixtures (parsed at module load — type safety from @arm/proto) ─────────
 
@@ -191,6 +202,7 @@ const ASSIGNMENT_FIXTURES: PackageAssignment[] = packageAssignmentSchema.array()
 
 // Mutable store — mutations update this in memory (no DB in 1.0 scaffold).
 const assignmentStore: PackageAssignment[] = [...ASSIGNMENT_FIXTURES];
+registerDemoArray(assignmentStore);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

@@ -43,6 +43,7 @@ import { checkArtifactIntegrity } from "../src/checks/artifact-integrity.js";
 import { checkBlobResidency } from "../src/checks/blob-residency.js";
 import { checkQuestionnaireDeterminism } from "../src/checks/questionnaire-determinism.js";
 import { checkNoContentInActivation } from "../src/checks/no-content-in-activation.js";
+import { checkDemoModeReadonly } from "../src/checks/demo-mode-readonly.js";
 import { INIT_SQL, assertTenantMonthPartitioning, ADOPTION_SQL, assertAdoptionPartitioning } from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
@@ -1096,5 +1097,75 @@ describe("mutation proof: no-content-in-activation (D10, Invariant 1 / A5)", () 
     const r = checkNoContentInActivation({ activationFields: [], questionKinds: [] });
     expect(r.scanned).toBe(0);
     expect(r.assertsNegative).toBe(true);
+  });
+});
+
+describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism)", () => {
+  it("FAILS when a router file defines a mutation but never imports isDemoMode", () => {
+    const r = checkDemoModeReadonly([
+      {
+        path: "packages/trpc/src/example-router.ts",
+        content: 'export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });', // mutation
+      },
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("isDemoMode");
+  });
+
+  it("FAILS when the file imports isDemoMode from the wrong path", () => {
+    const r = checkDemoModeReadonly([
+      {
+        path: "packages/trpc/src/example-router.ts",
+        content:
+          'import { isDemoMode } from "@arm/some-other-package";\n' + // mutation: wrong import source
+          'export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });',
+      },
+    ]);
+    expect(r.status).toBe("fail");
+  });
+
+  it("PASSES when the file both imports and uses isDemoMode from ./demo-mode.js", () => {
+    const r = checkDemoModeReadonly([
+      {
+        path: "packages/trpc/src/example-router.ts",
+        content:
+          'import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";\n' +
+          'const tenantProcedure = t.procedure.use(async (opts) => { if (!isDemoMode()) return opts.next(); });\n' +
+          'export const exampleRouter = t.router({ doThing: tenantProcedure.mutation(async () => ({ ok: true })) });',
+      },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("PASSES on a query-only file with no mutations at all (nothing to guard)", () => {
+    const r = checkDemoModeReadonly([
+      {
+        path: "packages/trpc/src/query-only-router.ts",
+        content: 'export const readonlyRouter = t.router({ list: t.procedure.query(async () => ([])) });',
+      },
+    ]);
+    expect(r.status).toBe("pass");
+  });
+
+  it("FAILS as VACUOUS when the input set is empty (asserts negative)", () => {
+    const r = checkDemoModeReadonly([]);
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+
+  it("PASSES on the real shipped packages/trpc/src router files", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join, extname, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const here = dirname(fileURLToPath(import.meta.url));
+    const dir = join(here, "..", "..", "..", "packages", "trpc", "src");
+    const files = readdirSync(dir)
+      .filter((entry) => extname(entry) === ".ts" && entry !== "demo-mode.ts")
+      .filter((entry) => !statSync(join(dir, entry)).isDirectory())
+      .map((entry) => ({ path: `packages/trpc/src/${entry}`, content: readFileSync(join(dir, entry), "utf8") }));
+    const r = checkDemoModeReadonly(files);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBeGreaterThan(0);
   });
 });

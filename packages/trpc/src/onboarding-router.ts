@@ -52,6 +52,7 @@ import { z } from "zod";
 import { randomUUID, createHash } from "node:crypto";
 import { SignJWT, jwtVerify, decodeJwt } from "jose";
 import type { ARMContext } from "./index.js";
+import { isDemoMode, registerDemoArray, registerDemoMap, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 import {
   questionnaireAnswerSchema,
   setupTokenClaimsSchema,
@@ -79,21 +80,43 @@ import { buildCanonicalManifest, manifestSha256 } from "@arm/client-core";
 
 const t = initTRPC.context<ARMContext>().create();
 
-const tenantProcedure = t.procedure.use(async (opts) => {
-  const { ctx } = opts;
-  if (!ctx.claims || !ctx.tenantId) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message:
-        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
-    });
-  }
-  return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
-});
+/** ARM_DEMO guaranteed-read-only guard (see ./demo-mode.ts) — applied to
+ *  BOTH tenantProcedure and publicProcedure, since redeemSetupToken /
+ *  resolveActivationCode are mutations on publicProcedure (A4: the token
+ *  itself is the credential, so they run without a tenant session). */
+const tenantProcedure = t.procedure
+  .use(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.claims || !ctx.tenantId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message:
+          "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      });
+    }
+    return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
+  })
+  .use(async (opts) => {
+    if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+    const snapshot = snapshotAllDemoStores();
+    try {
+      return await opts.next();
+    } finally {
+      restoreAllDemoStores(snapshot);
+    }
+  });
 
 /** Setup-token redemption has NO prior session — the token itself is the
  *  credential (A4). Public by design, not an oversight. */
-const publicProcedure = t.procedure;
+const publicProcedure = t.procedure.use(async (opts) => {
+  if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+  const snapshot = snapshotAllDemoStores();
+  try {
+    return await opts.next();
+  } finally {
+    restoreAllDemoStores(snapshot);
+  }
+});
 
 // ── Dev-mode signing config (TODO(1.1): real KMS-backed signing key, real
 //    tenant→industry-profile lookup, real short-lived catalog/agent tokens
@@ -299,6 +322,14 @@ const setupTokenStore = new Map<string, StoredSetupToken>(); // keyed by jti
 const activationCodeIndex = new Map<string, string>(); // activation_code -> jti
 
 const assignmentStore: PackageAssignment[] = [];
+
+registerDemoArray(responseStore);
+registerDemoArray(assignmentStore);
+registerDemoMap(setupTokenStore);
+registerDemoMap(activationCodeIndex);
+// attemptLog (rate-limiting) is deliberately NOT registered — it's internal
+// abuse-prevention state, not visitor-facing content, and should keep
+// working across demo mutations rather than reset after every call.
 
 // ── Rate limiting (redemption is single-use + rate-limited per tenant, guide
 //    03 §4) — simple in-memory sliding window; a real deployment fronts this

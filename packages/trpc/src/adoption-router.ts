@@ -46,22 +46,33 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { config } from "@arm/config";
 import type { ARMContext } from "./index.js";
+import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 
 // ── tRPC setup (mirrors src/index.ts; routers must not import runtime values back) ──
 
 const t = initTRPC.context<ARMContext>().create();
 
-const tenantProcedure = t.procedure.use(async (opts) => {
-  const { ctx } = opts;
-  if (!ctx.claims || !ctx.tenantId) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message:
-        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
-    });
-  }
-  return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
-});
+const tenantProcedure = t.procedure
+  .use(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.claims || !ctx.tenantId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message:
+          "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      });
+    }
+    return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
+  })
+  .use(async (opts) => {
+    if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+    const snapshot = snapshotAllDemoStores();
+    try {
+      return await opts.next();
+    } finally {
+      restoreAllDemoStores(snapshot);
+    }
+  });
 
 // ── Fixture-mode flag ────────────────────────────────────────────────────
 //

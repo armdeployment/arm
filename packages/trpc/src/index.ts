@@ -21,6 +21,7 @@ import { catalogRouter } from "./catalog-router.js";
 import { libraryRouter } from "./library-router.js";
 import { onboardingRouter } from "./onboarding-router.js";
 import { adoptionRouter } from "./adoption-router.js";
+import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -38,17 +39,27 @@ export function createContext(opts: { claims?: ARMClaims | null }): ARMContext {
 
 const t = initTRPC.context<ARMContext>().create();
 
-const tenantProcedure = t.procedure.use(async (opts) => {
-  const { ctx } = opts;
-  if (!ctx.claims || !ctx.tenantId) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message:
-        "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
-    });
-  }
-  return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
-});
+const tenantProcedure = t.procedure
+  .use(async (opts) => {
+    const { ctx } = opts;
+    if (!ctx.claims || !ctx.tenantId) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message:
+          "No authenticated tenant context. All queries require a tenant_id (Invariant §11.6).",
+      });
+    }
+    return opts.next({ ctx: { ...ctx, tenantId: ctx.tenantId } });
+  })
+  .use(async (opts) => {
+    if (!isDemoMode() || opts.type !== "mutation") return opts.next();
+    const snapshot = snapshotAllDemoStores();
+    try {
+      return await opts.next();
+    } finally {
+      restoreAllDemoStores(snapshot);
+    }
+  });
 
 const publicProcedure = t.procedure;
 
