@@ -238,6 +238,35 @@ export interface ResourceTypeAllowlist {
   enabled: string[];
 }
 
+// ── Job-function taxonomy (D10 — docs/guides/01-library-artifactory.md §3) ─
+
+/**
+ * A single job-function taxonomy entry — the questionnaire/recommendation
+ * grouping key (D10, `docs/research/oem-job-taxonomy.md`). Pure data; the
+ * provisioning step materializes this into `job_function` rows
+ * (`packages/db/src/schema/artifactory.ts`).
+ *
+ * `key` is a stable snake_case slug (`quality_engineer`, `maintenance_technician`),
+ * unique within a single profile's `jobFunctions` list. `aliases` carry the
+ * synonyms an employee might pick in the questionnaire ("PQE", "product
+ * quality engineer") — the `client` module maps free choices onto these, so
+ * aliases matter. `headcountWeight` is a relative (fixture-only, not a real
+ * customer metric) sizing hint used by gap analysis to rank uncovered job
+ * functions — higher weight = more people typically hold this job type.
+ */
+export interface JobFunctionSeed {
+  /** Stable machine key, e.g. "quality_engineer". Matches /^[a-z0-9_]+$/. */
+  key: string;
+  /** Display name, e.g. "Product Quality Engineer (PQE)". */
+  name: string;
+  /** Grouping family, e.g. "Quality Management" (docs/research/oem-job-taxonomy.md §2). */
+  functionFamily: string;
+  /** Synonyms an employee might type/select in the questionnaire. */
+  aliases: string[];
+  /** Relative headcount sizing hint (fixture data, not a real metric) — feeds gap-analysis ranking. */
+  headcountWeight: number;
+}
+
 // ── Work packages (D9) ────────────────────────────────────────────────────
 
 /**
@@ -299,6 +328,13 @@ export interface WorkPackageSeed {
   templateRefs: string[];
   /** Minimum agent runtime version this package config requires. */
   minAgentVersion: string;
+  /**
+   * Job-function keys this package serves (D10) — must resolve to keys
+   * present in the profile's own `jobFunctions` taxonomy list. Feeds
+   * `work_package_job_function` coverage mapping and gap analysis
+   * (docs/guides/01-library-artifactory.md §3 bullet 5).
+   */
+  jobFunctions: string[];
 }
 
 // ── The full profile preset ────────────────────────────────────────────────
@@ -334,4 +370,8 @@ export interface IndustryProfilePreset {
   /** Work packages (D9) — role-scoped tool bundles seeded at provisioning
    *  time, then governed per-package (budgets, approvals, metering). */
   workPackages: WorkPackageSeed[];
+  /** Job-function taxonomy (D10) — the questionnaire/recommendation grouping
+   *  key. Every `WorkPackageSeed.jobFunctions` entry across this profile must
+   *  resolve to a `key` in this list (packages/profiles/test/profiles.test.ts). */
+  jobFunctions: JobFunctionSeed[];
 }

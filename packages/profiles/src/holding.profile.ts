@@ -15,7 +15,8 @@
  * enable anything any subsidiary needs.
  */
 
-import type { IndustryProfilePreset } from "./types";
+import type { IndustryProfilePreset } from "./types.js";
+import { HOLDING_JOB_FUNCTIONS } from "./job-taxonomy.holding.js";
 
 export const holdingProfile: IndustryProfilePreset = {
   id: "holding",
@@ -351,6 +352,7 @@ export const holdingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.consolidation-checklist", "tpl.board-pack", "tpl.variance-memo"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["consolidation_analyst"],
     },
     {
       roleKey: "exec_assistant",
@@ -382,6 +384,10 @@ export const holdingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["executive_assistant"],
     },
   ],
+
+  // ── Job-function taxonomy (D10) ──────────────────────────────────────────
+  jobFunctions: HOLDING_JOB_FUNCTIONS,
 };

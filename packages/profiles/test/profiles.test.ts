@@ -45,6 +45,7 @@ const REQUIRED_KEYS: (keyof IndustryProfilePreset)[] = [
   "rolePresets",
   "workTypeTaxonomies",
   "workPackages",
+  "jobFunctions",
 ];
 
 describe("Industry Profile presets", () => {
@@ -672,6 +673,69 @@ describe("Work packages (D9 — automotive OEM toolchain expansion)", () => {
       expect(pkg.tools.length).toBeGreaterThanOrEqual(2);
       expect(pkg.skills.length).toBeGreaterThanOrEqual(2);
       expect(pkg.starterPrompts.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("Job-function taxonomy (D10 — docs/guides/01-library-artifactory.md §3)", () => {
+  const PROFILES: IndustryProfilePreset[] = [
+    techProfile,
+    manufacturingProfile,
+    financeProfile,
+    holdingProfile,
+  ];
+  const JOB_FUNCTION_KEY_RE = /^[a-z0-9_]+$/;
+
+  it("every profile has a non-empty jobFunctions taxonomy", () => {
+    for (const profile of PROFILES) {
+      expect(Array.isArray(profile.jobFunctions)).toBe(true);
+      expect(profile.jobFunctions.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every job-function key is well-formed, unique, and carries a name/family/aliases/weight", () => {
+    for (const profile of PROFILES) {
+      const keys = profile.jobFunctions.map((jf) => jf.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      for (const jf of profile.jobFunctions) {
+        expect(jf.key).toMatch(JOB_FUNCTION_KEY_RE);
+        expect(jf.name).toBeTruthy();
+        expect(jf.functionFamily).toBeTruthy();
+        expect(Array.isArray(jf.aliases)).toBe(true);
+        expect(jf.headcountWeight).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("every seeded work package's job_functions resolve to a seeded job-function key", () => {
+    for (const profile of PROFILES) {
+      const knownKeys = new Set(profile.jobFunctions.map((jf) => jf.key));
+      for (const pkg of profile.workPackages) {
+        expect(pkg.jobFunctions.length).toBeGreaterThan(0);
+        for (const key of pkg.jobFunctions) {
+          expect(knownKeys.has(key), `${profile.id}/${pkg.roleKey}: unknown job function "${key}"`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("manufacturing seeds close to the full ~250-key OEM taxonomy", () => {
+    expect(manufacturingProfile.jobFunctions.length).toBeGreaterThanOrEqual(200);
+  });
+
+  it("tech seeds roughly a ~60-role software-org taxonomy", () => {
+    expect(techProfile.jobFunctions.length).toBeGreaterThanOrEqual(40);
+  });
+
+  it("finance and holding seed a minimal (non-trivial) taxonomy", () => {
+    expect(financeProfile.jobFunctions.length).toBeGreaterThanOrEqual(3);
+    expect(holdingProfile.jobFunctions.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("job-function taxonomy is pure JSON-serializable data", () => {
+    for (const profile of PROFILES) {
+      const roundTripped = JSON.parse(JSON.stringify(profile.jobFunctions));
+      expect(roundTripped).toEqual(profile.jobFunctions);
     }
   });
 });

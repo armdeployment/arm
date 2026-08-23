@@ -12,18 +12,18 @@
  * The `guardrails/no-profile-branching` check enforces this.
  */
 
-import type { IndustryProfilePreset, ProfileId } from "./types";
-import type { OrgNodeSeed } from "./types";
-import { techProfile } from "./tech.profile";
-import { manufacturingProfile } from "./manufacturing.profile";
-import { financeProfile } from "./finance.profile";
-import { holdingProfile } from "./holding.profile";
+import type { IndustryProfilePreset, ProfileId } from "./types.js";
+import type { OrgNodeSeed } from "./types.js";
+import { techProfile } from "./tech.profile.js";
+import { manufacturingProfile } from "./manufacturing.profile.js";
+import { financeProfile } from "./finance.profile.js";
+import { holdingProfile } from "./holding.profile.js";
 
-export { techProfile } from "./tech.profile";
-export { manufacturingProfile } from "./manufacturing.profile";
-export { financeProfile } from "./finance.profile";
-export { holdingProfile } from "./holding.profile";
-export * from "./types";
+export { techProfile } from "./tech.profile.js";
+export { manufacturingProfile } from "./manufacturing.profile.js";
+export { financeProfile } from "./finance.profile.js";
+export { holdingProfile } from "./holding.profile.js";
+export * from "./types.js";
 
 /** All built-in profiles. "custom" is the à-la-carte escape hatch (empty preset). */
 const REGISTRY: Record<ProfileId, IndustryProfilePreset | undefined> = {
@@ -121,6 +121,7 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
     ],
     workTypeTaxonomies: [],
     workPackages: [],
+    jobFunctions: [],
   };
 }
 

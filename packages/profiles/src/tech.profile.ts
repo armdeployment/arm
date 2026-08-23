@@ -5,7 +5,8 @@
  * values become per-tenant config rows — runtime code never reads `id: "tech"`.
  */
 
-import type { IndustryProfilePreset } from "./types";
+import type { IndustryProfilePreset } from "./types.js";
+import { TECH_JOB_FUNCTIONS } from "./job-taxonomy.tech.js";
 
 export const techProfile: IndustryProfilePreset = {
   id: "tech",
@@ -224,6 +225,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.pr-summary", "tpl.security-scan"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["code_reviewer"],
     },
     {
       roleKey: "backend_engineer",
@@ -258,6 +260,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.api-spec", "tpl.migration", "tpl.runbook"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["backend_engineer"],
     },
     {
       roleKey: "frontend_engineer",
@@ -289,6 +292,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.component", "tpl.a11y-checklist"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["frontend_engineer"],
     },
     {
       roleKey: "data_scientist",
@@ -320,6 +324,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.eda-notebook", "tpl.model-eval", "tpl.dashboard"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["data_scientist"],
     },
     {
       roleKey: "exec_assistant",
@@ -352,6 +357,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["executive_assistant"],
     },
     {
       roleKey: "devops_engineer",
@@ -383,6 +389,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.ci-pipeline", "tpl.sbom", "tpl.shift-left-security"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["devops_engineer"],
     },
     {
       roleKey: "embedded_engineer",
@@ -414,6 +421,10 @@ export const techProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.model-codegen", "tpl.bus-log-analysis"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["embedded_engineer"],
     },
   ],
+
+  // ── Job-function taxonomy (D10) ──────────────────────────────────────────
+  jobFunctions: TECH_JOB_FUNCTIONS,
 };

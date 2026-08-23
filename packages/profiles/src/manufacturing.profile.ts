@@ -16,7 +16,8 @@
  * defaults.
  */
 
-import type { IndustryProfilePreset } from "./types";
+import type { IndustryProfilePreset } from "./types.js";
+import { MANUFACTURING_JOB_FUNCTIONS } from "./job-taxonomy.manufacturing.js";
 
 export const manufacturingProfile: IndustryProfilePreset = {
   id: "manufacturing",
@@ -376,6 +377,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.8d-report", "tpl.control-plan", "tpl.ppap-checklist"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["product_quality_engineer_pqe", "spc_metrology_engineer"],
     },
     {
       roleKey: "sqe_supplier_quality",
@@ -408,6 +410,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.vda63-audit", "tpl.scar-8d", "tpl.chargeback"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["supplier_quality_engineer_sqe"],
     },
     {
       roleKey: "plc_programmer",
@@ -441,6 +444,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.ladder-routine", "tpl.aoi", "tpl.alarm-list"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["controls_engineer_plc_programmer"],
     },
     {
       roleKey: "maintenance_technician",
@@ -474,6 +478,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.fault-to-fix", "tpl.sop-checklist", "tpl.work-order"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["maintenance_technician_mech_elec"],
     },
     {
       roleKey: "material_planner",
@@ -504,6 +509,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.exception-triage", "tpl.ecn-impact", "tpl.eol-calc"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["material_planner_mrp"],
     },
     {
       roleKey: "production_supervisor",
@@ -534,6 +540,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.shift-report", "tpl.handover", "tpl.staffing-model"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["shift_supervisor_team_leader"],
     },
     {
       roleKey: "warranty_analyst",
@@ -563,6 +570,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.pareto-report", "tpl.chargeback-bundle", "tpl.reserve-memo"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["warranty_field_quality_analyst", "warranty_administrator_analyst"],
     },
     {
       roleKey: "data_analyst_plant",
@@ -595,6 +603,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.spc-notebook", "tpl.oee-calc", "tpl.dashboard"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["manufacturing_data_scientist", "oee_performance_analytics_engineer"],
     },
     {
       roleKey: "office_worker_general",
@@ -628,6 +637,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.meeting-notes", "tpl.doc-summary", "tpl.mail-triage"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["general_office_staff"],
     },
     {
       roleKey: "exec_assistant",
@@ -660,6 +670,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["executive_assistant"],
     },
     {
       roleKey: "cae_analyst",
@@ -693,6 +704,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.solver-run-report", "tpl.mesh-check", "tpl.correlation-report"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["fea_structural_analyst", "durability_fatigue_analyst"],
     },
     {
       roleKey: "embedded_sw_engineer",
@@ -726,6 +738,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.autosar-module", "tpl.misra-fix", "tpl.mil-sil-suite"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["embedded_software_engineer"],
     },
     {
       roleKey: "systems_engineer",
@@ -759,6 +772,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.requirements-flowdown", "tpl.traceability-matrix", "tpl.fmea-guide"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["systems_engineer"],
     },
     {
       roleKey: "calibration_engineer",
@@ -790,6 +804,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.dataset-release", "tpl.drive-cycle-analysis", "tpl.doe-plan"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["powertrain_calibration_engineer"],
     },
     {
       roleKey: "hils_engineer",
@@ -819,6 +834,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.fault-injection-matrix", "tpl.hil-test-report", "tpl.can-log-analysis"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["hil_test_engineer"],
     },
     {
       roleKey: "program_manager",
@@ -850,6 +866,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.apqp-timing", "tpl.status-deck", "tpl.issue-triage"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["launch_program_manager_apqp"],
     },
     {
       roleKey: "plm_administrator",
@@ -879,6 +896,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.ecn-workflow", "tpl.bom-reconcile", "tpl.part-number"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["plm_administrator"],
     },
     {
       roleKey: "mfg_sim_engineer",
@@ -910,6 +928,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.robot-olfp", "tpl.virtual-commissioning", "tpl.line-balance"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["factory_simulation_engineer", "throughput_discrete_event_simulation_engineer"],
     },
     {
       roleKey: "ee_architect",
@@ -941,6 +960,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.harness-design", "tpl.topology-design", "tpl.signal-db"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["e_e_architecture_engineer"],
     },
     {
       roleKey: "qms_apqp",
@@ -974,6 +994,10 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.fmea-control-plan", "tpl.ppap-psw", "tpl.spc-capability"],
       minAgentVersion: "1.0.0",
+      jobFunctions: ["launch_program_manager_apqp", "quality_auditor_system_process_product"],
     },
   ],
+
+  // ── Job-function taxonomy (D10) ──────────────────────────────────────────
+  jobFunctions: MANUFACTURING_JOB_FUNCTIONS,
 };
