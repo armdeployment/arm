@@ -1,18 +1,27 @@
 /**
- * One-command employee provisioning (D9 Phase 1.6, roadmap §5.1).
+ * One-command employee provisioning (D9 Phase 1.6, updated D10 for manifest
+ * v2 / A4 token path, roadmap §5.1, docs/guides/03-client-downloader.md §5).
  *
- * `runSetup` is the shared engine behind `arm setup` (CLI) and the ARM
- * Desktop wizard: fetch the role's package manifest → verify content
- * integrity (fail loud on tamper) → render the opencode config → write it →
- * verify a metered round-trip against the ARM proxy → return a human- and
- * machine-readable result. A network health failure is never fatal: the
- * result carries `online: false` with a plain-language message.
+ * `runSetup` is the shared engine behind `arm setup` (CLI): fetch (or accept
+ * a pre-resolved) package manifest → verify content integrity (fail loud on
+ * tamper) → render the opencode config → write it → install non-callable
+ * components by verified digest → verify a metered round-trip against the
+ * ARM proxy → return a human- and machine-readable result. A network health
+ * failure is never fatal: the result carries `online: false` with a
+ * plain-language message.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { fetchManifest, verifyManifestIntegrity, type ClientPackageManifest } from "./manifest.js";
+import {
+  fetchManifest,
+  verifyManifestIntegrity,
+  buildCanonicalManifest,
+  type ClientPackageManifest,
+} from "./manifest.js";
 import { renderOpencodeConfig, assertNoSecretsInConfig, DEFAULT_OPENCODE_HOME } from "./opencode.js";
+import { installComponents } from "./components.js";
+import { ArmClientError } from "./errors.js";
 import type { ConnectionsManifestEntry, ConnectionMethod } from "./connections.js";
 
 /** Inputs for a full setup run. */
@@ -31,6 +40,29 @@ export interface SetupArgs {
    */
   agentToken?: string;
   agentHome?: string;
+  /**
+   * Data-plane artifact cache base URL. Required only to install
+   * *installable* components (skill/subagent/template/…) by digest — when
+   * absent, callable components (which need no on-disk install) still work,
+   * but installable ones are skipped (no `installedPaths`).
+   */
+  dataPlaneUrl?: string;
+  /**
+   * Pre-resolved + integrity-verified manifest — set by
+   * `resolveFromSetupToken` (the A4 token path, setup-token.ts). When
+   * present, `runSetup` skips `fetchManifest`/`verifyManifestIntegrity` and
+   * uses this directly; every other step (render, write, install, health
+   * check, activation events) is unchanged. The `--role`/flags path leaves
+   * this unset and `runSetup` fetches by `roleKey` as before.
+   */
+  manifest?: ClientPackageManifest;
+  /**
+   * A6: true when the recommended package requires manager approval and
+   * hasn't been approved yet. Passed straight through to `SetupResult` so
+   * the CLI can print "your agent is installed; tool access is waiting on
+   * your manager" — install never blocks on approval.
+   */
+  pendingApproval?: boolean;
 }
 
 /** Result of a setup run — safe to print directly in a terminal. */
@@ -39,13 +71,17 @@ export interface SetupResult {
   healthMessage: string;
   roleKey: string;
   packageVersion: string;
-  tools: string[];
-  skills: string[];
+  /** Names of every component in the resolved manifest (callable + installable). */
+  components: string[];
+  /** Absolute paths of installable components actually written to disk. */
+  installedPaths: string[];
   connectionsNeeded: ConnectionsManifestEntry[];
   configPath: string;
   /** Path of the companion env file; present only when an agentToken was provided. */
   envFilePath?: string;
   budgetHint: string;
+  /** A6 — true when tool access is pending manager approval. */
+  pendingApproval: boolean;
 }
 
 /**
@@ -152,27 +188,30 @@ function fallbackGuideId(authMethod: ConnectionMethod): string {
 }
 
 /**
- * Build the connections manifest for this package: every tool whose
- * auth_strategy is not "none" needs a connection. Guide id is picked from
- * vendor hints on the tool name/endpoint; scopes come from the package
- * version's pinned tool refs when present, else the guide's defaults.
+ * Build the connections manifest for this package: every component whose
+ * auth_strategy is not null/"none" needs a connection. Guide id is picked
+ * from vendor hints on the component name/endpoint; scopes come from the
+ * package version's pinned component refs when present, else the guide's
+ * defaults.
  */
 export function collectConnectionsNeeded(
   manifest: ClientPackageManifest,
 ): ConnectionsManifestEntry[] {
-  const refsByToolId = new Map(manifest.version.tools.map((ref) => [ref.tool_id, ref.scopes]));
+  const scopesByComponentId = new Map(
+    manifest.version.components.map((ref) => [ref.component_id, ref.scopes]),
+  );
 
-  return manifest.tools
-    .filter((tool) => tool.auth_strategy !== "none")
-    .map((tool) => {
-      const authMethod = tool.auth_strategy as ConnectionMethod;
+  return manifest.components
+    .filter(({ component }) => component.auth_strategy !== null && component.auth_strategy !== "none")
+    .map(({ component }) => {
+      const authMethod = component.auth_strategy as ConnectionMethod;
       const hint = VENDOR_GUIDE_HINTS.find((candidate) =>
-        candidate.pattern.test(`${tool.name} ${tool.endpoint}`),
+        candidate.pattern.test(`${component.name} ${component.endpoint ?? ""}`),
       );
-      const pinnedScopes = refsByToolId.get(tool.id) ?? [];
+      const pinnedScopes = scopesByComponentId.get(component.id) ?? [];
       return {
-        toolId: tool.id,
-        toolName: tool.name,
+        componentId: component.id,
+        componentName: component.name,
         authMethod,
         guideId: hint?.guideId ?? fallbackGuideId(authMethod),
         requiredScopes: pinnedScopes.length > 0 ? pinnedScopes : (hint?.defaultScopes ?? []),
@@ -191,8 +230,9 @@ export function budgetHint(budgetTemplate: Record<string, unknown>): string {
 
 /**
  * Run the full one-click setup flow. Throws only for hard failures (bad
- * manifest, integrity mismatch, unwritable config) — proxy health problems
- * degrade to `online: false` with a message instead.
+ * manifest, integrity mismatch, unwritable config — as `ArmClientError`s
+ * carrying a stable code, errors.ts) — proxy health problems degrade to
+ * `online: false` with a message instead.
  *
  * When `agentToken` is provided it is written to `<agentHome>/.arm-env`
  * (mode 0o600, Invariant 4: short-lived credentials, secrets never land in
@@ -200,14 +240,19 @@ export function budgetHint(budgetTemplate: Record<string, unknown>): string {
  * `${ARM_AGENT_TOKEN}`.
  */
 export async function runSetup(args: SetupArgs): Promise<SetupResult> {
-  const manifest = await fetchManifest(args.controlPlaneUrl, args.token, args.roleKey);
+  const manifest = args.manifest ?? (await fetchManifest(args.controlPlaneUrl, args.token, args.roleKey));
 
   if (!verifyManifestIntegrity(manifest.version)) {
-    throw new Error(
+    throw new ArmClientError(
+      "MANIFEST_TAMPERED",
       `package manifest integrity check FAILED for "${args.roleKey}"@${manifest.version.version} — ` +
         "refusing to write config from a tampered manifest",
     );
   }
+  // Touch the canonicalizer so a drift between it and the pinned hash is
+  // exercised even when a caller supplies a pre-verified manifest (defense
+  // in depth — verifyManifestIntegrity already calls it internally too).
+  void buildCanonicalManifest(manifest.version);
 
   const rendered = renderOpencodeConfig({
     manifest,
@@ -218,8 +263,18 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
   });
   assertNoSecretsInConfig(rendered.content);
 
-  await mkdir(dirname(rendered.configPath), { recursive: true });
-  await writeFile(rendered.configPath, rendered.content, "utf8");
+  try {
+    await mkdir(dirname(rendered.configPath), { recursive: true });
+    await writeFile(rendered.configPath, rendered.content, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === "EACCES") {
+      throw new ArmClientError(
+        "DISK_PERMISSION",
+        `could not write config to ${rendered.configPath}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    throw err;
+  }
 
   const agentHome = args.agentHome ?? DEFAULT_OPENCODE_HOME;
   let envFilePath: string | undefined;
@@ -232,6 +287,17 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     });
   }
 
+  let installedPaths: string[] = [];
+  if (args.dataPlaneUrl !== undefined) {
+    const installed = await installComponents(manifest.components, {
+      dataPlaneUrl: args.dataPlaneUrl,
+      agentHome,
+    });
+    installedPaths = installed
+      .map((entry) => entry.installedPath)
+      .filter((path): path is string => path !== null);
+  }
+
   const health = await verifyMeteredRoundTrip(args.armProxyUrl, args.agentToken);
 
   return {
@@ -239,11 +305,12 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     healthMessage: health.message,
     roleKey: args.roleKey,
     packageVersion: manifest.version.version,
-    tools: manifest.tools.map((tool) => tool.name),
-    skills: manifest.version.skills,
+    components: manifest.components.map(({ component }) => component.name),
+    installedPaths,
     connectionsNeeded: collectConnectionsNeeded(manifest),
     configPath: rendered.configPath,
     ...(envFilePath !== undefined ? { envFilePath } : {}),
     budgetHint: budgetHint(manifest.version.budget_template),
+    pendingApproval: args.pendingApproval ?? false,
   };
 }

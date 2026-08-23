@@ -1,11 +1,14 @@
 /**
- * @arm/client-core — shared ARM client engine (D9 Phase 1.6).
+ * @arm/client-core — shared ARM client engine (D9 Phase 1.6, updated D10 for
+ * manifest v2 / components / the A4 token path).
  *
- * One engine, three shapes (roadmap §5): the `arm` CLI, the ARM Desktop
- * wizard, and MDM packages all run this code. Responsibilities: package
- * manifest fetch + integrity verification, opencode config rendering with
- * env-var-only credentials, connections-wizard guide content, and the full
- * one-click `runSetup` orchestration.
+ * One engine, every shape (roadmap §5): the `arm` CLI and any future
+ * platform installer run this code. Responsibilities: package manifest
+ * fetch + integrity verification, component resolution/installation by
+ * digest, opencode config rendering with env-var-only credentials,
+ * connections-wizard guide content, the setup-token (A4) redemption path,
+ * activation-event telemetry, and the full one-click `runSetup`
+ * orchestration.
  *
  * SECURITY (Invariants 4/5): rendered configs contain environment-variable
  * references only — never raw credentials (assertNoSecretsInConfig enforces).
@@ -18,20 +21,31 @@ export {
   verifyManifestIntegrity,
   buildCanonicalManifest,
   clientPackageManifestSchema,
+  resolvedComponentSchema,
+  isCallableComponentKind,
+  CALLABLE_COMPONENT_KINDS,
 } from "./manifest.js";
 export type {
   ClientPackageManifest,
+  ResolvedComponent,
   WorkPackage,
   WorkPackageVersion,
-  Tool,
-  CanonicalPackageManifest,
-  CanonicalToolRef,
+  Component,
+  ComponentVersion,
 } from "./manifest.js";
+
+export {
+  pullComponentBlob,
+  installComponent,
+  installComponents,
+  installDirFor,
+} from "./components.js";
+export type { InstalledComponent } from "./components.js";
 
 export {
   renderOpencodeConfig,
   assertNoSecretsInConfig,
-  toolToMcpEntry,
+  componentToMcpEntry,
   mcpTokenEnvVar,
   DEFAULT_OPENCODE_HOME,
 } from "./opencode.js";
@@ -47,3 +61,12 @@ export {
   budgetHint,
 } from "./setup.js";
 export type { SetupArgs, SetupResult } from "./setup.js";
+
+export { resolveFromSetupToken, setupRedemptionResponseSchema } from "./setup-token.js";
+export type { SetupRedemptionResponse } from "./setup-token.js";
+
+export { ArmClientError, ARM_ERROR_CODES, ARM_ERROR_FIXES, fixFor } from "./errors.js";
+export type { ArmErrorCode } from "./errors.js";
+
+export { buildActivationEvent, emitActivationEvent, trackActivation } from "./activation.js";
+export type { ActivationEventInput } from "./activation.js";

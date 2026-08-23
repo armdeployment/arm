@@ -1,102 +1,107 @@
 /**
- * Package manifest fetch + integrity verification (D9 Phase 1.6).
+ * Package manifest fetch + integrity verification (D9 Phase 1.6, updated D10
+ * — manifest v2, docs/guides/00-shared-contracts.md §4, docs/guides/
+ * 03-client-downloader.md §5).
  *
  * The client downloads the package manifest from the control plane catalog
  * endpoint, validates it against the proto contracts, and re-verifies the
  * content hash (`manifest_sha256`) before rendering any config. Tampered or
  * truncated manifests fail loud here, before a single credential is minted.
  *
- * Canonical manifest shape (hashed by `manifestSha256`, shared with
- * `@arm/catalog`): the nine snake_case wire fields below, tool refs
- * normalized to `{ tool_id, tool_version, scopes }`, serialized with sorted
- * keys, no whitespace. `buildCanonicalManifest` must stay byte-identical to
- * `@arm/catalog`'s `canonicalManifest` (packages/catalog/src/manifest.ts) —
- * the control plane hashes the snake_case canonical object, so the client
- * builds the same snake_case object or integrity verification fails.
- * Do not reorder, rename, or add fields without a catalog-side change in
- * the same PR.
+ * Canonical manifest v2 shape (hashed by `manifestSha256`, shared with
+ * `@arm/catalog`): the eight snake_case wire fields from guide 00 §4 —
+ * `manifest_version`, `components` (sorted by component_id), `permissions`
+ * (sorted), `model_routing`, `budget_template`, `starter_prompts` (insertion
+ * order preserved), `min_agent_version`, `job_functions` (sorted).
+ * `buildCanonicalManifest` must stay byte-identical to `@arm/catalog`'s
+ * `canonicalManifest` (packages/catalog/src/manifest.ts, owned by the
+ * `library` Wave-1 agent) — both are tested against the shared golden vector
+ * at packages/proto/test/fixtures/manifest-v2-golden.json so drift is caught
+ * without either side importing the other (dependency-direction guardrail).
  */
 
 import { z } from "zod";
-import { toolSchema, workPackageSchema, workPackageVersionSchema } from "@arm/proto";
+import {
+  workPackageSchema,
+  workPackageVersionSchema,
+  componentSchema,
+  componentVersionSchema,
+  type WorkPackage,
+  type WorkPackageVersion,
+  type Component,
+  type ComponentVersion,
+  type PackageManifestV2,
+} from "@arm/proto";
 import { manifestSha256 } from "./hash.js";
 
-/** Work Package entity (zod-inferred from the proto wire contract). */
-export type WorkPackage = z.infer<typeof workPackageSchema>;
-/** Work Package version — the installable bundle (zod-inferred). */
-export type WorkPackageVersion = z.infer<typeof workPackageVersionSchema>;
+export type { WorkPackage, WorkPackageVersion, Component, ComponentVersion };
+
+/** Component kinds that are *callable* (tool:* verbs apply) — these become
+ *  opencode MCP entries. Everything else is *installable* (materialized to
+ *  disk under the agent home) — guide 00 §1 / guide 03 §5. */
+export const CALLABLE_COMPONENT_KINDS = new Set(["mcp", "http_api", "cli", "connector"]);
+
+export function isCallableComponentKind(kind: string): boolean {
+  return CALLABLE_COMPONENT_KINDS.has(kind);
+}
 
 /**
- * Client-side tool wire type: the proto `toolSchema` plus an optional
- * `config_schema` (e.g. `command` for cli tools) so runtime-rendering hints
- * can flow through the manifest. Additive and optional — catalog payloads
- * without it still parse. The canonical manifest hash covers package-version
- * fields only, so this extension does not affect integrity verification.
+ * One resolved component: the registry entity (name, endpoint, auth
+ * strategy) plus the exact pinned version's data (blob digest, config
+ * schema) for the version referenced by this package's `components[]`.
  */
-export const clientToolSchema = toolSchema.extend({
-  config_schema: z.record(z.string(), z.unknown()).optional(),
-});
-/** Tool registry entity (client wire shape, config_schema optional). */
-export type Tool = z.infer<typeof clientToolSchema>;
+export interface ResolvedComponent {
+  component: Component;
+  version: ComponentVersion;
+}
 
-/** A complete, installable package: definition + pinned version + tools. */
+export const resolvedComponentSchema = z.object({
+  component: componentSchema,
+  version: componentVersionSchema,
+});
+
+/** A complete, installable package: definition + pinned version + resolved components. */
 export interface ClientPackageManifest {
   package: WorkPackage;
   version: WorkPackageVersion;
-  tools: Tool[];
+  components: ResolvedComponent[];
 }
 
 /** Wire contract for the catalog manifest endpoint response. */
 export const clientPackageManifestSchema = z.object({
   package: workPackageSchema,
   version: workPackageVersionSchema,
-  tools: z.array(clientToolSchema),
+  components: z.array(resolvedComponentSchema),
 });
 
-/** Normalized tool reference inside the canonical manifest (snake_case wire shape). */
-export interface CanonicalToolRef {
-  tool_id: string;
-  tool_version: string;
-  scopes: string[];
-}
-
-/** The canonical manifest object covered by `manifest_sha256` (snake_case). */
-export interface CanonicalPackageManifest {
-  tools: CanonicalToolRef[];
-  skills: string[];
-  subagent_configs: string[];
-  permissions: string[];
-  model_routing: Record<string, unknown>;
-  budget_template: Record<string, unknown>;
-  starter_prompts: string[];
-  template_refs: string[];
-  min_agent_version: string;
-}
-
 /**
- * Build the canonical manifest object from a (snake_case wire) version.
- * This is the exact snake_case object the catalog hashes — it must stay
- * byte-identical to `@arm/catalog`'s `canonicalManifest`
- * (packages/catalog/src/manifest.ts). The wire version fields are already
- * snake_case, so the canonical object is a structural copy of the hashed
- * fields in the same order; the hash itself is order-insensitive (sorted
- * keys deep), but the shape must match field-for-field.
+ * Build the canonical manifest v2 object from a (snake_case wire) version —
+ * exactly the eight fields in guide 00 §4, deterministically ordered:
+ * `components` sorted by `component_id`, `permissions`/`job_functions`
+ * sorted lexicographically, `starter_prompts` keeps insertion order. This is
+ * the object `manifest_sha256` covers; the hash itself is order-insensitive
+ * on object keys (sortKeysDeep) but NOT on array element order, so the
+ * arrays must be canonicalized here, not left in DB/wire order.
  */
-export function buildCanonicalManifest(version: WorkPackageVersion): CanonicalPackageManifest {
+export function buildCanonicalManifest(version: WorkPackageVersion): PackageManifestV2 {
+  const components = version.components
+    .map((ref) => ({
+      component_id: ref.component_id,
+      version: ref.version,
+      kind: ref.kind,
+      scopes: [...ref.scopes],
+    }))
+    .sort((a, b) => (a.component_id < b.component_id ? -1 : a.component_id > b.component_id ? 1 : 0));
+
   return {
-    tools: version.tools.map((ref) => ({
-      tool_id: ref.tool_id,
-      tool_version: ref.tool_version,
-      scopes: ref.scopes,
-    })),
-    skills: version.skills,
-    subagent_configs: version.subagent_configs,
-    permissions: version.permissions,
+    manifest_version: 2,
+    components,
+    permissions: [...version.permissions].sort(),
     model_routing: version.model_routing,
     budget_template: version.budget_template,
-    starter_prompts: version.starter_prompts,
-    template_refs: version.template_refs,
+    starter_prompts: [...version.starter_prompts],
     min_agent_version: version.min_agent_version,
+    job_functions: [...version.job_functions].sort(),
   };
 }
 
@@ -110,7 +115,9 @@ function normalizeBaseUrl(url: string): string {
  *
  * GET `${controlPlaneUrl}/api/catalog/packages/${roleKey}/manifest` with a
  * Bearer token. Throws on non-200 responses, non-JSON bodies, or responses
- * that fail the proto-composed zod schema.
+ * that fail the proto-composed zod schema. This is the advanced/flags path
+ * (guide 03 §1) — the primary token path resolves a manifest directly via
+ * `resolveFromSetupToken` (setup-token.ts) and never calls this.
  */
 export async function fetchManifest(
   controlPlaneUrl: string,
@@ -144,9 +151,10 @@ export async function fetchManifest(
 }
 
 /**
- * Recompute `manifestSha256` over the canonical manifest and compare with the
- * version's pinned hash. `false` means the manifest was tampered with or is
- * from a catalog with a different canonicalization — fail loud, never render.
+ * Recompute `manifestSha256` over the canonical manifest v2 and compare with
+ * the version's pinned hash. `false` means the manifest was tampered with or
+ * is from a catalog with a different canonicalization — fail loud, never
+ * render.
  */
 export function verifyManifestIntegrity(version: WorkPackageVersion): boolean {
   const recomputed = manifestSha256(buildCanonicalManifest(version));

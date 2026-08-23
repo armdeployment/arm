@@ -1,21 +1,26 @@
 /**
- * opencode runtime config rendering (D9 Phase 1.6 — reference runtime).
+ * opencode runtime config rendering (D9 Phase 1.6, updated D10 for manifest
+ * v2 components — reference runtime).
  *
  * Renders an opencode config.json from a verified package manifest. The ARM
- * proxy becomes the model backend; each package tool becomes an MCP entry.
+ * proxy becomes the model backend; each *callable* component
+ * (mcp/http_api/cli/connector — guide 00 §1) becomes an MCP entry.
+ * Installable components (skill/subagent/template/prompt_pack/plugin) are
+ * NOT rendered here — they are materialized to disk by components.ts.
  *
  * SECURITY (Invariants 4/5, roadmap §5.2): this module NEVER writes a real
  * credential into the file. The proxy credential is an environment-variable
  * reference (`${ARM_AGENT_TOKEN}`) resolved by the agent runtime from the
  * companion `<agentHome>/.arm-env` file (written 0o600 by `runSetup`, never
- * committed, never inlined). Tool auth headers are environment-variable
+ * committed, never inlined). Component auth headers are environment-variable
  * references (`${ARM_MCP_<NAME>_TOKEN}`) resolved by the agent runtime from
  * the OS keychain / tenant-vault broker. The only literals in the file are
  * routing metadata (sub-account id, tenant id) — identifiers, not secrets.
  * `assertNoSecretsInConfig` enforces this contract on every rendered config.
  */
 
-import type { ClientPackageManifest, Tool } from "./manifest.js";
+import type { ClientPackageManifest, ResolvedComponent } from "./manifest.js";
+import { isCallableComponentKind } from "./manifest.js";
 
 /** Arguments for rendering an opencode config. */
 export interface RenderOpencodeConfigArgs {
@@ -37,47 +42,50 @@ export interface RenderedOpencodeConfig {
 /** Default opencode config directory when no agentHome is given. */
 export const DEFAULT_OPENCODE_HOME = "~/.config/opencode";
 
-/** Sanitize a tool name into a safe config key / env-var token. */
-function sanitizeToolName(name: string): string {
+/** Sanitize a component name into a safe config key / env-var token. */
+function sanitizeComponentName(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9_]+/g, "_")
     .replace(/^_+|_+$/g, "");
 }
 
-/** The env var holding a tool's MCP token — referenced, never inlined. */
-export function mcpTokenEnvVar(toolName: string): string {
-  return `ARM_MCP_${sanitizeToolName(toolName).toUpperCase()}_TOKEN`;
+/** The env var holding a component's MCP token — referenced, never inlined. */
+export function mcpTokenEnvVar(componentName: string): string {
+  return `ARM_MCP_${sanitizeComponentName(componentName).toUpperCase()}_TOKEN`;
 }
 
 /**
- * Map a registry tool to an opencode MCP entry.
+ * Map a resolved *callable* component to an opencode MCP entry.
  *
- * - `cli` tools → opencode `stdio` entry. The command comes from
- *   `tool.config_schema.command` (falls back to the tool name). When the
- *   tool authenticates (auth_strategy ≠ "none"), an `env` block maps
- *   `ARM_MCP_<NAME>_TOKEN` to the env-var reference `${ARM_MCP_<NAME>_TOKEN}` —
- *   the runtime resolves it from the keychain / vault broker. No auth → no
- *   env block at all.
- * - `mcp` / `http_api` / `connector` tools → `http` entry against the tool
- *   endpoint. The Authorization header is an env-var reference only — raw
- *   credentials must never appear here.
+ * - `cli` components → opencode `stdio` entry. The command comes from
+ *   `version.config_schema.command` (falls back to the component name). When
+ *   the component authenticates (auth_strategy not null/"none"), an `env`
+ *   block maps `ARM_MCP_<NAME>_TOKEN` to the env-var reference
+ *   `${ARM_MCP_<NAME>_TOKEN}` — the runtime resolves it from the keychain /
+ *   vault broker. No auth → no env block at all.
+ * - `mcp` / `http_api` / `connector` components → `http` entry against the
+ *   component endpoint. The Authorization header is an env-var reference
+ *   only — raw credentials must never appear here.
  */
-export function toolToMcpEntry(tool: Tool): Record<string, unknown> {
-  if (tool.kind === "cli") {
-    const command =
-      typeof tool.config_schema?.command === "string" ? tool.config_schema.command : tool.name;
+export function componentToMcpEntry(resolved: ResolvedComponent): Record<string, unknown> {
+  const { component, version } = resolved;
+  const hasAuth = component.auth_strategy !== null && component.auth_strategy !== "none";
+
+  if (component.kind === "cli") {
+    const configCommand = version.config_schema["command"];
+    const command = typeof configCommand === "string" ? configCommand : component.name;
     const entry: Record<string, unknown> = { type: "stdio", command };
-    if (tool.auth_strategy !== "none") {
-      entry.env = { [mcpTokenEnvVar(tool.name)]: `\${${mcpTokenEnvVar(tool.name)}}` };
+    if (hasAuth) {
+      entry.env = { [mcpTokenEnvVar(component.name)]: `\${${mcpTokenEnvVar(component.name)}}` };
     }
     return entry;
   }
 
   return {
     type: "http",
-    url: tool.endpoint,
-    headers: { Authorization: `\${${mcpTokenEnvVar(tool.name)}}` },
+    url: component.endpoint ?? "",
+    headers: { Authorization: `\${${mcpTokenEnvVar(component.name)}}` },
   };
 }
 
@@ -94,8 +102,9 @@ export function renderOpencodeConfig(args: RenderOpencodeConfigArgs): RenderedOp
   const agentHome = args.agentHome ?? DEFAULT_OPENCODE_HOME;
 
   const mcp: Record<string, unknown> = {};
-  for (const tool of manifest.tools) {
-    mcp[sanitizeToolName(tool.name)] = toolToMcpEntry(tool);
+  for (const resolved of manifest.components) {
+    if (!isCallableComponentKind(resolved.component.kind)) continue; // installed to disk, not wired as MCP
+    mcp[sanitizeComponentName(resolved.component.name)] = componentToMcpEntry(resolved);
   }
 
   const config = {

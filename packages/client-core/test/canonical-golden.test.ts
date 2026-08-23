@@ -1,73 +1,71 @@
 /**
- * Golden-vector test for the canonical manifest contract (D9 §package-integrity).
- *
- * The control plane (@arm/catalog) hashes the snake_case canonical manifest;
- * the client must build the identical snake_case object or every integrity
- * check fails (B1). This test embeds a fixed canonical manifest, hashes it
- * once with `manifestSha256`, and hardcodes the resulting hex as the expected
- * constant — mirroring @arm/catalog's golden vector. Any drift in
- * `buildCanonicalManifest` or `manifestSha256` fails loud here.
+ * Golden-vector test for the canonical manifest v2 contract (guide 00 §4,
+ * guide 03 §5). The control plane (@arm/catalog, owned by the `library`
+ * Wave-1 agent) hashes the snake_case canonical manifest v2 object; the
+ * client must build the byte-identical object or every integrity check
+ * fails. Both sides are tested against the SAME committed fixture at
+ * packages/proto/test/fixtures/manifest-v2-golden.json (+ its expected
+ * sha256) so drift is caught without either package importing the other
+ * (the dependency-direction guardrail forbids it).
  */
 
 import { describe, it, expect } from "vitest";
-import { buildCanonicalManifest, verifyManifestIntegrity } from "../src/manifest.js";
-import { manifestSha256 } from "../src/hash.js";
-import type { WorkPackageVersion } from "../src/manifest.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+import { buildCanonicalManifest, verifyManifestIntegrity, manifestSha256 } from "../src/index.js";
+import type { WorkPackageVersion } from "../src/index.js";
 
-/**
- * The fixed canonical manifest object — snake_case, the nine hashed fields.
- * MUST be byte-identical to the vector embedded in
- * @arm/catalog's packages/catalog/test/canonical-golden.test.ts.
- */
-const GOLDEN_CANONICAL = {
-  tools: [
-    { tool_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", tool_version: "2.1.0", scopes: ["invoke", "configure"] },
-    { tool_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", tool_version: "1.0.0", scopes: ["read"] },
-  ],
-  skills: ["8d-reporting", "spc-charting"],
-  subagent_configs: ["ppap-reviewer"],
-  permissions: ["tool:invoke", "resource:read"],
-  model_routing: { default: "gpt-4o-mini", reasoning: "gpt-4o" },
-  budget_template: { usd_cap_cents: 15000, period: "monthly" },
-  starter_prompts: ["Draft an 8D report for this defect"],
-  template_refs: ["8d-template", "ppap-psw"],
-  min_agent_version: "1.2.0",
+const here = dirname(fileURLToPath(import.meta.url));
+const FIXTURE_DIR = resolve(here, "../../proto/test/fixtures");
+
+const GOLDEN_MANIFEST = JSON.parse(
+  readFileSync(resolve(FIXTURE_DIR, "manifest-v2-golden.json"), "utf8"),
+) as {
+  manifest_version: 2;
+  components: { component_id: string; version: string; kind: string; scopes: string[] }[];
+  permissions: string[];
+  model_routing: Record<string, unknown>;
+  budget_template: Record<string, unknown>;
+  starter_prompts: string[];
+  min_agent_version: string;
+  job_functions: string[];
 };
 
-/**
- * Precomputed sha256 hex of the golden canonical manifest above
- * (computed once via manifestSha256; hardcoded so this test detects
- * canonicalization drift without trusting the function under test).
- * MUST match the constant in @arm/catalog's mirror test.
- */
-const GOLDEN_SHA256 = "6d88398ed8ffb4c1e0928f45a0d07440a0093b7e07cfd162a31fe0187e1e8f7d";
+const GOLDEN_SHA256 = (
+  JSON.parse(readFileSync(resolve(FIXTURE_DIR, "manifest-v2-golden.sha256.json"), "utf8")) as {
+    sha256: string;
+  }
+).sha256;
 
-/** The wire-shaped (proto snake_case) version carrying the golden fields. */
+/** The wire-shaped (proto snake_case) version carrying the golden fields, fed
+ *  in DELIBERATELY UNSORTED order to prove buildCanonicalManifest re-sorts
+ *  rather than trusting DB/wire order. */
 function goldenWireVersion(): WorkPackageVersion {
   return {
     id: "44444444-4444-4444-8444-444444444444",
     package_id: "33333333-3333-4333-8333-333333333333",
     version: "1.0.0",
-    tools: GOLDEN_CANONICAL.tools,
-    skills: GOLDEN_CANONICAL.skills,
-    subagent_configs: GOLDEN_CANONICAL.subagent_configs,
-    permissions: GOLDEN_CANONICAL.permissions,
-    model_routing: GOLDEN_CANONICAL.model_routing,
-    budget_template: GOLDEN_CANONICAL.budget_template,
-    starter_prompts: GOLDEN_CANONICAL.starter_prompts,
-    template_refs: GOLDEN_CANONICAL.template_refs,
-    min_agent_version: GOLDEN_CANONICAL.min_agent_version,
+    manifest_version: 2,
+    // reversed from the golden fixture's sorted order
+    components: [...GOLDEN_MANIFEST.components].reverse() as WorkPackageVersion["components"],
+    permissions: [...GOLDEN_MANIFEST.permissions].reverse(),
+    model_routing: GOLDEN_MANIFEST.model_routing,
+    budget_template: GOLDEN_MANIFEST.budget_template,
+    starter_prompts: GOLDEN_MANIFEST.starter_prompts,
+    min_agent_version: GOLDEN_MANIFEST.min_agent_version,
+    job_functions: [...GOLDEN_MANIFEST.job_functions].reverse(),
     manifest_sha256: GOLDEN_SHA256,
   };
 }
 
-describe("canonical manifest golden vector", () => {
-  it("buildCanonicalManifest produces the snake_case canonical object", () => {
-    expect(buildCanonicalManifest(goldenWireVersion())).toEqual(GOLDEN_CANONICAL);
+describe("canonical manifest v2 golden vector (shared with @arm/catalog)", () => {
+  it("buildCanonicalManifest re-sorts unsorted input into the golden canonical object", () => {
+    expect(buildCanonicalManifest(goldenWireVersion())).toEqual(GOLDEN_MANIFEST);
   });
 
-  it("manifestSha256 of the canonical object equals the hardcoded golden hash", () => {
-    expect(manifestSha256(GOLDEN_CANONICAL)).toBe(GOLDEN_SHA256);
+  it("manifestSha256 of the golden canonical object equals the committed golden hash", () => {
+    expect(manifestSha256(GOLDEN_MANIFEST)).toBe(GOLDEN_SHA256);
   });
 
   it("verifyManifestIntegrity accepts the golden wire version", () => {
@@ -75,11 +73,11 @@ describe("canonical manifest golden vector", () => {
   });
 
   it("golden hash changes when any field drifts", () => {
+    expect(manifestSha256({ ...GOLDEN_MANIFEST, job_functions: ["different"] })).not.toBe(
+      GOLDEN_SHA256,
+    );
     expect(
-      manifestSha256({ ...GOLDEN_CANONICAL, skills: ["different-skill"] }),
-    ).not.toBe(GOLDEN_SHA256);
-    expect(
-      manifestSha256({ ...GOLDEN_CANONICAL, budget_template: { monthly_usd_cap: 999 } }),
+      manifestSha256({ ...GOLDEN_MANIFEST, budget_template: { monthly_usd_cap: 999 } }),
     ).not.toBe(GOLDEN_SHA256);
   });
 });

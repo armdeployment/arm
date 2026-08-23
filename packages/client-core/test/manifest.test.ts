@@ -10,36 +10,34 @@ import {
 import { makeManifest, makeVersion, tamperHash } from "./helpers.js";
 
 describe("verifyManifestIntegrity", () => {
-  it("accepts a manifest hashed via manifestSha256", () => {
+  it("accepts a manifest hashed via manifestSha256/buildCanonicalManifest", () => {
     const version = makeVersion();
     expect(verifyManifestIntegrity(version)).toBe(true);
   });
 
   it("rejects a tampered field", () => {
-    const version = makeVersion({ skills: ["tampered-skill"] });
-    // makeVersion hashes whatever it built, so this passes by construction;
-    // tamper after hashing to simulate a real attack.
     const honest = makeVersion();
-    const tampered = { ...honest, skills: ["tampered-skill"] };
+    const tampered = { ...honest, job_functions: ["tampered_function"] };
     expect(verifyManifestIntegrity(tampered)).toBe(false);
     expect(verifyManifestIntegrity(honest)).toBe(true);
-    void version;
   });
 
   it("rejects a tampered hash", () => {
     expect(verifyManifestIntegrity(tamperHash(makeVersion()))).toBe(false);
   });
 
-  it("rejects a tampered tool ref", () => {
+  it("rejects a tampered component ref", () => {
     const honest = makeVersion();
     const tampered = {
       ...honest,
-      tools: [
+      components: [
         {
-          tool_id: honest.tools[0]!.tool_id,
-          tool_version: "9.9.9",
-          scopes: honest.tools[0]!.scopes,
+          component_id: honest.components[0]!.component_id,
+          version: "9.9.9",
+          kind: honest.components[0]!.kind,
+          scopes: honest.components[0]!.scopes,
         },
+        ...honest.components.slice(1),
       ],
     };
     expect(verifyManifestIntegrity(tampered)).toBe(false);
@@ -79,7 +77,7 @@ describe("fetchManifest", () => {
       const result = await fetchManifest(baseUrl, "token", "quality_engineer");
       expect(result.package.role_key).toBe("quality_engineer");
       expect(result.version.version).toBe("1.0.0");
-      expect(result.tools.map((t) => t.name)).toContain("jira");
+      expect(result.components.map((c) => c.component.name)).toContain("jira");
       expect(verifyManifestIntegrity(result.version)).toBe(true);
     } finally {
       await stopServer();
