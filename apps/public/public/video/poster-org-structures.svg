@@ -1,0 +1,14 @@
+<svg viewBox="0 0 960 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="posterOrgTitle">
+  <title id="posterOrgTitle">Video preview: editing an organization structure in the ARM dashboard</title>
+  <rect width="960" height="540" fill="#0F172A" />
+  <rect width="960" height="540" fill="url(#grid)" opacity="0.5" />
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1E3A8A" stroke-width="1" />
+    </pattern>
+  </defs>
+  <circle cx="480" cy="240" r="56" fill="#1E3A8A" />
+  <path d="M462 214 L462 266 L508 240 Z" fill="#F8FAFC" />
+  <text x="480" y="340" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="28" font-weight="600" fill="#F8FAFC">Org structure editing, captured live</text>
+  <text x="480" y="378" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="16" fill="#94A3B8">Real dashboard recording — budgets inheriting down the org tree</text>
+</svg>
