@@ -1,0 +1,139 @@
+/*
+ * apps/onboarding shares the control-plane web app's design tokens (guide
+ * 03 §3: "Shares the design tokens by importing the same CSS variables; do
+ * not fork the design system"). This app is tenant-scoped but a SEPARATE
+ * Next.js app (different trust level — talks to the tRPC API directly,
+ * including PUBLIC setup-token redemption), so it re-imports the token
+ * source rather than sharing a build target.
+ */
+@import "../../../control-plane/web/src/styles/globals.css";
+
+/* ── Onboarding-specific layout (question-per-screen flow) ── */
+
+.onboarding-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: var(--bg-app);
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.5rem;
+}
+
+.onboarding-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
+.onboarding-prompt {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-help {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.onboarding-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.onboarding-option:hover {
+  border-color: var(--border-navy);
+  background: var(--accent-soft);
+}
+
+.onboarding-option[data-selected="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.onboarding-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+.onboarding-button {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.onboarding-button-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.onboarding-button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.onboarding-button-secondary {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.onboarding-code {
+  font-family: monospace;
+  font-size: 2rem;
+  letter-spacing: 0.25rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  padding: 1rem;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.onboarding-platform-row {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
