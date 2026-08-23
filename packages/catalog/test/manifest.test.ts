@@ -1,124 +1,153 @@
 /**
- * Tests for canonical manifests + package version validation (D9).
+ * Tests for canonical manifests v2 + package version validation
+ * (docs/guides/01-library-artifactory.md §4).
  *
  * Verifies:
- *   1. A structurally valid package version with known tool refs passes.
- *   2. Ref to an unknown tool id fails.
- *   3. Ref pinning a version the tool never published fails.
- *   4. Empty tools + skills + subagent configs + starter prompts fails.
- *   5. Malformed payloads fail with zod issues.
- *   6. canonicalManifest normalizes camelCase refs to the wire shape.
+ *   1. A structurally valid package version with known, approved component
+ *      refs passes.
+ *   2. A ref to an unknown component_version fails.
+ *   3. A ref pinning a non-approved component_version fails.
+ *   4. A ref pinning a yanked component_version fails.
+ *   5. Empty components fails (must ship at least one component).
+ *   6. An unknown job_functions[] key fails.
+ *   7. Malformed payloads fail with zod issues.
+ *   8. canonicalManifest normalizes camelCase refs to the wire shape.
  */
 
 import { describe, it, expect } from "vitest";
-import { canonicalManifest, validatePackageVersion } from "../src/index.js";
+import { canonicalManifest, validatePackageVersion, type ComponentVersionLookup } from "../src/index.js";
 
-const TOOL_ID = "11111111-1111-4111-8111-111111111111";
+const COMPONENT_ID = "11111111-1111-4111-8111-111111111111";
 const PACKAGE_ID = "22222222-2222-4222-8222-222222222222";
 const SHA = "a".repeat(64);
+const JOB_FUNCTIONS = new Set(["quality_engineer"]);
 
-const toolsById = new Map<string, Set<string>>([[TOOL_ID, new Set(["1.0.0", "1.1.0"])]]);
+const componentVersionsById = new Map<string, ComponentVersionLookup>([
+  [`${COMPONENT_ID}@1.0.0`, { reviewStatus: "approved", yanked: false }],
+  [`${COMPONENT_ID}@1.1.0`, { reviewStatus: "in_review", yanked: false }],
+  [`${COMPONENT_ID}@2.0.0`, { reviewStatus: "approved", yanked: true }],
+]);
 
 function validInput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "33333333-3333-4333-8333-333333333333",
     package_id: PACKAGE_ID,
     version: "1.0.0",
-    tools: [{ tool_id: TOOL_ID, tool_version: "1.0.0", scopes: ["invoke"] }],
-    skills: ["8d-reporting"],
-    subagent_configs: [],
+    manifest_version: 2,
+    components: [{ component_id: COMPONENT_ID, version: "1.0.0", kind: "mcp", scopes: ["invoke"] }],
     permissions: ["tool:invoke"],
     model_routing: { default: "gpt-4o-mini" },
     budget_template: { usd_cap_cents: 5000 },
-    starter_prompts: [],
-    template_refs: [],
+    starter_prompts: ["hi"],
     min_agent_version: "0.9.0",
+    job_functions: ["quality_engineer"],
     manifest_sha256: SHA,
     ...overrides,
   };
 }
 
 describe("validatePackageVersion", () => {
-  it("accepts a valid version with known tool refs", () => {
-    const r = validatePackageVersion(validInput(), toolsById);
+  it("accepts a valid version with a known, approved component ref", () => {
+    const r = validatePackageVersion(validInput(), componentVersionsById, JOB_FUNCTIONS);
     expect(r.ok).toBe(true);
     expect(r.errors).toEqual([]);
   });
 
-  it("rejects unknown tool ids", () => {
+  it("rejects a ref to an unknown component_version", () => {
     const r = validatePackageVersion(
-      validInput({
-        tools: [
-          { tool_id: "99999999-9999-4999-8999-999999999999", tool_version: "1.0.0", scopes: [] },
-        ],
-      }),
-      toolsById,
+      validInput({ components: [{ component_id: COMPONENT_ID, version: "9.9.9", kind: "mcp", scopes: [] }] }),
+      componentVersionsById,
+      JOB_FUNCTIONS,
     );
     expect(r.ok).toBe(false);
-    expect(r.errors.some((e) => e.includes("unknown tool"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("unknown component_version"))).toBe(true);
   });
 
-  it("rejects refs pinning versions the tool never published", () => {
+  it("rejects a ref pinning a non-approved component_version", () => {
     const r = validatePackageVersion(
-      validInput({
-        tools: [{ tool_id: TOOL_ID, tool_version: "9.9.9", scopes: [] }],
-      }),
-      toolsById,
+      validInput({ components: [{ component_id: COMPONENT_ID, version: "1.1.0", kind: "mcp", scopes: [] }] }),
+      componentVersionsById,
+      JOB_FUNCTIONS,
     );
     expect(r.ok).toBe(false);
-    expect(r.errors.some((e) => e.includes("has no version"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("not approved"))).toBe(true);
   });
 
-  it("rejects packages that ship nothing usable", () => {
+  it("rejects a ref pinning a yanked component_version", () => {
     const r = validatePackageVersion(
-      validInput({ tools: [], skills: [], subagent_configs: [], starter_prompts: [] }),
-      toolsById,
+      validInput({ components: [{ component_id: COMPONENT_ID, version: "2.0.0", kind: "mcp", scopes: [] }] }),
+      componentVersionsById,
+      JOB_FUNCTIONS,
     );
+    expect(r.ok).toBe(false);
+    expect(r.errors.some((e) => e.includes("yanked"))).toBe(true);
+  });
+
+  it("rejects packages that ship zero components", () => {
+    const r = validatePackageVersion(validInput({ components: [] }), componentVersionsById, JOB_FUNCTIONS);
     expect(r.ok).toBe(false);
     expect(r.errors.join("\n")).toMatch(/ships nothing usable/);
   });
 
+  it("rejects an unknown job_functions key", () => {
+    const r = validatePackageVersion(validInput({ job_functions: ["not_a_real_job_function"] }), componentVersionsById, JOB_FUNCTIONS);
+    expect(r.ok).toBe(false);
+    expect(r.errors.some((e) => e.includes("unknown job function"))).toBe(true);
+  });
+
   it("rejects malformed payloads with schema issues", () => {
-    const r = validatePackageVersion({ nope: true }, toolsById);
+    const r = validatePackageVersion({ nope: true }, componentVersionsById, JOB_FUNCTIONS);
     expect(r.ok).toBe(false);
     expect(r.errors.length).toBeGreaterThan(0);
   });
 });
 
 describe("canonicalManifest", () => {
-  it("normalizes camelCase tool refs to the wire shape", () => {
+  it("normalizes camelCase component refs to the wire shape", () => {
     const m = canonicalManifest({
-      tools: [{ toolId: TOOL_ID, toolVersion: "1.0.0", scopes: ["invoke"] }],
-      skills: ["a"],
-      subagentConfigs: ["s"],
+      components: [{ componentId: COMPONENT_ID, version: "1.0.0", kind: "mcp", scopes: ["invoke"] }],
       permissions: [],
       modelRouting: {},
       budgetTemplate: {},
       starterPrompts: [],
-      templateRefs: [],
       minAgentVersion: "0.9.0",
+      jobFunctions: ["quality_engineer"],
     });
-    expect(m.tools[0]).toEqual({
-      tool_id: TOOL_ID,
-      tool_version: "1.0.0",
+    expect(m.manifest_version).toBe(2);
+    expect(m.components[0]).toEqual({
+      component_id: COMPONENT_ID,
+      version: "1.0.0",
+      kind: "mcp",
       scopes: ["invoke"],
     });
-    expect(m.subagent_configs).toEqual(["s"]);
     expect(m.min_agent_version).toBe("0.9.0");
+    expect(m.job_functions).toEqual(["quality_engineer"]);
   });
 
   it("passes wire-shaped refs through unchanged", () => {
     const m = canonicalManifest({
-      tools: [{ tool_id: TOOL_ID, tool_version: "1.1.0", scopes: [] }],
-      skills: [],
-      subagentConfigs: [],
+      components: [{ component_id: COMPONENT_ID, version: "1.1.0", kind: "skill", scopes: [] }],
       permissions: [],
       modelRouting: {},
       budgetTemplate: {},
       starterPrompts: [],
-      templateRefs: [],
       minAgentVersion: "0.0.0",
+      jobFunctions: [],
     });
-    expect(m.tools[0]).toEqual({ tool_id: TOOL_ID, tool_version: "1.1.0", scopes: [] });
+    expect(m.components[0]).toEqual({ component_id: COMPONENT_ID, version: "1.1.0", kind: "skill", scopes: [] });
+  });
+
+  it("defaults missing fields to their empty forms", () => {
+    const m = canonicalManifest({});
+    expect(m).toEqual({
+      manifest_version: 2,
+      components: [],
+      permissions: [],
+      model_routing: {},
+      budget_template: {},
+      starter_prompts: [],
+      min_agent_version: "0.0.0",
+      job_functions: [],
+    });
   });
 });

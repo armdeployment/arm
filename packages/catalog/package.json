@@ -16,7 +16,8 @@
   "dependencies": {
     "@arm/proto": "workspace:*",
     "@arm/db": "workspace:*",
-    "@arm/config": "workspace:*"
+    "@arm/config": "workspace:*",
+    "@arm/artifactory": "workspace:*"
   },
   "devDependencies": {
     "vitest": "4.1.10",

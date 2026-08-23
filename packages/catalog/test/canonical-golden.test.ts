@@ -1,83 +1,80 @@
 /**
- * GOLDEN-VECTOR test for the canonical package manifest (B1).
+ * GOLDEN-VECTOR test for the canonical package manifest v2
+ * (docs/guides/00-shared-contracts.md §4, docs/guides/01-library-artifactory.md §4.5).
  *
- * This test is MIRRORED in @arm/client-core with the SAME object + constant
- * (client-side `buildCanonicalManifest` produces the identical snake_case
- * object). If either side changes the canonical field list, the golden
- * constant breaks in BOTH suites — the mechanism that keeps the DB-side
- * hash and the client-side hash provably identical.
- *
- * The constant below was computed ONCE by running the hash fn over the
- * object below (golden vector — do not regenerate). Changing it without a
- * coordinated wire change to @arm/client-core would silently break
- * package-integrity verification for every installed package.
+ * Reads the SHARED fixture committed by the `contracts` (Wave 0) agent at
+ * `packages/proto/test/fixtures/manifest-v2-golden.json` (+ its
+ * `.sha256.json` companion) rather than hand-copying a local constant — this
+ * is what proves `@arm/catalog`'s `canonicalManifest`/`manifestSha256`
+ * produce byte-identical output to `@arm/client-core`'s
+ * `buildCanonicalManifest` (both sides read the SAME fixture + expected
+ * hash; `packages/proto/test/manifest-v2-golden.test.ts` proves the fixture
+ * itself is internally consistent). If either side's canonicalizer diverges
+ * from the fixture, that side's suite goes red — the fixture wins (guide 01
+ * §4, coordination note).
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { describe, it, expect } from "vitest";
-import { manifestSha256, canonicalManifest } from "../src/index.js";
+import { manifestSha256, canonicalManifest, packageManifestV2Schema } from "../src/index.js";
 
-/** The fixed canonical manifest object — snake_case, the nine hashed fields. */
-const GOLDEN_MANIFEST = {
-  tools: [
-    { tool_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", tool_version: "2.1.0", scopes: ["invoke", "configure"] },
-    { tool_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", tool_version: "1.0.0", scopes: ["read"] },
-  ],
-  skills: ["8d-reporting", "spc-charting"],
-  subagent_configs: ["ppap-reviewer"],
-  permissions: ["tool:invoke", "resource:read"],
-  model_routing: { default: "gpt-4o-mini", reasoning: "gpt-4o" },
-  budget_template: { usd_cap_cents: 15000, period: "monthly" },
-  starter_prompts: ["Draft an 8D report for this defect"],
-  template_refs: ["8d-template", "ppap-psw"],
-  min_agent_version: "1.2.0",
-};
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROTO_FIXTURES_DIR = resolve(__dirname, "../../proto/test/fixtures");
 
-// golden vector — do not regenerate
-const GOLDEN_SHA256 = "6d88398ed8ffb4c1e0928f45a0d07440a0093b7e07cfd162a31fe0187e1e8f7d";
+const GOLDEN_MANIFEST: unknown = JSON.parse(
+  readFileSync(resolve(PROTO_FIXTURES_DIR, "manifest-v2-golden.json"), "utf8"),
+);
+const { sha256: GOLDEN_SHA256 } = JSON.parse(
+  readFileSync(resolve(PROTO_FIXTURES_DIR, "manifest-v2-golden.sha256.json"), "utf8"),
+) as { sha256: string };
 
-/** The same content in DB (camelCase) source form — must canonicalize identically. */
-const GOLDEN_MANIFEST_CAMEL_SOURCE = {
-  tools: [
-    { toolId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", toolVersion: "2.1.0", scopes: ["invoke", "configure"] },
-    { toolId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", toolVersion: "1.0.0", scopes: ["read"] },
-  ],
-  skills: ["8d-reporting", "spc-charting"],
-  subagentConfigs: ["ppap-reviewer"],
-  permissions: ["tool:invoke", "resource:read"],
-  modelRouting: { default: "gpt-4o-mini", reasoning: "gpt-4o" },
-  budgetTemplate: { usd_cap_cents: 15000, period: "monthly" },
-  starterPrompts: ["Draft an 8D report for this defect"],
-  templateRefs: ["8d-template", "ppap-psw"],
-  minAgentVersion: "1.2.0",
-};
-
-describe("canonical manifest golden vector (mirrored in @arm/client-core)", () => {
-  it("hashes the fixed canonical manifest to the golden constant", () => {
-    expect(manifestSha256(canonicalManifest(GOLDEN_MANIFEST))).toBe(GOLDEN_SHA256);
+describe("canonical manifest v2 golden vector (shared with @arm/proto + @arm/client-core)", () => {
+  it("the golden fixture parses against packageManifestV2Schema", () => {
+    expect(packageManifestV2Schema.safeParse(GOLDEN_MANIFEST).success).toBe(true);
   });
 
-  it("is invariant to key-order permutations", () => {
+  it("@arm/catalog's canonicalManifest + manifestSha256 hash the golden fixture to the golden constant", () => {
+    expect(manifestSha256(canonicalManifest(GOLDEN_MANIFEST as Record<string, unknown>))).toBe(GOLDEN_SHA256);
+  });
+
+  it("is invariant to top-level key-order permutations", () => {
+    const m = GOLDEN_MANIFEST as Record<string, unknown>;
     const permuted = {
-      min_agent_version: GOLDEN_MANIFEST.min_agent_version,
-      tools: GOLDEN_MANIFEST.tools.map((t) => ({
-        scopes: t.scopes,
-        tool_version: t.tool_version,
-        tool_id: t.tool_id,
-      })),
-      starter_prompts: GOLDEN_MANIFEST.starter_prompts,
-      budget_template: GOLDEN_MANIFEST.budget_template,
-      skills: GOLDEN_MANIFEST.skills,
-      permissions: GOLDEN_MANIFEST.permissions,
-      model_routing: GOLDEN_MANIFEST.model_routing,
-      template_refs: GOLDEN_MANIFEST.template_refs,
-      subagent_configs: GOLDEN_MANIFEST.subagent_configs,
+      job_functions: m["job_functions"],
+      min_agent_version: m["min_agent_version"],
+      components: m["components"],
+      starter_prompts: m["starter_prompts"],
+      budget_template: m["budget_template"],
+      permissions: m["permissions"],
+      model_routing: m["model_routing"],
+      manifest_version: m["manifest_version"],
     };
-    expect(manifestSha256(permuted)).toBe(GOLDEN_SHA256);
+    expect(manifestSha256(canonicalManifest(permuted as Record<string, unknown>))).toBe(GOLDEN_SHA256);
   });
 
   it("canonicalizes the DB (camelCase) source form to the same hash", () => {
-    const canonical = canonicalManifest(GOLDEN_MANIFEST_CAMEL_SOURCE);
-    expect(canonical).toEqual(canonicalManifest(GOLDEN_MANIFEST));
+    const m = GOLDEN_MANIFEST as {
+      components: { component_id: string; version: string; kind: string; scopes: string[] }[];
+      permissions: string[];
+      model_routing: Record<string, unknown>;
+      budget_template: Record<string, unknown>;
+      starter_prompts: string[];
+      min_agent_version: string;
+      job_functions: string[];
+    };
+    const camelSource = {
+      components: m.components.map((c) => ({ componentId: c.component_id, version: c.version, kind: c.kind, scopes: c.scopes })),
+      permissions: m.permissions,
+      modelRouting: m.model_routing,
+      budgetTemplate: m.budget_template,
+      starterPrompts: m.starter_prompts,
+      minAgentVersion: m.min_agent_version,
+      jobFunctions: m.job_functions,
+    };
+    const canonical = canonicalManifest(camelSource);
+    expect(canonical).toEqual(canonicalManifest(GOLDEN_MANIFEST as Record<string, unknown>));
     expect(manifestSha256(canonical)).toBe(GOLDEN_SHA256);
   });
 });

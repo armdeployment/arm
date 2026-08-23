@@ -1,77 +1,89 @@
 /**
- * D9 automotive tool-landscape fixture suite (Aug 2026 OEM survey seeding).
+ * D10 pilot Work Package fixture suite (docs/guides/01-library-artifactory.md §4).
  *
- * ── Documented exception (mirrors guardrail tool-endpoint-scope) ────────────
- * `kind === "cli"` tools are DESKTOP ENGINEERING APPS invoked as
- * local-process invocations on the operator workstation — not
- * credential-bearing remote endpoints. They therefore carry auth_strategy
- * "none" even when their data_classification is confidential; the OS/session
- * login is the auth boundary there. Any NON-cli tool with confidential or
- * restricted data MUST carry a real auth_strategy (oauth/pat/service_account).
- *
- * Tool-version hashes are per-manifest hashes: sha256 over the canonical
- * { config_schema, changelog } object of that version (see fixtures.ts).
+ * D10 cutover: the Tool Registry landscape fixtures moved to
+ * `@arm/artifactory` (see that package's own `test/fixtures.test.ts` for the
+ * 40-callable + 38-installable component assertions). This file now covers
+ * `@arm/catalog`'s OWN fixtures — the 6 pilot `work_package_version` rows
+ * built from slug-based seeds resolved through the Component Registry.
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  toolFixtures,
-  toolIdFixtures,
-  toolVersionFixtures,
-  manifestSha256,
-} from "../src/index.js";
+import { packageVersionFixtures, manifestSha256, canonicalManifest } from "../src/index.js";
+import { componentFixturesBySlug } from "@arm/artifactory";
 
-describe("D9 automotive landscape tool fixtures", () => {
-  it("(a) ships 40 tools (36 landscape + 4 original) with unique names", () => {
-    expect(toolFixtures).toHaveLength(40);
-    const names = toolFixtures.map((t) => t.name);
-    expect(new Set(names).size).toBe(names.length);
+describe("D10 pilot work package fixtures", () => {
+  it("ships exactly 6 pilot package versions with unique ids", () => {
+    expect(packageVersionFixtures).toHaveLength(6);
+    const ids = packageVersionFixtures.map((v) => v.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("(b) every toolVersionFixtures entry references an existing tool id", () => {
-    const toolIds = new Set(toolFixtures.map((t) => t.id));
-    expect(toolVersionFixtures).toHaveLength(toolFixtures.length);
-    const versionIds = new Set(toolVersionFixtures.map((tv) => tv.id));
-    expect(versionIds.size).toBe(toolVersionFixtures.length);
-    for (const tv of toolVersionFixtures) {
-      expect(toolIds.has(tv.tool_id), `version ${tv.id} dangles on ${tv.tool_id}`).toBe(true);
+  it("every version is manifest_version 2 and ships at least one component", () => {
+    for (const v of packageVersionFixtures) {
+      expect(v.manifest_version).toBe(2);
+      expect(v.components.length).toBeGreaterThan(0);
     }
   });
 
-  it("(c) every slug in toolIdFixtures has a matching toolFixtures row", () => {
-    for (const [slug, id] of Object.entries(toolIdFixtures)) {
-      const tool = toolFixtures.find((t) => t.id === id);
-      expect(tool, `slug ${slug} -> ${id} has no toolFixtures row`).toBeDefined();
-      expect(tool!.name).toBe(slug);
-    }
-  });
-
-  it("(d) kind cli implies a cli:// endpoint", () => {
-    for (const t of toolFixtures.filter((t) => t.kind === "cli")) {
-      expect(t.endpoint.startsWith("cli://"), `${t.name}: ${t.endpoint}`).toBe(true);
-    }
-  });
-
-  it("(e) confidential/restricted tools never use auth none — except local cli apps", () => {
-    for (const t of toolFixtures) {
-      if (
-        (t.data_classification === "confidential" ||
-          t.data_classification === "restricted") &&
-        t.auth_strategy === "none"
-      ) {
-        expect(
-          t.kind,
-          `${t.name} classified ${t.data_classification} with auth_strategy none must be a local cli app`,
-        ).toBe("cli");
+  it("every pinned component ref resolves to a real @arm/artifactory component id", () => {
+    const knownIds = new Set(Object.values(componentFixturesBySlug).map((c) => c.id));
+    for (const v of packageVersionFixtures) {
+      for (const ref of v.components) {
+        expect(knownIds.has(ref.component_id), `dangling component_id ${ref.component_id} on ${v.id}`).toBe(true);
       }
     }
   });
 
-  it("tool-version manifest_sha256 recomputes over { config_schema, changelog } (per-manifest hashes)", () => {
-    for (const tv of toolVersionFixtures) {
-      expect(tv.manifest_sha256).toBe(
-        manifestSha256({ config_schema: tv.config_schema, changelog: tv.changelog }),
-      );
+  it("every pinned component ref's kind matches the real component's kind", () => {
+    const bySlug = componentFixturesBySlug;
+    const idToSlug = new Map(Object.entries(bySlug).map(([slug, c]) => [c.id, slug]));
+    for (const v of packageVersionFixtures) {
+      for (const ref of v.components) {
+        const slug = idToSlug.get(ref.component_id)!;
+        expect(ref.kind).toBe(bySlug[slug]!.kind);
+      }
     }
+  });
+
+  it("component refs are sorted by component_id (manifest v2 wire convention)", () => {
+    for (const v of packageVersionFixtures) {
+      const ids = v.components.map((c) => c.component_id);
+      expect(ids).toEqual([...ids].sort());
+    }
+  });
+
+  it("job_functions are sorted lexicographically", () => {
+    for (const v of packageVersionFixtures) {
+      expect(v.job_functions).toEqual([...v.job_functions].sort());
+    }
+  });
+
+  it("manifest_sha256 recomputes correctly from the shipped wire fixture", () => {
+    for (const v of packageVersionFixtures) {
+      expect(manifestSha256(canonicalManifest(v))).toBe(v.manifest_sha256);
+    }
+  });
+
+  it("carries the D9 pilot role keys", () => {
+    // Cross-checked directly against packages/trpc/src/catalog-router.ts's
+    // hardcoded PACKAGE_FIXTURES (not owned by `library` — these ids/keys
+    // must stay stable).
+    const byId: Record<string, string> = {
+      "40000000-0000-4000-8000-000000000001": "30000000-0000-4000-8000-000000000001",
+      "40000000-0000-4000-8000-000000000002": "30000000-0000-4000-8000-000000000002",
+      "40000000-0000-4000-8000-000000000003": "30000000-0000-4000-8000-000000000003",
+      "40000000-0000-4000-8000-000000000004": "30000000-0000-4000-8000-000000000004",
+      "40000000-0000-4000-8000-000000000005": "30000000-0000-4000-8000-000000000005",
+      "40000000-0000-4000-8000-000000000006": "30000000-0000-4000-8000-000000000006",
+    };
+    for (const v of packageVersionFixtures) {
+      expect(v.package_id).toBe(byId[v.id]);
+    }
+  });
+
+  it("material_planner is the only automated-mode pilot package (cross-checked via its budget/model routing shape)", () => {
+    const materialPlanner = packageVersionFixtures.find((v) => v.id === "40000000-0000-4000-8000-000000000006")!;
+    expect(materialPlanner.model_routing["batch_window"]).toBe("nightly");
   });
 });
