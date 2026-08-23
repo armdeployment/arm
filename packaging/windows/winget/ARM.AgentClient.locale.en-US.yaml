@@ -1,0 +1,21 @@
+PackageIdentifier: ARM.AgentClient
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: ARM
+PublisherUrl: https://arm.example
+PackageName: ARM Agent Client
+PackageUrl: https://arm.example
+License: Proprietary
+ShortDescription: One-click provisioning for your ARM-managed AI agent — no role key, no config file, no terminal.
+Description: >-
+  The ARM Agent Client is a single signed generic installer (docs/guides/
+  03-client-downloader.md, A4): the same binary for every employee, with
+  per-user configuration carried by a signed setup token issued at the end
+  of the onboarding questionnaire. Run `arm setup` after install, or
+  double-click a downloaded .armsetup file — no terminal required.
+Tags:
+  - ai
+  - agent
+  - devtools
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

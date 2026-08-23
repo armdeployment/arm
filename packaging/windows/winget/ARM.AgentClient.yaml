@@ -1,0 +1,7 @@
+# winget version manifest (docs/guides/03-client-downloader.md §7).
+# Submit to https://github.com/microsoft/winget-pkgs on each release.
+PackageIdentifier: ARM.AgentClient
+PackageVersion: 1.0.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX v4 source for the ARM client MSI (docs/guides/03-client-downloader.md
+  section 7, A7). Installs the one signed generic client binary
+  (build-sea.mjs's arm.exe) and registers the ".armsetup" file extension so
+  double-clicking a downloaded setup file runs arm setup with the file's
+  token, with no terminal (A4).
+
+  Build: wix build arm.wxs -d ArmExePath=..\dist\arm.exe -d Version=%ARM_VERSION% -o arm-setup.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="ARM Agent Client"
+           Manufacturer="ARM"
+           Version="$(var.Version)"
+           UpgradeCode="8f2b1c1a-3e9d-4b7e-9c2a-1a2b3c4d5e6f"
+           Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of the ARM Agent Client is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="ARM">
+        <Component Id="ArmExecutable" Guid="*">
+          <File Id="ArmExe" Source="$(var.ArmExePath)" KeyPath="yes" />
+          <Environment Id="PathEntry" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+        </Component>
+
+        <!-- Register .armsetup so double-clicking a downloaded setup file
+             runs arm setup with the file, with no terminal. -->
+        <Component Id="ArmSetupFileAssociation" Guid="*">
+          <RegistryValue Root="HKCR" Key=".armsetup" Value="ARM.SetupFile" Type="string" KeyPath="yes" />
+          <RegistryValue Root="HKCR" Key="ARM.SetupFile" Value="ARM Setup File" Type="string" />
+          <RegistryValue Root="HKCR" Key="ARM.SetupFile\shell\open\command"
+                         Value="&quot;[INSTALLFOLDER]arm.exe&quot; setup --setup-file &quot;%1&quot;" Type="string" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="ARM Agent Client" Level="1">
+      <ComponentRef Id="ArmExecutable" />
+      <ComponentRef Id="ArmSetupFileAssociation" />
+    </Feature>
+  </Package>
+</Wix>
