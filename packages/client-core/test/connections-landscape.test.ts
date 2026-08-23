@@ -31,8 +31,8 @@ const NEW_GUIDE_IDS = [
 
 function makeEntry(overrides: Partial<ConnectionsManifestEntry> = {}): ConnectionsManifestEntry {
   return {
-    toolId: "10000000-0000-4000-8000-00000000abcd",
-    toolName: "unknown-tool",
+    componentId: "10000000-0000-4000-8000-00000000abcd",
+    componentName: "unknown-tool",
     authMethod: "pat",
     guideId: "unknown-tool-pat",
     requiredScopes: [],
@@ -62,7 +62,7 @@ describe("GUIDE_LIBRARY landscape guides", () => {
 
 describe("getConnectionGuide resolution", () => {
   it("prefers the specific guide pinned by the manifest entry", () => {
-    const entry = makeEntry({ toolName: "gitlab", guideId: "gitlab-pat", authMethod: "pat" });
+    const entry = makeEntry({ componentName: "gitlab", guideId: "gitlab-pat", authMethod: "pat" });
     expect(getConnectionGuide(entry)).toBe(GUIDE_LIBRARY["gitlab-pat"]);
   });
 

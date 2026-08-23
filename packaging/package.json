@@ -1,0 +1,10 @@
+{
+  "name": "@arm/packaging",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Signed platform installers wrapping the ARM CLI (docs/guides/03-client-downloader.md §7, A7). Not a pnpm workspace member — packaging/ sits outside the packages/*|apps/* globs on purpose (it ships build tooling, not a library other packages import). build-sea.mjs uses the root workspace's hoisted `tsup` and fetches `postject` on demand via `npx` — see README.md for the full runbook and required env vars.",
+  "scripts": {
+    "build:sea": "node build-sea.mjs"
+  }
+}

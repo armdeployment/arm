@@ -13,7 +13,7 @@
  * never written to agent config files — only env-var references.
  */
 
-/** How a package tool authenticates against its vendor. */
+/** How a package component authenticates against its vendor. */
 export type ConnectionMethod = "oauth" | "pat" | "service_account" | "none";
 
 /** A versioned, renderable step-by-step vendor guide. */
@@ -23,10 +23,10 @@ export interface ConnectionGuide {
   steps: string[];
 }
 
-/** One row of a package's connections manifest. */
+/** One row of a package's connections manifest (D10: keyed by component, not tool). */
 export interface ConnectionsManifestEntry {
-  toolId: string;
-  toolName: string;
+  componentId: string;
+  componentName: string;
   authMethod: ConnectionMethod;
   guideId: string;
   requiredScopes: string[];
@@ -321,7 +321,7 @@ export function getConnectionGuide(entry: ConnectionsManifestEntry): ConnectionG
       return generic;
     }
   }
-  throw new Error(`unknown connection guide "${entry.guideId}" for tool "${entry.toolName}"`);
+  throw new Error(`unknown connection guide "${entry.guideId}" for component "${entry.componentName}"`);
 }
 
 /** Render a guide's steps as a numbered, printable list. */

@@ -1,0 +1,35 @@
+{
+  "name": "@arm-app/onboarding",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3300",
+    "build": "next build",
+    "start": "next start --port 3300",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arm/proto": "workspace:*",
+    "@arm/config": "workspace:*",
+    "@arm/trpc": "workspace:*",
+    "@arm/questionnaire": "workspace:*",
+    "@arm/client-core": "workspace:*",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@trpc/client": "11.18.0",
+    "@trpc/react-query": "11.18.0",
+    "@tanstack/react-query": "5.101.4",
+    "@trpc/server": "11.18.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

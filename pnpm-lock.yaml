@@ -345,6 +345,67 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(jsdom@27.0.0(supports-color@8.1.1))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0))
 
+  apps/onboarding:
+    dependencies:
+      '@arm/client-core':
+        specifier: workspace:*
+        version: link:../../packages/client-core
+      '@arm/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@arm/proto':
+        specifier: workspace:*
+        version: link:../../packages/proto
+      '@arm/questionnaire':
+        specifier: workspace:*
+        version: link:../../packages/questionnaire
+      '@arm/trpc':
+        specifier: workspace:*
+        version: link:../../packages/trpc
+      '@tanstack/react-query':
+        specifier: 5.101.4
+        version: 5.101.4(react@19.2.8)
+      '@trpc/client':
+        specifier: 11.18.0
+        version: 11.18.0(@trpc/server@11.18.0(typescript@7.0.2))(typescript@7.0.2)
+      '@trpc/react-query':
+        specifier: 11.18.0
+        version: 11.18.0(@tanstack/react-query@5.101.4(react@19.2.8))(@trpc/client@11.18.0(@trpc/server@11.18.0(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.18.0(typescript@7.0.2))(react@19.2.8)(typescript@7.0.2)
+      '@trpc/server':
+        specifier: 11.18.0
+        version: 11.18.0(typescript@7.0.2)
+      next:
+        specifier: 16.2.12
+        version: 16.2.12(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.62.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@tailwindcss/postcss':
+        specifier: 4.3.3
+        version: 4.3.3
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      tailwindcss:
+        specifier: 4.3.3
+        version: 4.3.3
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+
   apps/simulation:
     dependencies:
       '@arm/classifier':
@@ -602,6 +663,28 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(jsdom@27.0.0(supports-color@8.1.1))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
 
+  packages/questionnaire:
+    dependencies:
+      '@arm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@arm/proto':
+        specifier: workspace:*
+        version: link:../proto
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      fast-check:
+        specifier: 4.9.0
+        version: 4.9.0
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+
   packages/trpc:
     dependencies:
       '@arm/artifactory':
@@ -613,6 +696,9 @@ importers:
       '@arm/catalog':
         specifier: workspace:*
         version: link:../catalog
+      '@arm/client-core':
+        specifier: workspace:*
+        version: link:../client-core
       '@arm/config':
         specifier: workspace:*
         version: link:../config
@@ -631,9 +717,15 @@ importers:
       '@arm/proto':
         specifier: workspace:*
         version: link:../proto
+      '@arm/questionnaire':
+        specifier: workspace:*
+        version: link:../questionnaire
       '@trpc/server':
         specifier: 11.18.0
         version: 11.18.0(typescript@7.0.2)
+      jose:
+        specifier: 6.2.4
+        version: 6.2.4
       zod:
         specifier: 4.4.3
         version: 4.4.3

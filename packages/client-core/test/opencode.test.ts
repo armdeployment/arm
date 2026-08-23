@@ -3,9 +3,9 @@ import {
   renderOpencodeConfig,
   assertNoSecretsInConfig,
   mcpTokenEnvVar,
-  toolToMcpEntry,
+  componentToMcpEntry,
 } from "../src/opencode.js";
-import { makeManifest, makeTool, TENANT_ID } from "./helpers.js";
+import { makeManifest, makeResolvedComponent, makeComponent, makeComponentVersion, TENANT_ID } from "./helpers.js";
 
 describe("renderOpencodeConfig", () => {
   const rendered = renderOpencodeConfig({
@@ -25,8 +25,9 @@ describe("renderOpencodeConfig", () => {
     expect(headers["X-ARM-TenantId"]).toBe(TENANT_ID);
   });
 
-  it("maps every manifest tool to an mcp entry with env-var refs only", () => {
+  it("maps every callable manifest component to an mcp entry, skipping installable ones", () => {
     const parsed = rendered.parsed as { mcp: Record<string, Record<string, unknown>> };
+    // jira (mcp) + github-issues (http_api) are callable; 8d-generator (skill) is not.
     expect(Object.keys(parsed.mcp)).toEqual(["jira", "github_issues"]);
     const jira = parsed.mcp["jira"]!;
     expect(jira["type"]).toBe("http");
@@ -35,20 +36,20 @@ describe("renderOpencodeConfig", () => {
     expect(headers["Authorization"]).toBe(`\${${mcpTokenEnvVar("jira")}}`);
   });
 
-  it("renders cli tools as stdio entries", () => {
+  it("renders cli components as stdio entries", () => {
     const manifest = makeManifest({
-      tools: [
-        {
-          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          tenant_id: "99999999-9999-4999-8999-999999999999",
-          name: "opc-diag",
-          kind: "cli",
-          endpoint: "opc-diag --list",
-          auth_strategy: "none",
-          data_classification: "internal",
-          owner_user_id: "88888888-8888-4888-8888-888888888888",
-          review_status: "approved",
-        },
+      components: [
+        makeResolvedComponent({
+          component: makeComponent({
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            slug: "opc-diag",
+            name: "opc-diag",
+            kind: "cli",
+            endpoint: "opc-diag --list",
+            auth_strategy: "none",
+          }),
+          version: makeComponentVersion({ component_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
+        }),
       ],
     });
     const result = renderOpencodeConfig({
@@ -71,46 +72,37 @@ describe("renderOpencodeConfig", () => {
   });
 });
 
-describe("toolToMcpEntry — kind routing", () => {
-  it("renders a cli tool as a stdio entry using the command from config_schema", () => {
-    const tool = makeTool({
-      name: "opc-diag",
-      kind: "cli",
-      endpoint: "unused",
-      auth_strategy: "pat",
-      config_schema: { command: "opc-diag --serve" },
+describe("componentToMcpEntry — kind routing", () => {
+  it("renders a cli component as a stdio entry using the command from config_schema", () => {
+    const resolved = makeResolvedComponent({
+      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+      version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
     });
-    expect(toolToMcpEntry(tool)).toEqual({
+    expect(componentToMcpEntry(resolved)).toEqual({
       type: "stdio",
       command: "opc-diag --serve",
       env: { [mcpTokenEnvVar("opc-diag")]: `\${${mcpTokenEnvVar("opc-diag")}}` },
     });
   });
 
-  it("falls back to the tool name as command when config_schema has no command", () => {
-    const tool = makeTool({
-      name: "opc-diag",
-      kind: "cli",
-      endpoint: "unused",
-      auth_strategy: "pat",
-      config_schema: {},
+  it("falls back to the component name as command when config_schema has no command", () => {
+    const resolved = makeResolvedComponent({
+      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+      version: makeComponentVersion({ config_schema: {} }),
     });
-    expect(toolToMcpEntry(tool)).toEqual({
+    expect(componentToMcpEntry(resolved)).toEqual({
       type: "stdio",
       command: "opc-diag",
       env: { [mcpTokenEnvVar("opc-diag")]: `\${${mcpTokenEnvVar("opc-diag")}}` },
     });
   });
 
-  it("omits the env block for cli tools with auth_strategy none", () => {
-    const tool = makeTool({
-      name: "opc-diag",
-      kind: "cli",
-      endpoint: "unused",
-      auth_strategy: "none",
-      config_schema: { command: "opc-diag --serve" },
+  it("omits the env block for cli components with auth_strategy none", () => {
+    const resolved = makeResolvedComponent({
+      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "none" }),
+      version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
     });
-    const entry = toolToMcpEntry(tool);
+    const entry = componentToMcpEntry(resolved);
     expect(entry["type"]).toBe("stdio");
     expect(entry["command"]).toBe("opc-diag --serve");
     expect(entry["env"]).toBeUndefined();
@@ -118,36 +110,37 @@ describe("toolToMcpEntry — kind routing", () => {
     expect(entry["headers"]).toBeUndefined();
   });
 
-  it("renders mcp tools as http entries with env-var auth refs only", () => {
-    const tool = makeTool(); // kind mcp, auth pat
-    expect(toolToMcpEntry(tool)).toEqual({
+  it("renders mcp components as http entries with env-var auth refs only", () => {
+    const resolved = makeResolvedComponent(); // kind mcp, auth pat (jira defaults)
+    expect(componentToMcpEntry(resolved)).toEqual({
       type: "http",
       url: "https://mcp.acme.internal/jira",
       headers: { Authorization: `\${${mcpTokenEnvVar("jira")}}` },
     });
   });
 
-  it("renders http_api and connector tools as http entries too", () => {
-    const httpApi = makeTool({ name: "vss", kind: "http_api", endpoint: "https://vss.internal" });
-    expect(toolToMcpEntry(httpApi)).toEqual({
+  it("renders http_api and connector components as http entries too", () => {
+    const httpApi = makeResolvedComponent({
+      component: makeComponent({ name: "vss", kind: "http_api", endpoint: "https://vss.internal" }),
+    });
+    expect(componentToMcpEntry(httpApi)).toEqual({
       type: "http",
       url: "https://vss.internal",
       headers: { Authorization: `\${${mcpTokenEnvVar("vss")}}` },
     });
-    const connector = makeTool({ name: "cmms", kind: "connector", endpoint: "cmms.internal:8443" });
-    expect(toolToMcpEntry(connector)["type"]).toBe("http");
-    expect(toolToMcpEntry(connector)["url"]).toBe("cmms.internal:8443");
+    const connector = makeResolvedComponent({
+      component: makeComponent({ name: "cmms", kind: "connector", endpoint: "cmms.internal:8443" }),
+    });
+    expect(componentToMcpEntry(connector)["type"]).toBe("http");
+    expect(componentToMcpEntry(connector)["url"]).toBe("cmms.internal:8443");
   });
 
   it("rendered cli configs carry env-var references, never literal secrets", () => {
     const manifest = makeManifest({
-      tools: [
-        makeTool({
-          name: "opc-diag",
-          kind: "cli",
-          endpoint: "unused",
-          auth_strategy: "pat",
-          config_schema: { command: "opc-diag --serve" },
+      components: [
+        makeResolvedComponent({
+          component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+          version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
         }),
       ],
     });
