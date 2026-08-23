@@ -1,19 +1,21 @@
 /**
- * guardrail: artifact-integrity (D10, guide 00 §9 — STUB, filled by `library`).
+ * guardrail: artifact-integrity (D10, guide 00 §9 — REAL, filled by `library`
+ * per docs/guides/01-library-artifactory.md §8).
  *
  * Polices: every `component_version` with a blob has a `sha256:<hex>` digest;
  * no manifest contains a mutable URL where a digest belongs
  * (packages/db/src/schema/artifactory.ts `componentVersionTable.blobDigest`).
  *
  * `checkArtifactIntegrity` is the real, testable rule (exercised by the
- * mutation proofs below). The REGISTERED check has nothing real to scan yet:
- * no component_version fixtures exist in the repo until `library` (Wave 1,
- * docs/guides/01-library-artifactory.md) lands them. Per spec §14.2 /
- * AGENTS.md, this is reported HONESTLY as a vacuous failure until that
- * substrate exists.
+ * mutation proofs below — unchanged signature, still
+ * `ComponentVersionBlobRef[]`). The REGISTERED check now scans REAL
+ * substrate: every row of `@arm/artifactory`'s shipped
+ * `componentVersionFixtures` (78 components, 80 versions, 2 of them
+ * blob-bearing with real sha256 digests — see that package's `fixtures.ts`).
  */
 
 import { register, type CheckResult } from "../types.js";
+import { componentVersionFixtures } from "@arm/artifactory";
 
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 /** A digest field holding an http(s)/ftp URL instead of a content hash —
@@ -58,17 +60,10 @@ register({
     "Every component_version with a blob has a well-formed sha256:<hex> digest; no manifest carries a mutable URL where a digest belongs (D10).",
   invariant: "D10: guide 00 §9 — content-addressed artifact storage (A2)",
   run: () => {
-    // No real component_version data exists yet — see file header. Honest
-    // vacuous failure (spec §14.2), not a fabricated pass.
-    return {
-      id: "artifact-integrity",
-      status: "fail",
-      detail:
-        "no component_version fixtures found — awaiting `library` (Wave 1) to land " +
-        "packages/artifactory fixtures; checkArtifactIntegrity() is implemented and mutation-proofed " +
-        "(scripts/guardrails/test/mutation-proofs.test.ts) and ready to wire up once real rows exist",
-      scanned: 0,
-      assertsNegative: true,
-    };
+    const versions: ComponentVersionBlobRef[] = componentVersionFixtures.map((v) => ({
+      componentVersionId: v.id,
+      blobDigest: v.blob_digest,
+    }));
+    return checkArtifactIntegrity(versions);
   },
 });

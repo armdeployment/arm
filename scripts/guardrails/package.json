@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@arm/catalog": "workspace:*",
+    "@arm/artifactory": "workspace:*",
     "@arm/clickhouse": "workspace:*",
     "@arm/db": "workspace:*",
     "@arm/proto": "workspace:*",

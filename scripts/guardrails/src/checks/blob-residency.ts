@@ -1,5 +1,6 @@
 /**
- * guardrail: blob-residency (D10, guide 00 §9 — STUB, filled by `library`).
+ * guardrail: blob-residency (D10, guide 00 §9 — REAL, filled by `library`
+ * per docs/guides/01-library-artifactory.md §8).
  *
  * Polices: no `component_blob` sourced from a `tenant_authored` component has
  * `residency = 'control_plane'` (Invariant 1 — packages/db/src/schema/
@@ -9,14 +10,15 @@
  * first-party (ARM-shipped) blobs may sit at control-plane residency.
  *
  * `checkBlobResidency` is the real, testable rule (exercised by the mutation
- * proofs below). The REGISTERED check has nothing real to scan yet: no
- * component/component_blob fixtures exist in the repo until `library`
- * (Wave 1, docs/guides/01-library-artifactory.md) lands them. Per spec
- * §14.2 / AGENTS.md, this is reported HONESTLY as a vacuous failure until
- * that substrate exists.
+ * proofs below — unchanged signature, still `BlobResidencyRow[]`). The
+ * REGISTERED check now scans REAL substrate: `@arm/artifactory`'s shipped
+ * `componentBlobFixtures` (one first-party/control_plane blob, one
+ * tenant_authored/tenant blob — see that package's `fixtures.ts`), joined
+ * through `componentVersionFixtures.blob_digest` to `componentFixtures.source_kind`.
  */
 
 import { register, type CheckResult } from "../types.js";
+import { componentFixtures, componentVersionFixtures, componentBlobFixtures } from "@arm/artifactory";
 
 export interface BlobResidencyRow {
   digest: string;
@@ -49,17 +51,16 @@ register({
     "No component_blob sourced from a tenant_authored component has residency = 'control_plane' (Invariant 1, D10).",
   invariant: "§11.1: prompt bodies + resource content never leave the tenant VPC",
   run: () => {
-    // No real component/component_blob data exists yet — see file header.
-    // Honest vacuous failure (spec §14.2), not a fabricated pass.
-    return {
-      id: "blob-residency",
-      status: "fail",
-      detail:
-        "no component/component_blob fixtures found — awaiting `library` (Wave 1) to land " +
-        "packages/artifactory fixtures; checkBlobResidency() is implemented and mutation-proofed " +
-        "(scripts/guardrails/test/mutation-proofs.test.ts) and ready to wire up once real rows exist",
-      scanned: 0,
-      assertsNegative: true,
-    };
+    // digest -> the component_version that references it -> its component's source_kind
+    const componentById = new Map(componentFixtures.map((c) => [c.id, c]));
+    const componentIdByDigest = new Map(
+      componentVersionFixtures.filter((v) => v.blob_digest !== null).map((v) => [v.blob_digest as string, v.component_id]),
+    );
+    const rows: BlobResidencyRow[] = componentBlobFixtures.map((blob) => {
+      const componentId = componentIdByDigest.get(blob.digest);
+      const sourceKind = componentId ? componentById.get(componentId)?.source_kind : undefined;
+      return { digest: blob.digest, sourceKind: sourceKind ?? "unknown_dangling_ref", residency: blob.residency };
+    });
+    return checkBlobResidency(rows);
   },
 });
