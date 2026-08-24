@@ -59,7 +59,7 @@ function SpendPageContent() {
           {/* PRIMARY: cost per active seat + cost per work product (guide 02 §1) */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="inst-card p-5">
-              <h3 className="label-meta mb-1">Cost per Active Seat</h3>
+              <h2 className="label-meta mb-1">Cost per Active Seat</h2>
               <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>total monthly spend ÷ weekly-active seats (adoption.activeUsers)</p>
               <div className="text-[32px] font-semibold tabular" style={{ color: "var(--navy)" }}>
                 {costPerActiveSeat != null ? `$${costPerActiveSeat.toFixed(0)}` : "—"}
@@ -72,7 +72,7 @@ function SpendPageContent() {
 
             <div className="inst-card p-5">
               <div className="mb-1 flex items-center gap-2">
-                <h3 className="label-meta">Cost per Work Product</h3>
+                <h2 className="label-meta">Cost per Work Product</h2>
                 <SampleDataBadge />
               </div>
               <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>full detail on /governance</p>

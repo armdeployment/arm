@@ -83,8 +83,8 @@ test.describe("sub-pages (scope-aware)", () => {
   test("/spend shows cost breakdown with drill-down cards", async ({ page }) => {
     await page.goto("/spend");
     await expect(page.getByRole("heading", { name: "Spend Analysis" })).toBeVisible();
-    await expect(page.getByText("Total Monthly")).toBeVisible();
-    await expect(page.getByText("$16,170")).toBeVisible();
+    await expect(page.getByText("Total Monthly", { exact: true })).toBeVisible();
+    await expect(page.getByText("$16,170", { exact: true })).toBeVisible();
   });
 
   test("/access renders JIT approval queue", async ({ page }) => {

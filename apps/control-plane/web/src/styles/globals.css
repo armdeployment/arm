@@ -32,7 +32,7 @@
   /* ── Text ── */
   --text-primary: #0F172A;       /* slate-900 — maximum contrast */
   --text-secondary: #475569;     /* slate-600 */
-  --text-muted: #94A3B8;         /* slate-400 */
+  --text-muted: #64748B;         /* slate-500 — was slate-400 (#94A3B8), bumped for WCAG AA contrast (axe color-contrast, e2e) */
   --text-label: #64748B;         /* slate-500 — for metadata labels */
 
   /* ── Borders (Swiss discipline — hairlines) ── */

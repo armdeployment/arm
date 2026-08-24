@@ -64,6 +64,7 @@ export function Sidebar() {
     <aside
       className="flex w-56 shrink-0 flex-col border-r"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-sidebar)" }}
+      aria-label="Primary navigation"
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5 border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>
@@ -84,7 +85,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="flex-1 overflow-y-auto py-3" aria-label="Sections">
         {NAV_SECTIONS.map((section) => (
           <div key={section.title} className="mb-1">
             <div className="label-meta px-5 py-1.5">{section.title}</div>

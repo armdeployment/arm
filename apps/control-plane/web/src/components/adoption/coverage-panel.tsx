@@ -44,7 +44,7 @@ export function CoveragePanelView({ status, rows, freshnessMs, sampleData, error
       sampleData={sampleData}
     >
       {rows && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Coverage table, scrollable">
           <table className="w-full text-left text-[12px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>

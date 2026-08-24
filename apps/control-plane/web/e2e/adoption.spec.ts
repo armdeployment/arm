@@ -23,17 +23,17 @@ test.describe("/adoption", () => {
     await page.goto("/adoption");
     await expect(page.getByRole("heading", { name: "Adoption", exact: true })).toBeVisible();
 
-    await expect(page.getByText("Activation Funnel")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Weekly Active")).toBeVisible();
-    await expect(page.getByText("Where Adoption Stalls")).toBeVisible();
-    await expect(page.getByText("Time to Value")).toBeVisible();
-    await expect(page.getByText("Coverage")).toBeVisible();
-    await expect(page.getByText("Coverage Gaps")).toBeVisible();
-    await expect(page.getByText("Recent Activations")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Activation Funnel" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Weekly Active", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Where Adoption Stalls" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Time to Value" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Coverage", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Coverage Gaps" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recent Activations" })).toBeVisible();
 
     // Funnel steps render with real fixture counts (guide 02 §5.1: not flattering — abandonment is visible)
-    await expect(page.getByText("Invited")).toBeVisible();
-    await expect(page.getByText("Weekly active")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^invited/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^weekly active/i })).toBeVisible();
 
     // Coverage gap is visible (process_engineer — no published package)
     await expect(page.getByText(/no package — gap/i)).toBeVisible();
@@ -44,15 +44,17 @@ test.describe("/adoption", () => {
 
   test("filtering by department (scope) narrows the funnel", async ({ page }) => {
     await page.goto("/adoption?scope=department:dept_qa");
-    await expect(page.getByText("Activation Funnel")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Activation Funnel" })).toBeVisible({ timeout: 15_000 });
     // Quality Assurance is a small department (42 headcount) — funnel counts
     // should be well below the org-wide totals visible on the unscoped page.
-    await expect(page.getByRole("heading", { name: "Quality Assurance" })).toBeVisible({ timeout: 10_000 });
+    // The scope surfaces via the breadcrumb (there's no scope-aware page
+    // heading — the h1 is always the static "Adoption").
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByText("Quality Assurance")).toBeVisible({ timeout: 10_000 });
   });
 
   test("clicking a funnel step filters the Recent Activations table below it", async ({ page }) => {
     await page.goto("/adoption");
-    await expect(page.getByText("Activation Funnel")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Activation Funnel" })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: /weekly active/i }).click();
     await expect(page.getByText(/filtered to step: weekly_active/i)).toBeVisible();
@@ -60,27 +62,27 @@ test.describe("/adoption", () => {
 
   test("axe accessibility pass", async ({ page }) => {
     await page.goto("/adoption");
-    await expect(page.getByText("Activation Funnel")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Activation Funnel" })).toBeVisible({ timeout: 15_000 });
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 });
 
 test.describe("/rollout", () => {
-  test("renders against the placeholder onboarding router without errors", async ({ page }) => {
+  test("renders the real onboarding.getQuestionnaire graph without errors", async ({ page }) => {
     await page.goto("/rollout");
     await expect(page.getByRole("heading", { name: "Rollout", exact: true })).toBeVisible();
-    await expect(page.getByText("Questionnaire")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Campaigns")).toBeVisible();
-    await expect(page.getByText("Download Artifacts")).toBeVisible();
-    await expect(page.getByText("Live Campaign Funnel")).toBeVisible();
-    // Well-built empty state (guide 02 §3) — no published questionnaire yet
-    await expect(page.getByText(/no questionnaire published yet/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Questionnaire" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Campaigns" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Download Artifacts" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Live Campaign Funnel" })).toBeVisible();
+    // The real published manufacturing.v1 graph (packages/questionnaire) — not the Wave-0 empty state.
+    await expect(page.getByText("Where do you work?")).toBeVisible({ timeout: 10_000 });
   });
 
   test("axe accessibility pass", async ({ page }) => {
     await page.goto("/rollout");
-    await expect(page.getByText(/no questionnaire published yet/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Where do you work?")).toBeVisible({ timeout: 10_000 });
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
@@ -110,13 +112,19 @@ test.describe("/library", () => {
     void card;
   });
 
-  test("Components and Discovery tabs render well-built empty states", async ({ page }) => {
+  test("Components and Discovery tabs render real library.search / listCandidates data", async ({ page }) => {
     await page.goto("/library");
     await page.getByRole("tab", { name: "Components" }).click();
-    await expect(page.getByText(/no components published yet/i)).toBeVisible({ timeout: 10_000 });
+    // Real @arm/artifactory fixture (not the Wave-0 empty state). The
+    // unfiltered default page is sorted by slug across ~100 components +
+    // work packages, so search explicitly rather than assume "jira" lands
+    // in the first page.
+    await page.getByLabel("Search library").fill("jira");
+    await expect(page.getByText("jira")).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole("tab", { name: "Discovery" }).click();
-    await expect(page.getByText(/no discovery candidates pending triage/i)).toBeVisible({ timeout: 10_000 });
+    // Real discoveryCandidateStore fixture (library-router.ts).
+    await expect(page.getByText("Example External Connector")).toBeVisible({ timeout: 10_000 });
   });
 
   test("axe accessibility pass", async ({ page }) => {

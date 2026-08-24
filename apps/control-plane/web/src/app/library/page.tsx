@@ -127,7 +127,7 @@ function FacetRail({ tab }: { tab: Tab }) {
         }));
 
   return (
-    <aside className="space-y-5">
+    <aside className="space-y-5" aria-label="Filter by facet">
       {["Kind", "Job function", "Data classification", "Mode", "Source"].map((label) => {
         const group = facetGroups.find((g) => g.title.toLowerCase() === label.toLowerCase());
         return (

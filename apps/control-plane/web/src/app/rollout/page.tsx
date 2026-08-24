@@ -74,7 +74,7 @@ function QuestionnaireDesigner() {
 
   return (
     <section className="inst-card p-5">
-      <h3 className="label-meta mb-1">Questionnaire</h3>
+      <h2 className="label-meta mb-1">Questionnaire</h2>
       <p className="mb-4 text-[11px]" style={{ color: "var(--text-muted)" }}>
         Graph editing is a form over the node list, not a visual editor. Definitions are immutable once published.
       </p>
@@ -100,6 +100,35 @@ function QuestionnaireDesigner() {
           </button>
         </div>
       )}
+      {q.data?.questionnaire && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
+            <span>v{q.data.questionnaire.version}</span>
+            <span>·</span>
+            <span>{q.data.questionnaire.industryProfile}</span>
+            <span>·</span>
+            <span className="rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide" style={{ backgroundColor: "var(--success-soft)", color: "var(--success)" }}>
+              {q.data.questionnaire.status}
+            </span>
+          </div>
+          <ol className="divide-y rounded-lg border" style={{ borderColor: "var(--border)" }}>
+            {q.data.questionnaire.graph.nodes.map((node, i) => (
+              <li key={node.id} className="flex items-start gap-2 px-3 py-2 text-[12px]" style={{ color: "var(--text-primary)" }}>
+                <span style={{ color: "var(--text-muted)" }}>{i + 1}.</span>
+                <span>{node.prompt}</span>
+              </li>
+            ))}
+          </ol>
+          <button
+            disabled
+            title="Publishing requires an onboarding.publishQuestionnaire procedure not yet in the frozen contract"
+            className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white opacity-50"
+            style={{ backgroundColor: "var(--navy)" }}
+          >
+            Publish new version
+          </button>
+        </div>
+      )}
     </section>
   );
 }
@@ -117,7 +146,7 @@ function CampaignIssuer() {
 
   return (
     <section className="inst-card p-5">
-      <h3 className="label-meta mb-1">Campaigns</h3>
+      <h2 className="label-meta mb-1">Campaigns</h2>
       <p className="mb-4 text-[11px]" style={{ color: "var(--text-muted)" }}>
         Issues a setup token + activation code for one or more work-package versions (single-token surface — see file header for the batch-campaign gap).
       </p>
@@ -164,7 +193,7 @@ function CampaignIssuer() {
 function DownloadArtifacts() {
   return (
     <section className="inst-card p-5">
-      <h3 className="label-meta mb-1">Download Artifacts</h3>
+      <h2 className="label-meta mb-1">Download Artifacts</h2>
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-10 text-center" style={{ borderColor: "var(--border)" }}>
         <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Not available yet</span>
         <span className="max-w-md text-[11px]" style={{ color: "var(--text-muted)" }}>

@@ -10,7 +10,7 @@ export function ScopeBreadcrumb({ scope }: { scope: ScopeRef }) {
   if (!data) return null;
 
   return (
-    <nav className="flex items-center gap-1.5 text-sm" style={{ color: "var(--text-muted)" }}>
+    <nav className="flex items-center gap-1.5 text-sm" style={{ color: "var(--text-muted)" }} aria-label="Breadcrumb">
       {data.path.map((node, i) => {
         const isLast = i === data.path.length - 1;
         // Org root maps to null scope (no query param → "/"), everything else uses its scope ref.

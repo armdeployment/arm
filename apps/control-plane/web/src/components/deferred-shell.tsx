@@ -51,7 +51,7 @@ export function DeferredShell({
     <div className="inst-card p-5" style={{ minHeight }} data-panel-status={status} data-testid="deferred-shell">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h3 className="label-meta">{title}</h3>
+          <h2 className="label-meta">{title}</h2>
           {subtitle && (
             <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
               {subtitle}

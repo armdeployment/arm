@@ -84,7 +84,7 @@ export function RecentActivationsPanelView({ status, activations, freshnessMs, s
       sampleData={sampleData}
     >
       {activations && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Recent activations table, scrollable">
           <table className="w-full text-left text-[12px]">
             <thead>
               {table.getHeaderGroups().map((hg) => (
