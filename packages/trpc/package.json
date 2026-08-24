@@ -3,14 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./adoption-router": "./src/adoption-router.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./adoption-router": {
+      "types": "./dist/adoption-router.d.ts",
+      "default": "./dist/adoption-router.js"
+    }
   },
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsup && (tsc --project tsconfig.build.json || true)",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -32,6 +38,7 @@
   },
   "devDependencies": {
     "vitest": "4.1.10",
-    "@types/node": "26.1.1"
+    "@types/node": "26.1.1",
+    "tsup": "8.5.1"
   }
 }

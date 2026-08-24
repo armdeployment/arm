@@ -15,7 +15,8 @@
     "test": "turbo run test",
     "guardrails": "turbo run guardrails",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "turbo run build --filter='./packages/*'"
   },
   "devDependencies": {
     "prettier": "3.9.6",
