@@ -200,12 +200,20 @@ export async function runSetupCommand(
       throw new Error(`"${parsed.setupFile}" is not a valid .armsetup file (expected {version, token, control_plane_url})`);
     }
     const resolved = await resolveFn({ token: raw.token, controlPlaneUrl: raw.control_plane_url });
-    return runSetupFn(resolved);
+    return runSetupFn({
+      ...resolved,
+      ...(parsed.agentHome !== undefined ? { agentHome: parsed.agentHome } : {}),
+      ...(parsed.agentToken !== undefined ? { agentToken: parsed.agentToken } : {}),
+    });
   }
 
   if (parsed.token !== undefined) {
     const resolved = await resolveFn({ token: parsed.token, controlPlaneUrl: parsed.tenantUrl! });
-    return runSetupFn(resolved);
+    return runSetupFn({
+      ...resolved,
+      ...(parsed.agentHome !== undefined ? { agentHome: parsed.agentHome } : {}),
+      ...(parsed.agentToken !== undefined ? { agentToken: parsed.agentToken } : {}),
+    });
   }
 
   // Advanced/CI path — direct role-key provisioning.

@@ -141,6 +141,27 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
     expect(assignment?.status).toBe("approved");
   });
 
+  it("resolves the version's real @arm/artifactory components (not the empty [] this router shipped with pre-integration)", async () => {
+    const issued = await caller(authedClaims).onboarding.issueSetupToken({
+      packageVersionIds: [QUALITY_VERSION_ID],
+    });
+    const redeemed = await caller(null).onboarding.redeemSetupToken({ token: issued.token });
+
+    const components = redeemed.manifest!.components as Array<{
+      component: { slug: string; id: string };
+      version: { component_id: string; version: string; manifest_sha256: string };
+    }>;
+    expect(components.length).toBeGreaterThan(0);
+    expect(components.map((c) => c.component.slug)).toContain("jira");
+    for (const { component, version } of components) {
+      expect(version.component_id).toBe(component.id);
+      expect(version.manifest_sha256).toMatch(/^[0-9a-f]{64}$/);
+    }
+    // The manifest hash covers the real components array — verifies with
+    // the same canonicalizer the client re-checks against.
+    expect(verifyManifestIntegrity(redeemed.manifest!.version)).toBe(true);
+  });
+
   it("redeems a fresh token: routes to pending_approval when approval_required=true (A6)", async () => {
     const issued = await caller(authedClaims).onboarding.issueSetupToken({
       packageVersionIds: [QUALITY_VERSION_ID],

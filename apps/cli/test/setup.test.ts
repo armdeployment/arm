@@ -224,6 +224,35 @@ describe("runSetupCommand — --token (A4 primary) path", () => {
     expect(result).toBe(STUB_RESULT);
   });
 
+  it("threads --agent-home / --agent-token through to the engine (regression: these were silently dropped on this path)", async () => {
+    const resolved: SetupArgs = {
+      controlPlaneUrl: "https://cp.arm.acme.com",
+      token: "catalog-token-from-redemption",
+      roleKey: "quality_engineer",
+      armProxyUrl: "https://data.arm.acme.com",
+      subAccountId: "sa_123",
+      tenantId: "tn_1",
+    };
+    const resolveFn = vi.fn(async () => resolved);
+    const runSetupFn = vi.fn(async () => STUB_RESULT);
+
+    await runSetupCommand(
+      [
+        "--token", "AB12CD",
+        "--tenant-url", "https://cp.arm.acme.com",
+        "--agent-home", "/tmp/smoke-agent-home",
+        "--agent-token", "arm_mtr_dev_token",
+      ],
+      { resolveFn, runSetupFn },
+    );
+
+    expect(runSetupFn).toHaveBeenCalledWith({
+      ...resolved,
+      agentHome: "/tmp/smoke-agent-home",
+      agentToken: "arm_mtr_dev_token",
+    });
+  });
+
   it("does not require ARM_TOKEN for the token path", async () => {
     vi.stubEnv("ARM_TOKEN", "");
     const resolved: SetupArgs = {
@@ -279,6 +308,27 @@ describe("runSetupCommand — --setup-file (.armsetup double-click) path", () =>
 
     expect(resolveFn).toHaveBeenCalledWith({ token: "ABC123", controlPlaneUrl: "https://cp.arm.acme.com" });
     expect(result).toBe(STUB_RESULT);
+  });
+
+  it("threads --agent-home through when set alongside --setup-file", async () => {
+    const path = await writeSetupFile({ version: 1, token: "ABC123", control_plane_url: "https://cp.arm.acme.com" });
+    const resolved: SetupArgs = {
+      controlPlaneUrl: "https://cp.arm.acme.com",
+      token: "catalog-token",
+      roleKey: "quality_engineer",
+      armProxyUrl: "https://proxy",
+      subAccountId: "sa",
+      tenantId: "tn",
+    };
+    const resolveFn = vi.fn(async () => resolved);
+    const runSetupFn = vi.fn(async () => STUB_RESULT);
+
+    await runSetupCommand(["--setup-file", path, "--agent-home", "/tmp/smoke-agent-home"], {
+      resolveFn,
+      runSetupFn,
+    });
+
+    expect(runSetupFn).toHaveBeenCalledWith({ ...resolved, agentHome: "/tmp/smoke-agent-home" });
   });
 
   it("throws a clear error when the file doesn't exist", async () => {

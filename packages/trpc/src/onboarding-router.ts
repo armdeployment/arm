@@ -66,6 +66,7 @@ import {
   type SetupTokenClaims,
 } from "@arm/proto";
 import { packageVersionFixtures } from "@arm/catalog";
+import { componentFixtures, componentVersionFixtures } from "@arm/artifactory";
 import {
   graphForIndustryProfile,
   score,
@@ -233,24 +234,49 @@ function packageForVersionId(versionId: string): { pkg: WorkPackage; v1: WorkPac
 }
 
 /** Build the v2 view of one package version with a FRESH, verifiable
- *  manifest_sha256 (see module doc header — the shared @arm/catalog
- *  canonicalizer is still v1-shaped, owned by `library`). */
+ *  manifest_sha256. `@arm/catalog`'s `packageVersionFixtures` is now
+ *  manifest-v2-real (library migrated it — component-review/artifact-
+ *  integrity guardrails are non-vacuous), so real `components`/
+ *  `job_functions` are pulled from there when a matching version exists;
+ *  this router's own locally-duplicated fixtures (PACKAGE_VERSION_FIXTURES
+ *  above) predate that migration and are the fallback for versions with no
+ *  `@arm/catalog` counterpart. */
 function buildV2Version(pkg: WorkPackage, v1: WorkPackageVersion): WorkPackageVersion {
+  const catalogVersion = packageVersionFixtures.find((v) => v.id === v1.id);
   const draft: WorkPackageVersion = {
     id: v1.id,
     package_id: v1.package_id,
     version: v1.version,
     manifest_version: 2,
-    components: [], // TODO(library): real ComponentRef[] once packages/artifactory lands
+    components: catalogVersion?.components ?? [],
     permissions: v1.permissions,
     model_routing: v1.model_routing,
     budget_template: v1.budget_template,
     starter_prompts: v1.starter_prompts,
     min_agent_version: v1.min_agent_version,
-    job_functions: [pkg.role_key], // TODO(library): real job_function keys once migrated
+    job_functions: catalogVersion?.job_functions ?? [pkg.role_key],
     manifest_sha256: "0".repeat(64),
   };
   return { ...draft, manifest_sha256: manifestSha256(buildCanonicalManifest(draft)) };
+}
+
+/** Resolve a version's `ComponentRef[]` against `@arm/artifactory`'s
+ *  Component Registry fixtures — the same shape `library-router.ts`'s
+ *  `getComponent` builds, `@arm/client-core`'s `ResolvedComponent`. Refs
+ *  with no matching component/version fixture are skipped (still honest
+ *  under §14.2 — this never fabricates a component). */
+function resolveComponents(version: WorkPackageVersion): Array<{ component: unknown; version: unknown }> {
+  const resolved: Array<{ component: unknown; version: unknown }> = [];
+  for (const ref of version.components) {
+    const component = componentFixtures.find((c) => c.id === ref.component_id);
+    if (!component) continue;
+    const componentVersion = componentVersionFixtures.find(
+      (v) => v.component_id === ref.component_id && v.version === ref.version,
+    );
+    if (!componentVersion) continue;
+    resolved.push({ component, version: componentVersion });
+  }
+  return resolved;
 }
 
 /** The `CatalogIndex` `@arm/questionnaire`'s pure `recommend()` consumes —
@@ -358,10 +384,9 @@ function newActivationCode(): string {
 }
 
 // ── Wire shapes ──────────────────────────────────────────────────────────
-// `components` is always `[]` today (see module doc header) — the resolved
-// shape would be `{ component: Component; version: ComponentVersion }[]`
-// (matching @arm/client-core's `ResolvedComponent`) once `library` lands
-// real Component Registry data.
+// `components` is `{ component: Component; version: ComponentVersion }[]`
+// (matching @arm/client-core's `ResolvedComponent`) — resolved for real
+// against @arm/artifactory's fixtures by `resolveComponents` below.
 
 interface ManifestWire {
   package: WorkPackage;
@@ -416,8 +441,18 @@ function completeRedemption(stored: StoredSetupToken, clientVersion: string | un
   stored.redeemedClientVersion = clientVersion ?? "";
 
   const version = buildV2Version(resolved.pkg, resolved.v1);
-  const manifest: ManifestWire = { package: resolved.pkg, version, components: [] };
-  const connections: ConnectionsManifestEntryWire[] = []; // no resolved components yet — see module doc header
+  const resolvedComponents = resolveComponents(version);
+  const manifest: ManifestWire = { package: resolved.pkg, version, components: resolvedComponents };
+  const connections: ConnectionsManifestEntryWire[] = resolvedComponents
+    .map(({ component }) => component as { id: string; name: string; auth_strategy: string | null })
+    .filter((c) => c.auth_strategy !== null && c.auth_strategy !== "none")
+    .map((c) => ({
+      componentId: c.id,
+      componentName: c.name,
+      authMethod: c.auth_strategy as "oauth" | "pat" | "service_account",
+      guideId: c.name,
+      requiredScopes: version.components.find((ref) => ref.component_id === c.id)?.scopes ?? [],
+    }));
 
   // A6 — assignment coupling on redemption.
   const approved = !resolved.pkg.approval_required;
