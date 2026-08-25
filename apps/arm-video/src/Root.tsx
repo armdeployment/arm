@@ -2,6 +2,7 @@ import { Composition, Folder } from "remotion";
 import { ArmVideo } from "./ArmVideo";
 import { ArmVideo1 } from "./ArmVideo1";
 import { ArmVideo2 } from "./ArmVideo2";
+import { ArmVideo3 } from "./ArmVideo3";
 import { SceneIntro } from "./Scenes/SceneIntro";
 import { SceneProfiles } from "./Scenes/SceneProfiles";
 import { SceneWorkType } from "./Scenes/SceneWorkType";
@@ -70,6 +71,14 @@ export const RemotionRoot: React.FC = () => {
         id="ArmVideo2-Structures"
         component={ArmVideo2}
         durationInFrames={(4 + 8 + 7 + 7) * FPS - 3 * T}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      <Composition
+        id="ArmVideo3-DbWiring"
+        component={ArmVideo3}
+        durationInFrames={(4 + 6 + 7 + 7 + 8) * FPS - 4 * T}
         fps={FPS}
         width={W}
         height={H}

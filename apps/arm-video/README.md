@@ -31,6 +31,17 @@ npm run dev
 npx remotion render
 ```
 
+If bundling crashes with `Cannot read properties of undefined (reading 'readFile')`
+inside `esbuild-loader`, it's a pnpm hoisting ambiguity — this monorepo has three
+coexisting `typescript` majors (5.9.3 here, 7.0.2 in `apps/public`/`apps/control-plane/web`/
+`apps/onboarding`), and `require('typescript')` from deep inside the pnpm store
+occasionally resolves to the wrong one, which lacks `ts.sys`. Work around it without
+touching the shared dependency graph:
+
+```console
+NODE_OPTIONS="--require $(pwd)/fix-ts-resolution.cjs" npx remotion render <id> <out>
+```
+
 **Upgrade Remotion**
 
 ```console
