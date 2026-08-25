@@ -12,6 +12,9 @@ import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
 import { componentFixturesBySlug, FIXTURE_TENANT_ID } from "@arm/artifactory";
 import { packageVersionFixtures } from "@arm/catalog";
+import { eq } from "drizzle-orm";
+import { getDb } from "@arm/db";
+import { componentTable, discoveryCandidateTable } from "@arm/db/schema";
 
 const authedClaims: ARMClaims = { sub: "user_01", tenant_id: "tn_01", email: "eng@acme.com" };
 // publishComponentVersion validates tenant_id as a UUID (componentVersionSchema,
@@ -243,12 +246,25 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
     // The new component is real and searchable.
     const found = await caller(fixtureTenantClaims).library.getComponent({ slug: promoted.component.slug });
     expect(found.component.id).toBe(promoted.component.id);
+
+    // Restore state — the dev DB is persistent across test runs, and only
+    // one "new" candidate is seeded, so leaving it "promoted" breaks the
+    // next run. Undo directly (rejectCandidate only accepts "new" rows).
+    const db = getDb();
+    await db
+      .update(discoveryCandidateTable)
+      .set({ status: "new", promotedComponentId: null })
+      .where(eq(discoveryCandidateTable.id, target!.id));
+    await db.delete(componentTable).where(eq(componentTable.id, promoted.component.id));
   });
 
   it("publishVersion writes a real component_version row via postgresComponentRepo + FsStorageBackend", async () => {
     process.env.ARM_FIXTURE_MODE = "0";
     const jira = await caller(fixtureTenantClaims).library.getComponent({ slug: "jira" });
-    const nextVersion = "9.9.9"; // guaranteed not to already exist
+    // component_version rows are immutable, and this runs against a persistent
+    // dev DB across test runs — a fixed literal collides on the second run.
+    // Derive from the clock so every run picks an unused version.
+    const nextVersion = `9.${Math.floor(Date.now() / 1000) % 100000}.0`;
     const result = await caller(realUserClaims).library.publishVersion({
       componentId: jira.component.id,
       version: nextVersion,
