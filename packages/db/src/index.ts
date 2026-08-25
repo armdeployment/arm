@@ -21,6 +21,7 @@ export * from "./schema/org-tree.js";
 export * from "./schema/identity.js";
 export * from "./schema/policy.js";
 export * from "./schema/access.js";
+export { getDb, closeDb } from "./client.js";
 
 import * as schemaNs from "./schema/index.js";
 /** Namespace view of all tables — for introspection (guardrails, drizzle-kit). */

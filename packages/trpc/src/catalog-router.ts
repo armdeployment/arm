@@ -41,10 +41,30 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { eq, and, asc } from "drizzle-orm";
 import type { ARMContext } from "./index.js";
 import { workPackageSchema, workPackageVersionSchema, packageAssignmentSchema } from "@arm/proto";
 import { packageVersionFixtures, manifestSha256, canonicalManifest } from "@arm/catalog";
+import { getDb } from "@arm/db";
+import { workPackageTable, workPackageVersionTable, packageAssignmentTable } from "@arm/db/schema";
 import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
+
+/**
+ * ARM_FIXTURE_MODE (default "1" — ON) selects the data path, same pattern
+ * as adoption-router.ts. Real mode (0) reads/writes Postgres via @arm/db.
+ *
+ * KNOWN LIMITATION: the demo-mode guard (./demo-mode.ts) snapshots/restores
+ * IN-MEMORY registered stores only — it has no wire to Postgres. Combining
+ * ARM_DEMO=1 with ARM_FIXTURE_MODE=0 does NOT currently guarantee
+ * mutations revert; ARM_DEMO's guaranteed-read-only promise (guide 04) was
+ * designed against fixture mode, the only mode that existed when it
+ * shipped. A real fix would wrap real-mode mutations in a transaction that
+ * rolls back under ARM_DEMO — not implemented here; flagging so nobody
+ * assumes the guarantee extends further than it currently does.
+ */
+export function isFixtureMode(): boolean {
+  return (process.env.ARM_FIXTURE_MODE ?? "1") !== "0";
+}
 
 // ── tRPC setup (mirrors src/index.ts; routers must not import runtime values back) ──
 
@@ -250,6 +270,65 @@ function precondition(message: string): never {
   throw new TRPCError({ code: "PRECONDITION_FAILED", message });
 }
 
+// ── Postgres row -> wire-shape mappers (real mode) ──────────────────────────
+// @arm/db's Drizzle tables are camelCase; @arm/proto's wire contracts (and
+// @arm/catalog's canonicalManifest/manifestSha256, which verifyManifestIntegrity
+// re-runs server-side) are snake_case. These map one way, row -> wire, since
+// real mode never needs the reverse (writes go through explicit column
+// objects, not a wire-shaped round-trip).
+
+type PgWorkPackageRow = typeof workPackageTable.$inferSelect;
+type PgWorkPackageVersionRow = typeof workPackageVersionTable.$inferSelect;
+type PgPackageAssignmentRow = typeof packageAssignmentTable.$inferSelect;
+
+function pgPackageToWire(row: PgWorkPackageRow): WorkPackage {
+  return workPackageSchema.parse({
+    id: row.id,
+    tenant_id: row.tenantId,
+    role_key: row.roleKey,
+    name: row.name,
+    family: row.family,
+    mode: row.mode,
+    description: row.description,
+    approval_required: row.approvalRequired,
+  });
+}
+
+function pgVersionToWire(row: PgWorkPackageVersionRow): WorkPackageVersion {
+  return workPackageVersionSchema.parse({
+    id: row.id,
+    package_id: row.packageId,
+    version: row.version,
+    manifest_version: row.manifestVersion,
+    components: row.components.map((c: { componentId: string; version: string; kind: string; scopes: string[] }) => ({
+      component_id: c.componentId, version: c.version, kind: c.kind, scopes: c.scopes,
+    })),
+    permissions: row.permissions,
+    model_routing: row.modelRouting,
+    budget_template: row.budgetTemplate,
+    starter_prompts: row.starterPrompts,
+    min_agent_version: row.minAgentVersion,
+    job_functions: row.jobFunctions,
+    manifest_sha256: row.manifestSha256,
+  });
+}
+
+function pgAssignmentToView(a: PgPackageAssignmentRow, pkg: PgWorkPackageRow | undefined) {
+  return {
+    id: a.id,
+    packageVersionId: a.packageVersionId,
+    assigneeType: a.assigneeType,
+    assigneeId: a.assigneeId,
+    status: a.status,
+    approverUserId: a.approverUserId,
+    approvedAt: a.approvedAt ? a.approvedAt.toISOString().slice(0, 19) : null,
+    packageId: pkg?.id ?? null,
+    roleKey: pkg?.roleKey ?? null,
+    packageName: pkg?.name ?? null,
+    mode: pkg?.mode ?? null,
+  };
+}
+
 // ── Router ─────────────────────────────────────────────────────────────────
 
 export const catalogRouter = t.router({
@@ -260,8 +339,36 @@ export const catalogRouter = t.router({
 
   /** List all work packages with their latest published version. */
   listPackages: tenantProcedure.query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const [pkgRows, versionRows] = await Promise.all([
+        db.select().from(workPackageTable).where(eq(workPackageTable.tenantId, tenantId)),
+        db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)).orderBy(asc(workPackageVersionTable.createdAt)),
+      ]);
+      return {
+        tenantId,
+        packages: pkgRows.map((pkg) => {
+          const versions = versionRows.filter((v) => v.packageId === pkg.id);
+          const latest = versions[versions.length - 1];
+          return {
+            id: pkg.id,
+            roleKey: pkg.roleKey,
+            name: pkg.name,
+            family: pkg.family,
+            mode: pkg.mode,
+            description: pkg.description,
+            approvalRequired: pkg.approvalRequired,
+            versionCount: versions.length,
+            latestVersion: latest?.version ?? null,
+            componentCount: latest?.components.length ?? 0,
+            monthlyUsdCap: typeof latest?.budgetTemplate?.["monthly_usd_cap"] === "number" ? latest.budgetTemplate["monthly_usd_cap"] : null,
+          };
+        }),
+      };
+    }
     return {
-      tenantId: opts.ctx.tenantId!,
+      tenantId,
       packages: PACKAGE_FIXTURES.map((pkg) => {
         const versions = PACKAGE_VERSION_FIXTURES.filter((v) => v.package_id === pkg.id);
         const latest = versions[versions.length - 1];
@@ -286,11 +393,42 @@ export const catalogRouter = t.router({
   getPackage: tenantProcedure
     .input(z.object({ packageId: z.string().uuid() }))
     .query(async (opts) => {
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const pkgRows = await db.select().from(workPackageTable)
+          .where(and(eq(workPackageTable.id, opts.input.packageId), eq(workPackageTable.tenantId, tenantId)));
+        const pkgRow = pkgRows[0];
+        if (!pkgRow) notFound(`Package ${opts.input.packageId} not found`);
+        const versionRows = await db.select().from(workPackageVersionTable)
+          .where(eq(workPackageVersionTable.packageId, pkgRow.id));
+        return {
+          tenantId,
+          package: pgPackageToWire(pkgRow),
+          versions: versionRows.map((row) => {
+            const v = pgVersionToWire(row);
+            return {
+              id: v.id,
+              version: v.version,
+              manifestVersion: v.manifest_version,
+              components: v.components,
+              jobFunctions: v.job_functions,
+              permissions: v.permissions,
+              modelRouting: v.model_routing,
+              budgetTemplate: v.budget_template,
+              starterPrompts: v.starter_prompts,
+              minAgentVersion: v.min_agent_version,
+              manifestSha256: v.manifest_sha256,
+              integrity_ok: verifyManifestIntegrity(v),
+            };
+          }),
+        };
+      }
       const pkg = PACKAGE_FIXTURES.find((p) => p.id === opts.input.packageId);
       if (!pkg) notFound(`Package ${opts.input.packageId} not found`);
       const versions = PACKAGE_VERSION_FIXTURES.filter((v) => v.package_id === pkg.id);
       return {
-        tenantId: opts.ctx.tenantId!,
+        tenantId,
         package: pkg,
         versions: versions.map((v) => ({
           id: v.id,
@@ -316,8 +454,22 @@ export const catalogRouter = t.router({
 
   /** List all package assignments across assignee types. */
   listAssignments: tenantProcedure.query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const [assignmentRows, pkgRows] = await Promise.all([
+        db.select().from(packageAssignmentTable).where(eq(packageAssignmentTable.tenantId, tenantId)),
+        db.select().from(workPackageTable).where(eq(workPackageTable.tenantId, tenantId)),
+      ]);
+      const versionRows = await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId));
+      const pkgByVersionId = new Map(versionRows.map((v) => [v.id, pkgRows.find((p) => p.id === v.packageId)]));
+      return {
+        tenantId,
+        assignments: assignmentRows.map((a) => pgAssignmentToView(a, pkgByVersionId.get(a.packageVersionId))),
+      };
+    }
     return {
-      tenantId: opts.ctx.tenantId!,
+      tenantId,
       assignments: assignmentStore.map(toAssignmentView),
     };
   }),
@@ -331,6 +483,25 @@ export const catalogRouter = t.router({
     }))
     .mutation(async (opts) => {
       const { packageVersionId, assigneeType, assigneeId } = opts.input;
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const versionRows = await db.select().from(workPackageVersionTable)
+          .where(and(eq(workPackageVersionTable.id, packageVersionId), eq(workPackageVersionTable.tenantId, tenantId)));
+        if (!versionRows[0]) notFound(`Package version ${packageVersionId} not found`);
+        const inserted = await db.insert(packageAssignmentTable).values({
+          tenantId,
+          packageVersionId,
+          assigneeType,
+          assigneeId,
+          status: "requested",
+          approverUserId: null,
+          approvedAt: null,
+        }).returning();
+        const pkgRow = (await db.select().from(workPackageTable)
+          .where(eq(workPackageTable.id, versionRows[0].packageId)))[0];
+        return { tenantId, assignment: pgAssignmentToView(inserted[0]!, pkgRow) };
+      }
       if (!packageForVersion(packageVersionId)) {
         notFound(`Package version ${packageVersionId} not found`);
       }
@@ -345,7 +516,7 @@ export const catalogRouter = t.router({
         approved_at: null,
       });
       assignmentStore.push(assignment);
-      return { tenantId: opts.ctx.tenantId!, assignment: toAssignmentView(assignment) };
+      return { tenantId, assignment: toAssignmentView(assignment) };
     }),
 
   /**
@@ -357,6 +528,36 @@ export const catalogRouter = t.router({
     .input(z.object({ assignmentId: z.string().uuid(), approve: z.boolean() }))
     .mutation(async (opts) => {
       const { assignmentId, approve } = opts.input;
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const current = (await db.select().from(packageAssignmentTable)
+          .where(and(eq(packageAssignmentTable.id, assignmentId), eq(packageAssignmentTable.tenantId, tenantId))))[0];
+        if (!current) notFound(`Assignment ${assignmentId} not found`);
+
+        let nextStatus: PgPackageAssignmentRow["status"];
+        if (approve) {
+          if (current.status === "requested") nextStatus = "approved";
+          else if (current.status === "approved") nextStatus = "active";
+          else precondition(`Cannot approve assignment in '${current.status}' state (use revokeAssignment for active)`);
+        } else {
+          if (current.status === "requested" || current.status === "approved") nextStatus = "revoked";
+          else precondition(`Cannot deny assignment in '${current.status}' state (use revokeAssignment for active)`);
+        }
+
+        const updated = (await db.update(packageAssignmentTable)
+          .set({
+            status: nextStatus,
+            approverUserId: approve ? FIXTURE_APPROVER_ID : current.approverUserId,
+            approvedAt: approve ? new Date() : current.approvedAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(packageAssignmentTable.id, assignmentId))
+          .returning())[0]!;
+        const versionRow = (await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.id, updated.packageVersionId)))[0];
+        const pkgRow = versionRow ? (await db.select().from(workPackageTable).where(eq(workPackageTable.id, versionRow.packageId)))[0] : undefined;
+        return { tenantId, assignment: pgAssignmentToView(updated, pkgRow) };
+      }
       const idx = assignmentStore.findIndex((a) => a.id === assignmentId);
       if (idx === -1) notFound(`Assignment ${assignmentId} not found`);
       const current = assignmentStore[idx]!;
@@ -378,7 +579,7 @@ export const catalogRouter = t.router({
         approved_at: approve ? localNow() : current.approved_at,
       });
       assignmentStore[idx] = next;
-      return { tenantId: opts.ctx.tenantId!, assignment: toAssignmentView(next) };
+      return { tenantId, assignment: toAssignmentView(next) };
     }),
 
   /** Revoke an approved or active assignment. `revoked` is terminal. */
@@ -386,6 +587,26 @@ export const catalogRouter = t.router({
     .input(z.object({ assignmentId: z.string().uuid() }))
     .mutation(async (opts) => {
       const { assignmentId } = opts.input;
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const current = (await db.select().from(packageAssignmentTable)
+          .where(and(eq(packageAssignmentTable.id, assignmentId), eq(packageAssignmentTable.tenantId, tenantId))))[0];
+        if (!current) notFound(`Assignment ${assignmentId} not found`);
+        if (current.status === "requested") {
+          precondition("Requested assignment must be decided via approveAssignment first");
+        }
+        if (current.status === "revoked") {
+          precondition("Assignment is already revoked");
+        }
+        const updated = (await db.update(packageAssignmentTable)
+          .set({ status: "revoked", updatedAt: new Date() })
+          .where(eq(packageAssignmentTable.id, assignmentId))
+          .returning())[0]!;
+        const versionRow = (await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.id, updated.packageVersionId)))[0];
+        const pkgRow = versionRow ? (await db.select().from(workPackageTable).where(eq(workPackageTable.id, versionRow.packageId)))[0] : undefined;
+        return { tenantId, assignment: pgAssignmentToView(updated, pkgRow) };
+      }
       const idx = assignmentStore.findIndex((a) => a.id === assignmentId);
       if (idx === -1) notFound(`Assignment ${assignmentId} not found`);
       const current = assignmentStore[idx]!;
@@ -397,6 +618,6 @@ export const catalogRouter = t.router({
       }
       const next = packageAssignmentSchema.parse({ ...current, status: "revoked" });
       assignmentStore[idx] = next;
-      return { tenantId: opts.ctx.tenantId!, assignment: toAssignmentView(next) };
+      return { tenantId, assignment: toAssignmentView(next) };
     }),
 });

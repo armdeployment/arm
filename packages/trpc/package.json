@@ -33,6 +33,7 @@
     "@arm/questionnaire": "workspace:*",
     "@arm/client-core": "workspace:*",
     "@trpc/server": "11.18.0",
+    "drizzle-orm": "0.45.2",
     "jose": "6.2.4",
     "zod": "4.4.3"
   },

@@ -24,7 +24,7 @@
  * plus invalid-transition rejections.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
@@ -196,6 +196,79 @@ describe("assignment state machine (D9)", () => {
     ).rejects.toThrowError(/not found/i);
     await expect(
       caller(authedClaims).catalog.revokeAssignment({ assignmentId: FIXTURE.unknownId }),
+    ).rejects.toThrowError(/not found/i);
+  });
+});
+
+// ── Live Postgres real-mode integration (Wave 3 DB wiring,
+// docs/solutions/2026-08-24-wave3-adoption-router-db-wiring.md's "next
+// slice" note). Skipped unless DATABASE_URL is set (see
+// infra/compose/docker-compose.dev-db.yml + scripts/dev/
+// seed-postgres-catalog.mjs). Uses the tenant/data that seed script writes.
+describe.skipIf(!process.env.DATABASE_URL)("catalog router — live Postgres real mode", () => {
+  const REAL_TENANT = "d9d9d9d9-0000-4000-8000-000000000001";
+  const realClaims: ARMClaims = { sub: "user_01", tenant_id: REAL_TENANT, email: "eng@acme.com" };
+  const REAL_QUALITY_VERSION = "40000000-0000-4000-8000-000000000001";
+
+  afterEach(() => {
+    delete process.env.ARM_FIXTURE_MODE;
+  });
+
+  it("listPackages reads real work_package + work_package_version rows", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const r = await caller(realClaims).catalog.listPackages();
+    expect(r.packages.length).toBe(6);
+    const quality = r.packages.find((p) => p.roleKey === "quality_engineer")!;
+    expect(quality.componentCount).toBe(10); // seeded from @arm/catalog's real components
+    expect(quality.monthlyUsdCap).toBe(950);
+  });
+
+  it("getPackage returns real components and a verified manifest hash", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const packages = await caller(realClaims).catalog.listPackages();
+    const qualityPkg = packages.packages.find((p) => p.roleKey === "quality_engineer")!;
+    const r = await caller(realClaims).catalog.getPackage({ packageId: qualityPkg.id });
+    expect(r.package.role_key).toBe("quality_engineer");
+    const v = r.versions.find((v) => v.id === REAL_QUALITY_VERSION)!;
+    expect(v.components.length).toBe(10);
+    expect(v.components.some((c) => c.component_id)).toBe(true);
+    expect(v.integrity_ok).toBe(true);
+  });
+
+  it("requestAssignment -> approveAssignment (x2) -> revokeAssignment round-trips through real Postgres", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const c = caller(realClaims);
+    const requested = await c.catalog.requestAssignment({
+      packageVersionId: REAL_QUALITY_VERSION,
+      assigneeType: "user",
+      assigneeId: randomUUID(),
+    });
+    expect(requested.assignment.status).toBe("requested");
+    expect(requested.assignment.roleKey).toBe("quality_engineer");
+    const id = requested.assignment.id;
+
+    const approved = await c.catalog.approveAssignment({ assignmentId: id, approve: true });
+    expect(approved.assignment.status).toBe("approved");
+    const active = await c.catalog.approveAssignment({ assignmentId: id, approve: true });
+    expect(active.assignment.status).toBe("active");
+
+    const revoked = await c.catalog.revokeAssignment({ assignmentId: id });
+    expect(revoked.assignment.status).toBe("revoked");
+
+    // Persisted for real — a fresh listAssignments call (new "connection",
+    // same live DB) sees the terminal state, proving this isn't in-memory.
+    const list = await c.catalog.listAssignments();
+    expect(list.assignments.find((a) => a.id === id)?.status).toBe("revoked");
+  });
+
+  it("rejects unknown ids against real Postgres the same way fixture mode does", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    await expect(
+      caller(realClaims).catalog.requestAssignment({
+        packageVersionId: FIXTURE.unknownId,
+        assigneeType: "user",
+        assigneeId: randomUUID(),
+      }),
     ).rejects.toThrowError(/not found/i);
   });
 });

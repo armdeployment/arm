@@ -12,7 +12,18 @@ export const dynamic = "force-dynamic";
  * tenant context is injected so the UI pipeline works end-to-end.
  *
  * TODO(1.1): wire real OIDC token verification from Authorization header.
+ *
+ * DEV_TENANT_ID must be a real UUID, not a human-readable placeholder like
+ * the "tn_demo" this used to be (Wave 3 DB wiring found this the hard way:
+ * apps/onboarding's Postgres-backed routers already used
+ * d9d9d9d9-0000-4000-8000-000000000001, and catalog-router.ts's/
+ * onboarding-router.ts's real-mode queries filter work_package.tenant_id /
+ * package_assignment.tenant_id, both `uuid` columns with FK constraints —
+ * "tn_demo" can never match a real Postgres row there). Matching
+ * apps/onboarding's own DEV_TENANT_ID so both apps' real-mode data agree.
  */
+const DEV_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001";
+
 const handler = (req: Request) =>
   fetchRequestHandler({
     endpoint: "/api/trpc",
@@ -24,7 +35,7 @@ const handler = (req: Request) =>
       return createContext({
         claims: {
           sub: "dev-user",
-          tenant_id: "tn_demo",
+          tenant_id: DEV_TENANT_ID,
           email: "eng@acme.com",
         },
       });

@@ -162,10 +162,15 @@ pnpm format:check     # prettier check
 ## Local Dev Database (Wave 3 — real Postgres/ClickHouse)
 
 Every router in this repo defaults to `ARM_FIXTURE_MODE=1` (in-memory
-fixtures, no DB required) — that's what every command above uses. To run
-against real databases instead (currently wired: `adoption-router.ts`'s six
-procedures; `docs/solutions/2026-08-21-d10-adoption-first-restructure.md`
-§8's Wave 3):
+fixtures, no DB required) — that's what every command above uses. Currently
+wired to real databases: `adoption-router.ts` (ClickHouse, all six
+procedures) and `catalog-router.ts` (Postgres, all six procedures —
+`listPackages`/`getPackage`/`listAssignments`/`requestAssignment`/
+`approveAssignment`/`revokeAssignment`).
+`docs/solutions/2026-08-21-d10-adoption-first-restructure.md` §8's Wave 3;
+see `docs/solutions/2026-08-24-wave3-adoption-router-db-wiring.md` and
+`docs/solutions/2026-08-25-wave3-catalog-router-postgres-wiring.md` for what
+shipped and what didn't.
 
 ```bash
 # Start local Postgres + ClickHouse (dev-only — not the enterprise
@@ -178,24 +183,29 @@ DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   node scripts/dev/apply-clickhouse-migrations.mjs
 
-# Seed activation_event with data derived from the same deterministic
-# fixture population adoption-router.ts uses in fixture mode, so both
-# modes tell the same story. Tenant must match the caller — apps/control-
-# plane/web's dev route hardcodes "tn_demo" (src/app/api/trpc/[trpc]/
-# route.ts); the trpc test suite's live-ClickHouse tests default to
-# d9d9d9d9-0000-4000-8000-000000000001 instead (ARM_SEED_TENANT_ID
-# overrides either way).
-CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 ARM_SEED_TENANT_ID=tn_demo \
+# Seed both DBs with data derived from (or copied from) the same fixtures
+# each router's fixture mode already uses, so fixture mode and real mode
+# tell the same story. Tenant: apps/control-plane/web's and apps/onboarding's
+# dev routes both inject d9d9d9d9-0000-4000-8000-000000000001 (a real UUID —
+# Postgres columns are uuid-typed with FK constraints, so a human-readable
+# placeholder like the old "tn_demo" can never match a real row there).
+DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
+  node scripts/dev/seed-postgres-catalog.mjs
+CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   node scripts/dev/seed-clickhouse-adoption.mjs
 
 # Run the dashboard against real data
-ARM_FIXTURE_MODE=0 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
+ARM_FIXTURE_MODE=0 \
+  DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
+  CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   pnpm --filter @arm-app/web dev
 ```
 
-`packages/trpc/test/adoption-router.test.ts`'s live-ClickHouse integration
-tests (`describe.skipIf(!process.env.CLICKHOUSE_URL)`) run automatically
-once `CLICKHOUSE_URL` is set — that's the regression check for this wiring.
+The live-DB integration tests in `packages/trpc/test/adoption-router.test.ts`
+and `packages/trpc/test/catalog-router.test.ts`
+(`describe.skipIf(!process.env.CLICKHOUSE_URL / DATABASE_URL)`) run
+automatically once the corresponding env var is set — that's the regression
+check for this wiring.
 
 ---
 
