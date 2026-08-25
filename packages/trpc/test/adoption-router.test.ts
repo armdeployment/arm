@@ -5,9 +5,21 @@
  * isolation (mirrors packages/trpc/test/tenant-middleware.test.ts).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { createContext, appRouter } from "../src/index.js";
-import { ACTIVATION_STEPS, FIXTURE_POPULATION, isFixtureMode } from "../src/adoption-router.js";
+import {
+  ACTIVATION_STEPS,
+  FIXTURE_POPULATION,
+  isFixtureMode,
+  buildFunnelSQL,
+  buildStallsSQL,
+  buildTimeToValueSQL,
+  buildActiveUsersSQL,
+  buildCoverageSQL,
+  buildActivatedSeatsSQL,
+  buildWeeklyActiveTrendSQL,
+  buildRecentActivationsSQL,
+} from "../src/adoption-router.js";
 import type { ARMClaims } from "@arm/auth";
 
 const authedClaims: ARMClaims = { sub: "user_01", tenant_id: "tn_01", email: "eng@acme.com" };
@@ -190,5 +202,129 @@ describe("FIXTURE_POPULATION — deterministic, realistic (guide 02 §5.1)", () 
   it("contains at least one error outcome and one abandoned outcome — not flattering", () => {
     expect(FIXTURE_POPULATION.some((u) => u.outcome === "error")).toBe(true);
     expect(FIXTURE_POPULATION.some((u) => u.outcome === "abandoned")).toBe(true);
+  });
+});
+
+// ── ClickHouse real-mode SQL builders (guide 02 §5.1) — pure string
+// construction, no live ClickHouse required. The real-mode HTTP execution
+// path (queryClickHouseJSON) is covered separately below, gated on a live
+// instance actually being available (Wave 3 DB wiring).
+describe("ClickHouse SQL builders — shape (no live DB required)", () => {
+  const TENANT = "tn_ch_test";
+  const NO_FILTER = { scope: null, jobFunctionKey: null, dateFrom: null, dateTo: null };
+
+  it("buildFunnelSQL: counts distinct users per step, outcome='ok' only", () => {
+    const sql = buildFunnelSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("FROM activation_event");
+    expect(sql).toContain(`tenant_id = '${TENANT}'`);
+    expect(sql).toContain("outcome = 'ok'");
+    expect(sql).toContain("GROUP BY step");
+  });
+
+  it("buildStallsSQL: excludes outcome='ok' and empty error_code", () => {
+    const sql = buildStallsSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("outcome != 'ok'");
+    expect(sql).toContain("error_code != ''");
+    expect(sql).toContain("GROUP BY step, error_code");
+  });
+
+  it("buildTimeToValueSQL: pairs questionnaire_started -> first_metered_call per user", () => {
+    const sql = buildTimeToValueSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("minIf(ts, step = 'questionnaire_started')");
+    expect(sql).toContain("minIf(ts, step = 'first_metered_call')");
+    expect(sql).toContain("GROUP BY user_ref");
+  });
+
+  it("buildActiveUsersSQL: counts distinct users at weekly_active", () => {
+    const sql = buildActiveUsersSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("step = 'weekly_active'");
+    expect(sql).toContain("outcome = 'ok'");
+  });
+
+  it("buildCoverageSQL: groups activated seats by job_function_key", () => {
+    const sql = buildCoverageSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("step = 'weekly_active'");
+    expect(sql).toContain("GROUP BY job_function_key");
+  });
+
+  it("buildActivatedSeatsSQL: counts distinct users at first_metered_call (looser than weekly_active)", () => {
+    const sql = buildActivatedSeatsSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("step = 'first_metered_call'");
+  });
+
+  it("buildWeeklyActiveTrendSQL: buckets by week, capped at 8 rows", () => {
+    const sql = buildWeeklyActiveTrendSQL(TENANT, NO_FILTER);
+    expect(sql).toContain("toStartOfWeek(ts, 1)");
+    expect(sql).toContain("LIMIT 8");
+  });
+
+  it("buildRecentActivationsSQL: orders by ts desc with the given limit", () => {
+    const sql = buildRecentActivationsSQL(TENANT, NO_FILTER, 42);
+    expect(sql).toContain("ORDER BY ts DESC LIMIT 42");
+  });
+
+  it("every builder applies the scope + date-range filters when set", () => {
+    const filter = { scope: { type: "department" as const, id: "dept_qa" }, dateFrom: "2026-01-01", dateTo: "2026-02-01", jobFunctionKey: "quality_engineer" };
+    for (const sql of [
+      buildFunnelSQL(TENANT, filter),
+      buildStallsSQL(TENANT, filter),
+      buildActiveUsersSQL(TENANT, filter),
+      buildCoverageSQL(TENANT, filter),
+    ]) {
+      expect(sql).toContain("org_node_id = 'dept_qa'");
+      expect(sql).toContain("ts >= '2026-01-01'");
+      expect(sql).toContain("ts <= '2026-02-01'");
+    }
+  });
+});
+
+// ── Live ClickHouse real-mode integration (Wave 3 DB wiring,
+// docs/solutions/2026-08-21-d10-adoption-first-restructure.md §8). Skipped
+// unless CLICKHOUSE_URL is set — CI/most dev machines won't have a live
+// instance, but this proves the wiring for real when one is available (see
+// infra/compose/docker-compose.dev-db.yml + scripts/dev/
+// apply-clickhouse-migrations.mjs + scripts/dev/seed-clickhouse-adoption.mjs).
+describe.skipIf(!process.env.CLICKHOUSE_URL)("adoption router — live ClickHouse real mode", () => {
+  const REAL_TENANT = process.env.ARM_SEED_TENANT_ID ?? "d9d9d9d9-0000-4000-8000-000000000001";
+  const realClaims: ARMClaims = { sub: "user_01", tenant_id: REAL_TENANT, email: "eng@acme.com" };
+
+  afterEach(() => {
+    delete process.env.ARM_FIXTURE_MODE;
+  });
+
+  it("funnel/coverage/activeUsers agree on activated-seat totals against the seeded dataset", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const funnel = await caller(realClaims).adoption.funnel({});
+    const invited = funnel.steps.find((s) => s.step === "invited")!;
+    const weeklyActive = funnel.steps.find((s) => s.step === "weekly_active")!;
+    expect(invited.count).toBeGreaterThan(0);
+    expect(funnel.meta.source).toBe("clickhouse");
+
+    const active = await caller(realClaims).adoption.activeUsers({});
+    expect(active.weeklyActive).toBe(weeklyActive.count);
+    expect(active.eligibleSeats).toBeGreaterThan(0);
+
+    const coverage = await caller(realClaims).adoption.coverage({});
+    const totalActivatedAcrossJobFunctions = coverage.rows.reduce((sum, r) => sum + r.activatedSeats, 0);
+    expect(totalActivatedAcrossJobFunctions).toBe(active.weeklyActive);
+  });
+
+  it("stalls resolves human-readable labels from error codes, not raw snake_case", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const stalls = await caller(realClaims).adoption.stalls({});
+    expect(stalls.rows.length).toBeGreaterThan(0);
+    for (const row of stalls.rows) {
+      expect(row.label).not.toBe(row.errorCode);
+    }
+  });
+
+  it("recentActivations returns real event rows ordered newest-first", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const r = await caller(realClaims).adoption.recentActivations({ limit: 5, cursor: 0 });
+    expect(r.activations.length).toBe(5);
+    expect(r.meta.source).toBe("clickhouse");
+    for (let i = 1; i < r.activations.length; i++) {
+      expect(Date.parse(r.activations[i]!.ts)).toBeLessThanOrEqual(Date.parse(r.activations[i - 1]!.ts));
+    }
   });
 });

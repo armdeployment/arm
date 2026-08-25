@@ -1,0 +1,48 @@
+# ARM local dev database stack — Postgres + ClickHouse only (Wave 3 DB
+# wiring, docs/solutions/2026-08-21-d10-adoption-first-restructure.md §8).
+# Not the enterprise simulation (apps/simulation/docker-compose.enterprise.yml)
+# and not the data-plane proxy stack (infra/compose/docker-compose.yml) —
+# this is just the two databases the control-plane routers need for
+# ARM_FIXTURE_MODE=0, so a developer can run migrations + real queries
+# locally without pulling in the full simulation network.
+#
+# Usage:
+#   docker compose -f infra/compose/docker-compose.dev-db.yml up -d
+#   DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm
+#   CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: arm
+      POSTGRES_PASSWORD: arm_dev_password
+      POSTGRES_DB: arm
+    volumes:
+      - arm-postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arm"]
+      interval: 2s
+      retries: 20
+
+  clickhouse-dev:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+    environment:
+      CLICKHOUSE_USER: arm
+      CLICKHOUSE_PASSWORD: arm_dev_password
+      CLICKHOUSE_DB: arm
+    volumes:
+      - arm-clickhouse-dev-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'"]
+      interval: 2s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  arm-postgres-dev-data:
+  arm-clickhouse-dev-data:

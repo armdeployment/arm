@@ -159,6 +159,46 @@ pnpm format:check     # prettier check
 
 ---
 
+## Local Dev Database (Wave 3 — real Postgres/ClickHouse)
+
+Every router in this repo defaults to `ARM_FIXTURE_MODE=1` (in-memory
+fixtures, no DB required) — that's what every command above uses. To run
+against real databases instead (currently wired: `adoption-router.ts`'s six
+procedures; `docs/solutions/2026-08-21-d10-adoption-first-restructure.md`
+§8's Wave 3):
+
+```bash
+# Start local Postgres + ClickHouse (dev-only — not the enterprise
+# simulation or the data-plane proxy stack, see the compose file's header)
+docker compose -f infra/compose/docker-compose.dev-db.yml up -d
+
+# Apply migrations (--force: non-interactive, fine against a fresh dev DB)
+DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
+  pnpm --filter @arm/db exec drizzle-kit push --force
+CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
+  node scripts/dev/apply-clickhouse-migrations.mjs
+
+# Seed activation_event with data derived from the same deterministic
+# fixture population adoption-router.ts uses in fixture mode, so both
+# modes tell the same story. Tenant must match the caller — apps/control-
+# plane/web's dev route hardcodes "tn_demo" (src/app/api/trpc/[trpc]/
+# route.ts); the trpc test suite's live-ClickHouse tests default to
+# d9d9d9d9-0000-4000-8000-000000000001 instead (ARM_SEED_TENANT_ID
+# overrides either way).
+CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 ARM_SEED_TENANT_ID=tn_demo \
+  node scripts/dev/seed-clickhouse-adoption.mjs
+
+# Run the dashboard against real data
+ARM_FIXTURE_MODE=0 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
+  pnpm --filter @arm-app/web dev
+```
+
+`packages/trpc/test/adoption-router.test.ts`'s live-ClickHouse integration
+tests (`describe.skipIf(!process.env.CLICKHOUSE_URL)`) run automatically
+once `CLICKHOUSE_URL` is set — that's the regression check for this wiring.
+
+---
+
 
 ## Sandbox Demo Environment
 

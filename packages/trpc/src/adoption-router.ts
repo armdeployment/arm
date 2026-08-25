@@ -247,6 +247,14 @@ const JOB_FUNCTIONS: readonly JobFunctionFixture[] = [
   },
 ];
 
+/** Human-readable label per stall error code — shared by fixture mode
+ *  (looked up via the user's job function) and ClickHouse real mode
+ *  (looked up directly, since real rows carry error_code but not which
+ *  JobFunctionFixture produced it). */
+const STALL_LABEL_BY_ERROR_CODE: ReadonlyMap<string, string> = new Map(
+  JOB_FUNCTIONS.map((jf) => [jf.stallErrorCode, jf.stallLabel]),
+);
+
 export interface ActivationUser {
   userRef: string;
   jobFunctionKey: string;
@@ -370,6 +378,23 @@ function meta() {
 // imported, see the file-header note on why this file doesn't take an
 // `@arm/clickhouse` runtime dependency.
 
+/** Node's fetch (undici) throws synchronously on a URL with embedded
+ *  userinfo ("Request cannot be constructed from a URL that includes
+ *  credentials") — but `postgresql://user:pass@host` / `http://user:pass@
+ *  host` is the standard way to express a ClickHouse connection string, and
+ *  is exactly what a deployment's CLICKHOUSE_URL will contain. Strip the
+ *  credentials out of the URL and carry them as a Basic auth header instead. */
+function clickHouseRequestTarget(rawUrl: string): { url: string; headers: Record<string, string> } {
+  const parsed = new URL(rawUrl);
+  const headers: Record<string, string> = {};
+  if (parsed.username || parsed.password) {
+    headers["Authorization"] = `Basic ${Buffer.from(`${parsed.username}:${parsed.password}`).toString("base64")}`;
+    parsed.username = "";
+    parsed.password = "";
+  }
+  return { url: parsed.toString().replace(/\/+$/, ""), headers };
+}
+
 async function queryClickHouseJSON<T>(sql: string): Promise<T[]> {
   if (!config.CLICKHOUSE_URL) {
     throw new TRPCError({
@@ -377,10 +402,11 @@ async function queryClickHouseJSON<T>(sql: string): Promise<T[]> {
       message: "ARM_FIXTURE_MODE=0 but CLICKHOUSE_URL is not configured (packages/config).",
     });
   }
-  const url = `${config.CLICKHOUSE_URL.replace(/\/+$/, "")}/?default_format=JSONEachRow`;
+  const { url: base, headers } = clickHouseRequestTarget(config.CLICKHOUSE_URL);
+  const url = `${base}/?default_format=JSONEachRow`;
   let res: Response;
   try {
-    res = await fetch(url, { method: "POST", body: sql });
+    res = await fetch(url, { method: "POST", body: sql, headers });
   } catch (err) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -456,6 +482,37 @@ export function buildActiveUsersSQL(tenantId: string, filter: AdoptionFilter): s
   );
 }
 
+/** Distinct users who've reached first_metered_call — a looser bar than
+ *  weekly_active (activated vs. currently weekly-active). */
+export function buildActivatedSeatsSQL(tenantId: string, filter: AdoptionFilter): string {
+  return (
+    `SELECT uniqExact(user_ref) AS c FROM activation_event ` +
+    `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'first_metered_call' AND outcome = 'ok'` +
+    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter)
+  );
+}
+
+/** 8-week weekly-active trend, one row per ISO week. */
+export function buildWeeklyActiveTrendSQL(tenantId: string, filter: AdoptionFilter): string {
+  return (
+    `SELECT toStartOfWeek(ts, 1) AS week_ending, uniqExact(user_ref) AS c FROM activation_event ` +
+    `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'weekly_active' AND outcome = 'ok'` +
+    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    ` GROUP BY week_ending ORDER BY week_ending ASC LIMIT 8`
+  );
+}
+
+/** Activated seats PER job function — coverage's real-mode counterpart to
+ *  fixture mode's `users.filter(u => u.jobFunctionKey === jf.key && ...)`. */
+export function buildCoverageSQL(tenantId: string, filter: AdoptionFilter): string {
+  return (
+    `SELECT job_function_key, uniqExact(user_ref) AS c FROM activation_event ` +
+    `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'weekly_active' AND outcome = 'ok'` +
+    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    ` GROUP BY job_function_key`
+  );
+}
+
 export function buildRecentActivationsSQL(tenantId: string, filter: AdoptionFilter, limit: number): string {
   return (
     `SELECT ts, org_node_id, user_ref, job_function_key, step, outcome, error_code ` +
@@ -505,7 +562,7 @@ export const adoptionRouter = t.router({
       );
       const total = rows.reduce((n, r) => n + Number(r.c), 0) || 1;
       const stallRows = rows.map((r) => ({
-        step: r.step, errorCode: r.error_code, label: r.error_code, count: Number(r.c),
+        step: r.step, errorCode: r.error_code, label: STALL_LABEL_BY_ERROR_CODE.get(r.error_code) ?? r.error_code, count: Number(r.c),
         share: Math.round((Number(r.c) / total) * 1000) / 10,
       }));
       return { tenantId: opts.ctx.tenantId!, rows: stallRows, meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
@@ -556,18 +613,33 @@ export const adoptionRouter = t.router({
       (jf) => !opts.input.jobFunctionKey || jf.key === opts.input.jobFunctionKey,
     );
     const activeIdx = ACTIVATION_STEPS.indexOf("weekly_active");
+
+    let activatedSeatsByJobFunction: Map<string, number>;
+    if (!isFixtureMode()) {
+      const rows = await queryClickHouseJSON<{ job_function_key: string; c: string }>(
+        buildCoverageSQL(opts.ctx.tenantId!, opts.input),
+      );
+      activatedSeatsByJobFunction = new Map(rows.map((r) => [r.job_function_key, Number(r.c)]));
+    } else {
+      activatedSeatsByJobFunction = new Map(
+        jfs.map((jf) => [
+          jf.key,
+          FIXTURE_POPULATION.filter((u) => u.jobFunctionKey === jf.key && u.reachedStepIndex >= activeIdx).length,
+        ]),
+      );
+    }
+
     const rows = jfs.map((jf) => {
-      const users = FIXTURE_POPULATION.filter((u) => u.jobFunctionKey === jf.key);
-      const activatedSeats = users.filter((u) => u.reachedStepIndex >= activeIdx).length;
+      const activatedSeats = activatedSeatsByJobFunction.get(jf.key) ?? 0;
       return {
         jobFunctionKey: jf.key,
         name: jf.name,
         departmentName: jf.departmentName,
         headcountWeight: jf.headcount,
         packages: jf.packageRoleKey ? [jf.packageName!] : [],
-        activatedSeats: isFixtureMode() ? activatedSeats : 0,
+        activatedSeats,
         eligibleSeats: jf.headcount,
-        uncoveredWeight: jf.headcount - (isFixtureMode() ? activatedSeats : 0),
+        uncoveredWeight: jf.headcount - activatedSeats,
       };
     }).sort((a, b) => b.uncoveredWeight - a.uncoveredWeight);
     return { tenantId: opts.ctx.tenantId!, rows, meta: isFixtureMode() ? meta() : { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
@@ -577,9 +649,25 @@ export const adoptionRouter = t.router({
   activeUsers: tenantProcedure.input(adoptionFilterInput).query(async (opts) => {
     const activeIdx = ACTIVATION_STEPS.indexOf("weekly_active");
     if (!isFixtureMode()) {
-      const rows = await queryClickHouseJSON<{ c: string }>(buildActiveUsersSQL(opts.ctx.tenantId!, opts.input));
-      const weeklyActive = Number(rows[0]?.c ?? 0);
-      return { tenantId: opts.ctx.tenantId!, weeklyActive, activatedSeats: weeklyActive, eligibleSeats: 0, trend: [] as { weekEnding: string; weeklyActive: number }[], meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
+      const [weeklyActiveRows, activatedRows, trendRows] = await Promise.all([
+        queryClickHouseJSON<{ c: string }>(buildActiveUsersSQL(opts.ctx.tenantId!, opts.input)),
+        queryClickHouseJSON<{ c: string }>(buildActivatedSeatsSQL(opts.ctx.tenantId!, opts.input)),
+        queryClickHouseJSON<{ week_ending: string; c: string }>(buildWeeklyActiveTrendSQL(opts.ctx.tenantId!, opts.input)),
+      ]);
+      const weeklyActive = Number(weeklyActiveRows[0]?.c ?? 0);
+      const activatedSeats = Number(activatedRows[0]?.c ?? 0);
+      const eligibleSeats = jobFunctionsInScope(opts.input.scope)
+        .filter((jf) => !opts.input.jobFunctionKey || jf.key === opts.input.jobFunctionKey)
+        .reduce((sum, jf) => sum + jf.headcount, 0);
+      const trend = trendRows.map((r) => ({ weekEnding: r.week_ending.slice(0, 10), weeklyActive: Number(r.c) }));
+      return {
+        tenantId: opts.ctx.tenantId!,
+        weeklyActive,
+        activatedSeats,
+        eligibleSeats,
+        trend,
+        meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 },
+      };
     }
     const users = filterUsers(opts.input);
     const weeklyActive = users.filter((u) => u.reachedStepIndex >= activeIdx).length;
