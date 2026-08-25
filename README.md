@@ -164,13 +164,15 @@ pnpm format:check     # prettier check
 Every router in this repo defaults to `ARM_FIXTURE_MODE=1` (in-memory
 fixtures, no DB required) — that's what every command above uses. Currently
 wired to real databases: `adoption-router.ts` (ClickHouse, all six
-procedures) and `catalog-router.ts` (Postgres, all six procedures —
-`listPackages`/`getPackage`/`listAssignments`/`requestAssignment`/
-`approveAssignment`/`revokeAssignment`).
+procedures), `catalog-router.ts` (Postgres, all six procedures), and
+`library-router.ts` (Postgres, 9 of 12 procedures — the Component
+Registry + Discovery surfaces; `listJobFunctions`/`recommendForJobFunction`/
+`gaps` stay on `@arm/profiles`' preset data in both modes, per D6).
 `docs/solutions/2026-08-21-d10-adoption-first-restructure.md` §8's Wave 3;
-see `docs/solutions/2026-08-24-wave3-adoption-router-db-wiring.md` and
-`docs/solutions/2026-08-25-wave3-catalog-router-postgres-wiring.md` for what
-shipped and what didn't.
+see `docs/solutions/2026-08-24-wave3-adoption-router-db-wiring.md`,
+`docs/solutions/2026-08-25-wave3-catalog-router-postgres-wiring.md`, and
+`docs/solutions/2026-08-25-wave3-library-router-postgres-wiring.md` for
+what shipped and what didn't.
 
 ```bash
 # Start local Postgres + ClickHouse (dev-only — not the enterprise
@@ -185,12 +187,16 @@ CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
 
 # Seed both DBs with data derived from (or copied from) the same fixtures
 # each router's fixture mode already uses, so fixture mode and real mode
-# tell the same story. Tenant: apps/control-plane/web's and apps/onboarding's
-# dev routes both inject d9d9d9d9-0000-4000-8000-000000000001 (a real UUID —
-# Postgres columns are uuid-typed with FK constraints, so a human-readable
-# placeholder like the old "tn_demo" can never match a real row there).
+# tell the same story. Tenant + user: apps/control-plane/web's and
+# apps/onboarding's dev routes inject d9d9d9d9-0000-4000-8000-000000000001
+# (tenant) / 60000000-0000-4000-8000-000000000001 (user) — both real UUIDs,
+# not human-readable placeholders like the old "tn_demo"/"dev-user" (every
+# Postgres tenant_id/owner_user_id/etc. column is uuid-typed with FK
+# constraints — those could never match a real row).
 DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
   node scripts/dev/seed-postgres-catalog.mjs
+DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
+  node scripts/dev/seed-postgres-library.mjs
 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   node scripts/dev/seed-clickhouse-adoption.mjs
 

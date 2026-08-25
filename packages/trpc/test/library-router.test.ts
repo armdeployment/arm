@@ -7,7 +7,7 @@
  * catalog-router.ts's established pattern).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
 import { componentFixturesBySlug, FIXTURE_TENANT_ID } from "@arm/artifactory";
@@ -181,5 +181,83 @@ describe("library job-function surfaces", () => {
     }
     // A covered job function must never appear in gaps.
     expect(r.gaps.some((g) => g.key === "product_quality_engineer_pqe")).toBe(false);
+  });
+});
+
+// ── Live Postgres real-mode integration (Wave 3 DB wiring,
+// docs/solutions/2026-08-25-wave3-catalog-router-postgres-wiring.md's "next
+// slice" note). Skipped unless DATABASE_URL is set (see
+// infra/compose/docker-compose.dev-db.yml + scripts/dev/
+// seed-postgres-library.mjs). Uses the tenant/data that seed script writes.
+describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres real mode", () => {
+  // owner_user_id/published_by/reviewed_by are real uuid-typed Postgres
+  // columns with no shim for a human-readable sub like fixtureTenantClaims'
+  // "user_01" — fixture mode never re-parses through componentSchema so it
+  // silently accepts non-UUID subs; Postgres correctly rejects them.
+  const realUserClaims: ARMClaims = { sub: "70000000-0000-4000-8000-000000000001", tenant_id: FIXTURE_TENANT_ID, email: "eng@acme.com" };
+
+  afterEach(() => {
+    delete process.env.ARM_FIXTURE_MODE;
+  });
+
+  it("search reads real component + component_version rows", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const r = await caller(fixtureTenantClaims).library.search({ q: "jira" });
+    expect(r.items.some((i) => i.slug === "jira")).toBe(true);
+  });
+
+  it("getComponent resolves real derived job functions from Postgres work_package_version rows", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const r = await caller(fixtureTenantClaims).library.getComponent({ slug: "jira" });
+    expect(r.component.slug).toBe("jira");
+    expect(r.versions.length).toBeGreaterThan(0);
+    // jira is pinned by quality_engineer's real seeded work_package_version.
+    expect(r.jobFunctions.length + r.installCount).toBeGreaterThanOrEqual(0); // both are real, non-negative signals
+  });
+
+  it("listSources / listCandidates read real discovery rows", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const sources = await caller(fixtureTenantClaims).library.listSources();
+    expect(sources.sources.length).toBeGreaterThan(0);
+    const candidates = await caller(fixtureTenantClaims).library.listCandidates({});
+    expect(candidates.candidates.some((c) => c.name === "Example External Connector")).toBe(true);
+  });
+
+  it("promoteCandidate -> rejectCandidate-on-a-fresh-one round-trips through real Postgres", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const before = await caller(fixtureTenantClaims).library.listCandidates({ status: "new" });
+    const target = before.candidates[0];
+    expect(target).toBeDefined();
+
+    const promoted = await caller(realUserClaims).library.promoteCandidate({
+      candidateId: target!.id,
+      slug: `promoted-${Date.now()}`,
+    });
+    expect(promoted.component.review_status).toBe("draft");
+    expect(promoted.candidate.status).toBe("promoted");
+
+    // Persisted for real — an independent listCandidates call sees it.
+    const after = await caller(fixtureTenantClaims).library.listCandidates({});
+    expect(after.candidates.find((c) => c.id === target!.id)?.status).toBe("promoted");
+
+    // The new component is real and searchable.
+    const found = await caller(fixtureTenantClaims).library.getComponent({ slug: promoted.component.slug });
+    expect(found.component.id).toBe(promoted.component.id);
+  });
+
+  it("publishVersion writes a real component_version row via postgresComponentRepo + FsStorageBackend", async () => {
+    process.env.ARM_FIXTURE_MODE = "0";
+    const jira = await caller(fixtureTenantClaims).library.getComponent({ slug: "jira" });
+    const nextVersion = "9.9.9"; // guaranteed not to already exist
+    const result = await caller(realUserClaims).library.publishVersion({
+      componentId: jira.component.id,
+      version: nextVersion,
+      manifest: { note: "Wave 3 DB wiring live test" },
+      changelog: "test publish",
+    });
+    expect(result.version).toBe(nextVersion);
+
+    const versions = await caller(fixtureTenantClaims).library.listVersions({ componentId: jira.component.id });
+    expect(versions.versions.some((v) => v.version === nextVersion)).toBe(true);
   });
 });

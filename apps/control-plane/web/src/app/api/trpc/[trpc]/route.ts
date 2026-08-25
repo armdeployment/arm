@@ -13,16 +13,19 @@ export const dynamic = "force-dynamic";
  *
  * TODO(1.1): wire real OIDC token verification from Authorization header.
  *
- * DEV_TENANT_ID must be a real UUID, not a human-readable placeholder like
- * the "tn_demo" this used to be (Wave 3 DB wiring found this the hard way:
- * apps/onboarding's Postgres-backed routers already used
- * d9d9d9d9-0000-4000-8000-000000000001, and catalog-router.ts's/
- * onboarding-router.ts's real-mode queries filter work_package.tenant_id /
- * package_assignment.tenant_id, both `uuid` columns with FK constraints —
- * "tn_demo" can never match a real Postgres row there). Matching
- * apps/onboarding's own DEV_TENANT_ID so both apps' real-mode data agree.
+ * DEV_TENANT_ID/DEV_USER_ID must be real UUIDs, not human-readable
+ * placeholders like the "tn_demo"/"dev-user" these used to be (Wave 3 DB
+ * wiring found this the hard way, twice: apps/onboarding's Postgres-backed
+ * routers already used d9d9d9d9-0000-4000-8000-000000000001 for the
+ * tenant, and library-router.ts's publishVersion/promoteCandidate write
+ * claims.sub straight into owner_user_id/reviewed_by — real `uuid` columns
+ * with FK constraints in both cases. Matching apps/onboarding's own
+ * DEV_TENANT_ID so both apps' real-mode data agree; DEV_USER_ID matches
+ * the OWNER_ID/FIXTURE_OWNER_ID convention @arm/artifactory's fixtures and
+ * catalog-router.ts already use.
  */
 const DEV_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001";
+const DEV_USER_ID = "60000000-0000-4000-8000-000000000001";
 
 const handler = (req: Request) =>
   fetchRequestHandler({
@@ -34,7 +37,7 @@ const handler = (req: Request) =>
       // Production: parse Authorization: Bearer <token> → verifyOIDCToken.
       return createContext({
         claims: {
-          sub: "dev-user",
+          sub: DEV_USER_ID,
           tenant_id: DEV_TENANT_ID,
           email: "eng@acme.com",
         },

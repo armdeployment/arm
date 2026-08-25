@@ -25,6 +25,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { eq, and } from "drizzle-orm";
 import type { ARMContext } from "./index.js";
 import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 import {
@@ -42,6 +43,7 @@ import {
   fixtureResolvableVersions,
   compareSemVer,
   publishComponentVersion,
+  FsStorageBackend,
   type StorageBackend,
   type ComponentRepoPort,
   type ComponentRow,
@@ -50,6 +52,8 @@ import {
 } from "@arm/artifactory";
 import { packageVersionFixtures } from "@arm/catalog";
 import { getProfile } from "@arm/profiles";
+import { getDb } from "@arm/db";
+import { componentTable, componentVersionTable, componentBlobTable, discoverySourceTable, discoveryCandidateTable, workPackageVersionTable } from "@arm/db/schema";
 import {
   searchInMemory,
   computeFacets,
@@ -61,6 +65,16 @@ import {
   type SearchableWorkPackageRow,
   type RecommendCandidate,
 } from "@arm/discovery";
+
+/** ARM_FIXTURE_MODE (default "1" — ON), same pattern as adoption-router.ts
+ *  and catalog-router.ts. Real mode reads/writes Postgres's component /
+ *  component_version / component_blob / discovery_source /
+ *  discovery_candidate tables (packages/db/src/schema/artifactory.ts) via
+ *  a PostgresComponentRepoPort + a real FsStorageBackend, instead of the
+ *  in-memory stores below. */
+export function isFixtureMode(): boolean {
+  return (process.env.ARM_FIXTURE_MODE ?? "1") !== "0";
+}
 
 // ── tRPC setup (mirrors src/index.ts; routers must not import runtime values back) ──
 
@@ -231,6 +245,180 @@ const componentRepo: ComponentRepoPort = {
   },
 };
 
+// ── Postgres real mode (Wave 3 DB wiring) ───────────────────────────────────
+// packages/artifactory's publishComponentVersion/ComponentRepoPort was
+// already written against an injectable port for exactly this swap (see the
+// module doc header). realStorageBackends writes real files to disk —
+// ARM_ARTIFACT_STORAGE_DIR (default ./data/artifacts) — a genuine content-
+// addressed store, not a demo stand-in.
+
+const realStorageBackends: BackendsByResidency = {
+  control_plane: new FsStorageBackend({ baseDir: process.env.ARM_ARTIFACT_STORAGE_DIR ?? "./data/artifacts/control-plane" }),
+  tenant: new FsStorageBackend({ baseDir: process.env.ARM_ARTIFACT_STORAGE_DIR ?? "./data/artifacts/tenant" }),
+};
+
+const postgresComponentRepo: ComponentRepoPort = {
+  async getComponent(componentId: string): Promise<ComponentRow | null> {
+    const db = getDb();
+    const rows = await db.select().from(componentTable).where(eq(componentTable.id, componentId));
+    const c = rows[0];
+    return c ? { id: c.id, tenantId: c.tenantId, slug: c.slug, reviewStatus: c.reviewStatus } : null;
+  },
+  async getLatestVersion(componentId: string): Promise<{ version: string } | null> {
+    const db = getDb();
+    const versions = await db.select().from(componentVersionTable)
+      .where(and(eq(componentVersionTable.componentId, componentId), eq(componentVersionTable.yanked, false)));
+    if (versions.length === 0) return null;
+    return { version: [...versions].sort((a, b) => compareSemVer(b.version, a.version))[0]!.version };
+  },
+  async versionExists(componentId: string, version: string): Promise<boolean> {
+    const db = getDb();
+    const rows = await db.select().from(componentVersionTable)
+      .where(and(eq(componentVersionTable.componentId, componentId), eq(componentVersionTable.version, version)));
+    return rows.length > 0;
+  },
+  async insertVersionWithBlob(version, blob): Promise<{ id: string }> {
+    const db = getDb();
+    const inserted = await db.insert(componentVersionTable).values({
+      tenantId: version.tenant_id,
+      componentId: version.component_id,
+      version: version.version,
+      manifest: version.manifest,
+      manifestSha256: version.manifest_sha256,
+      blobDigest: version.blob_digest,
+      blobSizeBytes: version.blob_size_bytes,
+      blobMediaType: version.blob_media_type,
+      configSchema: version.config_schema,
+      requires: version.requires,
+      changelog: version.changelog,
+      yanked: version.yanked,
+      publishedAt: version.published_at ? new Date(version.published_at) : null,
+      publishedBy: version.published_by,
+    }).returning();
+    if (blob) {
+      await db.insert(componentBlobTable).values({
+        digest: blob.digest,
+        tenantId: blob.residency === "control_plane" ? null : version.tenant_id,
+        mediaType: blob.mediaType,
+        sizeBytes: blob.sizeBytes,
+        storageBackend: blob.storageBackend,
+        residency: blob.residency,
+        storageKey: blob.storageKey,
+        uploadedBy: version.published_by,
+      }).onConflictDoNothing(); // content-addressed — same digest may already exist
+    }
+    return { id: inserted[0]!.id };
+  },
+};
+
+function pgComponentToWire(row: typeof componentTable.$inferSelect): Component {
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    slug: row.slug,
+    kind: row.kind,
+    name: row.name,
+    description: row.description,
+    owner_user_id: row.ownerUserId,
+    review_status: row.reviewStatus,
+    source_kind: row.sourceKind,
+    source_ref: row.sourceRef,
+    endpoint: row.endpoint,
+    auth_strategy: row.authStrategy as Component["auth_strategy"],
+    data_classification: row.dataClassification as Component["data_classification"],
+    homepage_url: row.homepageUrl,
+  };
+}
+
+function pgVersionToComponentVersion(row: typeof componentVersionTable.$inferSelect): ComponentVersion {
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    component_id: row.componentId,
+    version: row.version,
+    manifest: row.manifest,
+    manifest_sha256: row.manifestSha256,
+    blob_digest: row.blobDigest,
+    blob_size_bytes: row.blobSizeBytes,
+    blob_media_type: row.blobMediaType,
+    config_schema: row.configSchema,
+    requires: row.requires,
+    changelog: row.changelog,
+    yanked: row.yanked,
+    published_at: row.publishedAt ? row.publishedAt.toISOString().slice(0, 19) : null,
+    published_by: row.publishedBy,
+  };
+}
+
+function pgSourceToWire(row: typeof discoverySourceTable.$inferSelect): DiscoverySource {
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    kind: row.kind,
+    name: row.name,
+    endpoint: row.endpoint,
+    auth_ref: row.authRef,
+    enabled: row.enabled,
+    last_synced_at: row.lastSyncedAt ? row.lastSyncedAt.toISOString().slice(0, 19) : null,
+  };
+}
+
+function pgCandidateToWire(row: typeof discoveryCandidateTable.$inferSelect): DiscoveryCandidate {
+  return {
+    id: row.id,
+    tenant_id: row.tenantId,
+    source_id: row.sourceId,
+    external_ref: row.externalRef,
+    proposed_kind: row.proposedKind,
+    name: row.name,
+    description: row.description,
+    raw_manifest: row.rawManifest,
+    status: row.status,
+    promoted_component_id: row.promotedComponentId,
+    first_seen_at: row.firstSeenAt.toISOString().slice(0, 19),
+    reviewed_by: row.reviewedBy,
+    reviewed_at: row.reviewedAt ? row.reviewedAt.toISOString().slice(0, 19) : null,
+  };
+}
+
+/** Real-mode derived signals — same "union of job_functions across pilot
+ *  package versions that pin this component" logic as fixture mode, over
+ *  real Postgres work_package_version rows instead of @arm/catalog's
+ *  static fixtures (which real-mode catalog-router.ts mutations don't
+ *  touch). */
+async function derivedJobFunctionsForComponentPg(tenantId: string, componentId: string): Promise<string[]> {
+  const db = getDb();
+  const versions = await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId));
+  const set = new Set<string>();
+  for (const v of versions) {
+    if (v.components.some((c) => c.componentId === componentId)) {
+      for (const jf of v.jobFunctions) set.add(jf);
+    }
+  }
+  return [...set].sort();
+}
+
+async function installCountForComponentPg(tenantId: string, componentId: string): Promise<number> {
+  const db = getDb();
+  const versions = await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId));
+  return versions.filter((v) => v.components.some((c) => c.componentId === componentId)).length;
+}
+
+async function toSearchableComponentPg(tenantId: string, c: Component): Promise<SearchableComponentRow> {
+  return {
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    kind: c.kind,
+    jobFunctions: await derivedJobFunctionsForComponentPg(tenantId, c.id),
+    dataClassification: c.data_classification,
+    sourceKind: c.source_kind,
+    reviewStatus: c.review_status,
+    installCount: await installCountForComponentPg(tenantId, c.id),
+  };
+}
+
 // ── Derived (real, non-fabricated) signals over the fixture data ───────────
 
 /** A component's job functions, derived as the UNION of job_functions across
@@ -302,27 +490,73 @@ export const libraryRouter = t.router({
       }),
     )
     .query(async (opts) => {
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const [compRows, versionRows] = await Promise.all([
+          db.select().from(componentTable).where(eq(componentTable.tenantId, tenantId)),
+          db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)),
+        ]);
+        const components = compRows.map(pgComponentToWire);
+        const componentRows = await Promise.all(components.map((c) => toSearchableComponentPg(tenantId, c)));
+        const packageRows: SearchableWorkPackageRow[] = versionRows.map((v) => ({
+          id: v.id, roleKey: v.id, name: v.id, description: "", mode: "copilot", jobFunctions: v.jobFunctions, installCount: 0,
+        }));
+        const result = searchInMemory(componentRows, packageRows, opts.input);
+        const facets = computeFacets(componentRows, packageRows);
+        return { tenantId, items: result.items, facets, nextCursor: result.nextCursor };
+      }
       const componentRows = componentStore.map(toSearchableComponent);
       const packageRows = packageVersionFixtures.map(toSearchableWorkPackage);
       const result = searchInMemory(componentRows, packageRows, opts.input);
       const facets = computeFacets(componentRows, packageRows);
-      return { tenantId: opts.ctx.tenantId!, items: result.items, facets, nextCursor: result.nextCursor };
+      return { tenantId, items: result.items, facets, nextCursor: result.nextCursor };
     }),
 
   facets: tenantProcedure.input(z.object({ q: z.string().optional() }).default({})).query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const [compRows, versionRows] = await Promise.all([
+        db.select().from(componentTable).where(eq(componentTable.tenantId, tenantId)),
+        db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)),
+      ]);
+      const components = compRows.map(pgComponentToWire);
+      const componentRows = await Promise.all(components.map((c) => toSearchableComponentPg(tenantId, c)));
+      const packageRows: SearchableWorkPackageRow[] = versionRows.map((v) => ({
+        id: v.id, roleKey: v.id, name: v.id, description: "", mode: "copilot", jobFunctions: v.jobFunctions, installCount: 0,
+      }));
+      return { tenantId, facets: computeFacets(componentRows, packageRows) };
+    }
     const componentRows = componentStore.map(toSearchableComponent);
     const packageRows = packageVersionFixtures.map(toSearchableWorkPackage);
-    return { tenantId: opts.ctx.tenantId!, facets: computeFacets(componentRows, packageRows) };
+    return { tenantId, facets: computeFacets(componentRows, packageRows) };
   }),
 
   getComponent: tenantProcedure.input(z.object({ slug: z.string() })).query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const compRows = await db.select().from(componentTable).where(and(eq(componentTable.slug, opts.input.slug), eq(componentTable.tenantId, tenantId)));
+      const compRow = compRows[0];
+      if (!compRow) throw new TRPCError({ code: "NOT_FOUND", message: `Component "${opts.input.slug}" not found` });
+      const versionRows = await db.select().from(componentVersionTable).where(eq(componentVersionTable.componentId, compRow.id));
+      const component = pgComponentToWire(compRow);
+      return {
+        tenantId,
+        component,
+        versions: versionRows.map(pgVersionToComponentVersion).sort((a, b) => compareSemVer(b.version, a.version)),
+        jobFunctions: await derivedJobFunctionsForComponentPg(tenantId, compRow.id),
+        installCount: await installCountForComponentPg(tenantId, compRow.id),
+      };
+    }
     const component = componentStore.find((c) => c.slug === opts.input.slug);
     if (!component) throw new TRPCError({ code: "NOT_FOUND", message: `Component "${opts.input.slug}" not found` });
     const versions = componentVersionStore
       .filter((v) => v.component_id === component.id)
       .sort((a, b) => compareSemVer(b.version, a.version));
     return {
-      tenantId: opts.ctx.tenantId!,
+      tenantId,
       component,
       versions,
       jobFunctions: derivedJobFunctionsForComponent(component.id),
@@ -331,6 +565,14 @@ export const libraryRouter = t.router({
   }),
 
   listVersions: tenantProcedure.input(z.object({ componentId: z.string().uuid() })).query(async (opts) => {
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const versionRows = await db.select().from(componentVersionTable).where(eq(componentVersionTable.componentId, opts.input.componentId));
+      return {
+        tenantId: opts.ctx.tenantId!,
+        versions: versionRows.map(pgVersionToComponentVersion).sort((a, b) => compareSemVer(b.version, a.version)),
+      };
+    }
     const versions = componentVersionStore
       .filter((v) => v.component_id === opts.input.componentId)
       .sort((a, b) => compareSemVer(b.version, a.version))
@@ -363,8 +605,11 @@ export const libraryRouter = t.router({
           residency: opts.input.residency,
           storageBackend: "fs",
         },
-        { repo: componentRepo, backends: inMemoryBackends },
+        { repo: isFixtureMode() ? componentRepo : postgresComponentRepo, backends: isFixtureMode() ? inMemoryBackends : realStorageBackends },
       );
+      // Audit trail is in-memory in both modes (no dedicated Postgres table
+      // exists for it yet) — a lightweight observability record, not a
+      // system of record.
       const audit = recordAudit(
         opts.ctx.claims!.sub,
         "publish_version",
@@ -377,24 +622,92 @@ export const libraryRouter = t.router({
 
   // ── Discovery ────────────────────────────────────────────────────────
 
-  listSources: tenantProcedure.query(async (opts) => ({
-    tenantId: opts.ctx.tenantId!,
-    sources: discoverySourceStore,
-  })),
+  listSources: tenantProcedure.query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    if (!isFixtureMode()) {
+      const db = getDb();
+      const rows = await db.select().from(discoverySourceTable).where(eq(discoverySourceTable.tenantId, tenantId));
+      return { tenantId, sources: rows.map(pgSourceToWire) };
+    }
+    return { tenantId, sources: discoverySourceStore };
+  }),
 
   listCandidates: tenantProcedure
     .input(z.object({ status: discoveryCandidateStatusSchema.optional() }).default({}))
-    .query(async (opts) => ({
-      tenantId: opts.ctx.tenantId!,
-      candidates: opts.input.status
-        ? discoveryCandidateStore.filter((c) => c.status === opts.input.status)
-        : discoveryCandidateStore,
-    })),
+    .query(async (opts) => {
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const conditions = opts.input.status
+          ? and(eq(discoveryCandidateTable.tenantId, tenantId), eq(discoveryCandidateTable.status, opts.input.status))
+          : eq(discoveryCandidateTable.tenantId, tenantId);
+        const rows = await db.select().from(discoveryCandidateTable).where(conditions);
+        return { tenantId, candidates: rows.map(pgCandidateToWire) };
+      }
+      return {
+        tenantId,
+        candidates: opts.input.status
+          ? discoveryCandidateStore.filter((c) => c.status === opts.input.status)
+          : discoveryCandidateStore,
+      };
+    }),
 
   promoteCandidate: tenantProcedure
     .input(z.object({ candidateId: z.string().uuid(), slug: z.string().min(1), dataClassification: z.enum(["public", "internal", "confidential", "restricted"]).default("internal") }))
     .mutation(async (opts) => {
       requireToolPublish();
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const candidateRows = await db.select().from(discoveryCandidateTable)
+          .where(and(eq(discoveryCandidateTable.id, opts.input.candidateId), eq(discoveryCandidateTable.tenantId, tenantId)));
+        const candidateRow = candidateRows[0];
+        if (!candidateRow) throw new TRPCError({ code: "NOT_FOUND", message: `Candidate ${opts.input.candidateId} not found` });
+        const candidate = pgCandidateToWire(candidateRow);
+
+        const promoted = buildPromotedComponent({
+          candidateId: candidate.id,
+          sourceId: candidate.source_id,
+          externalRef: candidate.external_ref,
+          proposedKind: candidate.proposed_kind,
+          name: candidate.name,
+          description: candidate.description,
+          tenantId,
+          ownerUserId: opts.ctx.claims!.sub,
+          dataClassification: opts.input.dataClassification,
+          slug: opts.input.slug,
+        });
+        const insertedComponent = (await db.insert(componentTable).values({
+          tenantId: promoted.tenant_id,
+          slug: promoted.slug,
+          kind: promoted.kind,
+          name: promoted.name,
+          description: promoted.description,
+          ownerUserId: promoted.owner_user_id,
+          reviewStatus: promoted.review_status,
+          sourceKind: promoted.source_kind,
+          sourceRef: promoted.source_ref,
+          endpoint: promoted.endpoint,
+          authStrategy: promoted.auth_strategy,
+          dataClassification: promoted.data_classification,
+          homepageUrl: promoted.homepage_url,
+        }).returning())[0]!;
+        const newComponent = pgComponentToWire(insertedComponent);
+
+        const updatedCandidate = (await db.update(discoveryCandidateTable)
+          .set({ status: "promoted", promotedComponentId: newComponent.id, reviewedBy: opts.ctx.claims!.sub, reviewedAt: new Date() })
+          .where(eq(discoveryCandidateTable.id, candidate.id))
+          .returning())[0]!;
+
+        const audit = recordAudit(
+          opts.ctx.claims!.sub,
+          "promote_candidate",
+          "discovery_candidate",
+          candidate.id,
+          `Promoted to draft component "${newComponent.slug}" (${newComponent.id}) — review_status=draft, source_kind=imported`,
+        );
+        return { tenantId, component: newComponent, candidate: pgCandidateToWire(updatedCandidate), audit };
+      }
       const candidate = discoveryCandidateStore.find((c) => c.id === opts.input.candidateId);
       if (!candidate) throw new TRPCError({ code: "NOT_FOUND", message: `Candidate ${opts.input.candidateId} not found` });
 
@@ -405,7 +718,7 @@ export const libraryRouter = t.router({
         proposedKind: candidate.proposed_kind,
         name: candidate.name,
         description: candidate.description,
-        tenantId: opts.ctx.tenantId!,
+        tenantId,
         ownerUserId: opts.ctx.claims!.sub,
         dataClassification: opts.input.dataClassification,
         slug: opts.input.slug,
@@ -429,13 +742,32 @@ export const libraryRouter = t.router({
         candidate.id,
         `Promoted to draft component "${newComponent.slug}" (${newComponent.id}) — review_status=draft, source_kind=imported`,
       );
-      return { tenantId: opts.ctx.tenantId!, component: newComponent, candidate: discoveryCandidateStore[idx], audit };
+      return { tenantId, component: newComponent, candidate: discoveryCandidateStore[idx], audit };
     }),
 
   rejectCandidate: tenantProcedure
     .input(z.object({ candidateId: z.string().uuid(), reason: z.string().default("") }))
     .mutation(async (opts) => {
       requireToolPublish();
+      const tenantId = opts.ctx.tenantId!;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const existing = await db.select().from(discoveryCandidateTable)
+          .where(and(eq(discoveryCandidateTable.id, opts.input.candidateId), eq(discoveryCandidateTable.tenantId, tenantId)));
+        if (!existing[0]) throw new TRPCError({ code: "NOT_FOUND", message: `Candidate ${opts.input.candidateId} not found` });
+        const updated = (await db.update(discoveryCandidateTable)
+          .set({ status: "rejected", reviewedBy: opts.ctx.claims!.sub, reviewedAt: new Date() })
+          .where(eq(discoveryCandidateTable.id, opts.input.candidateId))
+          .returning())[0]!;
+        const audit = recordAudit(
+          opts.ctx.claims!.sub,
+          "reject_candidate",
+          "discovery_candidate",
+          updated.id,
+          opts.input.reason || "Rejected without a stated reason",
+        );
+        return { tenantId, candidate: pgCandidateToWire(updated), audit };
+      }
       const idx = discoveryCandidateStore.findIndex((c) => c.id === opts.input.candidateId);
       if (idx === -1) throw new TRPCError({ code: "NOT_FOUND", message: `Candidate ${opts.input.candidateId} not found` });
       const current = discoveryCandidateStore[idx]!;
@@ -452,7 +784,7 @@ export const libraryRouter = t.router({
         current.id,
         opts.input.reason || "Rejected without a stated reason",
       );
-      return { tenantId: opts.ctx.tenantId!, candidate: discoveryCandidateStore[idx], audit };
+      return { tenantId, candidate: discoveryCandidateStore[idx], audit };
     }),
 
   // ── Job functions ────────────────────────────────────────────────────
