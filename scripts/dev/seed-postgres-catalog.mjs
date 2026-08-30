@@ -26,6 +26,7 @@ const PACKAGE_ROWS = [
   { id: "30000000-0000-4000-8000-000000000004", roleKey: "office_worker_general", name: "Office Worker (General)", family: "General Office", mode: "copilot", description: "The volume default: chat, docs, SharePoint, email triage, meeting notes → actions." },
   { id: "30000000-0000-4000-8000-000000000005", roleKey: "exec_assistant", name: "Executive Assistant", family: "Executive", mode: "copilot", description: "KPI briefings, exec digests, approvals-inbox summaries — aggregates-only guardrail enforced." },
   { id: "30000000-0000-4000-8000-000000000006", roleKey: "material_planner", name: "Material Planner", family: "Supply Chain", mode: "automated", description: "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs." },
+  { id: "30000000-0000-4000-8000-000000000007", roleKey: "senior_manager", name: "Senior Manager", family: "Leadership", mode: "copilot", description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals — the decision-maker persona, not a hands-on tool user." },
 ];
 
 const ASSIGNMENT_ROWS = [

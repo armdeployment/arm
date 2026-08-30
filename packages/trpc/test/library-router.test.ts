@@ -203,6 +203,29 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
     delete process.env.ARM_FIXTURE_MODE;
   });
 
+  it("work-package search results carry the real role_key/name, never the version UUID", async () => {
+    // Regression: real mode used to build package rows from
+    // work_package_version alone, falling back to the version's own UUID for
+    // roleKey/name — so the Library's Components tab rendered raw
+    // "40000000-0000-…" strings as titles. searchableWorkPackagesPg joins
+    // work_package for the real values.
+    process.env.ARM_FIXTURE_MODE = "0";
+    // Query rather than listing everything: components are spread before
+    // work packages in the result set, so the ~7 packages fall past the
+    // default page size on an empty query.
+    const r = await caller(fixtureTenantClaims).library.search({ q: "manager" });
+    const packages = r.items.filter((i) => i.type === "work_package");
+    expect(packages.length).toBeGreaterThan(0);
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const p of packages) {
+      expect(p.name, `package ${p.id} rendered a UUID as its name`).not.toMatch(UUID_RE);
+      expect(p.slug, `package ${p.id} rendered a UUID as its slug`).not.toMatch(UUID_RE);
+      expect(p.name.length).toBeGreaterThan(0);
+    }
+    // The senior_manager package seeded by scripts/dev/seed-postgres-catalog.mjs
+    expect(packages.some((p) => p.slug === "senior_manager")).toBe(true);
+  });
+
   it("search reads real component + component_version rows", async () => {
     process.env.ARM_FIXTURE_MODE = "0";
     const r = await caller(fixtureTenantClaims).library.search({ q: "jira" });
@@ -261,10 +284,18 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
   it("publishVersion writes a real component_version row via postgresComponentRepo + FsStorageBackend", async () => {
     process.env.ARM_FIXTURE_MODE = "0";
     const jira = await caller(fixtureTenantClaims).library.getComponent({ slug: "jira" });
-    // component_version rows are immutable, and this runs against a persistent
-    // dev DB across test runs — a fixed literal collides on the second run.
-    // Derive from the clock so every run picks an unused version.
-    const nextVersion = `9.${Math.floor(Date.now() / 1000) % 100000}.0`;
+    // component_version rows are immutable AND must be strictly greater than
+    // the latest published version, against a dev DB that persists across
+    // runs. Deriving a version from the clock is not enough — any modulus
+    // wraps eventually and yields a LOWER version than a previous run, which
+    // publishComponentVersion correctly rejects. Read the current maximum and
+    // bump it instead: self-healing whatever state the DB is already in.
+    const before = await caller(fixtureTenantClaims).library.listVersions({ componentId: jira.component.id });
+    const highestMajor = before.versions.reduce(
+      (max, v) => Math.max(max, Number.parseInt(v.version.split(".")[0] ?? "0", 10) || 0),
+      0,
+    );
+    const nextVersion = `${highestMajor + 1}.0.0`;
     const result = await caller(realUserClaims).library.publishVersion({
       componentId: jira.component.id,
       version: nextVersion,

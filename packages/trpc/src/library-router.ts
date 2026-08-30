@@ -53,7 +53,7 @@ import {
 import { packageVersionFixtures } from "@arm/catalog";
 import { getProfile } from "@arm/profiles";
 import { getDb } from "@arm/db";
-import { componentTable, componentVersionTable, componentBlobTable, discoverySourceTable, discoveryCandidateTable, workPackageVersionTable } from "@arm/db/schema";
+import { componentTable, componentVersionTable, componentBlobTable, discoverySourceTable, discoveryCandidateTable, workPackageTable, workPackageVersionTable } from "@arm/db/schema";
 import {
   searchInMemory,
   computeFacets,
@@ -456,6 +456,42 @@ function toSearchableComponent(c: Component): SearchableComponentRow {
   };
 }
 
+/**
+ * Real-mode searchable work-package rows. Unlike the fixture-mode view
+ * below, `work_package` IS reachable here (Wave 3 wired this router to
+ * Postgres), so a version resolves to its package's real role_key / name /
+ * mode / description instead of falling back to the version UUID. Without
+ * this join the Library's Components tab rendered raw UUIDs as titles —
+ * every package version showing as "40000000-0000-…" with no name.
+ *
+ * A version whose package row is missing is skipped rather than rendered
+ * with a placeholder name: a dangling version is a data-integrity problem
+ * to surface elsewhere, not something to paper over in search results.
+ */
+async function searchableWorkPackagesPg(
+  db: ReturnType<typeof getDb>,
+  tenantId: string,
+): Promise<SearchableWorkPackageRow[]> {
+  const [packageRows, versionRows] = await Promise.all([
+    db.select().from(workPackageTable).where(eq(workPackageTable.tenantId, tenantId)),
+    db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)),
+  ]);
+  const packageById = new Map(packageRows.map((p) => [p.id, p]));
+  return versionRows.flatMap((v) => {
+    const pkg = packageById.get(v.packageId);
+    if (!pkg) return [];
+    return [{
+      id: v.id,
+      roleKey: pkg.roleKey,
+      name: pkg.name,
+      description: pkg.description,
+      mode: pkg.mode,
+      jobFunctions: v.jobFunctions,
+      installCount: 0,
+    }];
+  });
+}
+
 function toSearchableWorkPackage(v: (typeof packageVersionFixtures)[number]): SearchableWorkPackageRow {
   // NOTE: work_package (name/mode/role_key) lives in catalog-router.ts's
   // private fixtures, not exported from @arm/catalog — this router derives
@@ -493,15 +529,12 @@ export const libraryRouter = t.router({
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
-        const [compRows, versionRows] = await Promise.all([
+        const [compRows, packageRows] = await Promise.all([
           db.select().from(componentTable).where(eq(componentTable.tenantId, tenantId)),
-          db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)),
+          searchableWorkPackagesPg(db, tenantId),
         ]);
         const components = compRows.map(pgComponentToWire);
         const componentRows = await Promise.all(components.map((c) => toSearchableComponentPg(tenantId, c)));
-        const packageRows: SearchableWorkPackageRow[] = versionRows.map((v) => ({
-          id: v.id, roleKey: v.id, name: v.id, description: "", mode: "copilot", jobFunctions: v.jobFunctions, installCount: 0,
-        }));
         const result = searchInMemory(componentRows, packageRows, opts.input);
         const facets = computeFacets(componentRows, packageRows);
         return { tenantId, items: result.items, facets, nextCursor: result.nextCursor };
@@ -517,15 +550,12 @@ export const libraryRouter = t.router({
     const tenantId = opts.ctx.tenantId!;
     if (!isFixtureMode()) {
       const db = getDb();
-      const [compRows, versionRows] = await Promise.all([
+      const [compRows, packageRows] = await Promise.all([
         db.select().from(componentTable).where(eq(componentTable.tenantId, tenantId)),
-        db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)),
+        searchableWorkPackagesPg(db, tenantId),
       ]);
       const components = compRows.map(pgComponentToWire);
       const componentRows = await Promise.all(components.map((c) => toSearchableComponentPg(tenantId, c)));
-      const packageRows: SearchableWorkPackageRow[] = versionRows.map((v) => ({
-        id: v.id, roleKey: v.id, name: v.id, description: "", mode: "copilot", jobFunctions: v.jobFunctions, installCount: 0,
-      }));
       return { tenantId, facets: computeFacets(componentRows, packageRows) };
     }
     const componentRows = componentStore.map(toSearchableComponent);
