@@ -57,7 +57,7 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
 
   it("lists 6 pilot packages with the D9 role keys", async () => {
     const r = await caller(authedClaims).catalog.listPackages();
-    expect(r.packages.length).toBe(6);
+    expect(r.packages.length).toBe(7);
     expect(r.packages.map((p) => p.roleKey)).toEqual(expect.arrayContaining([
       "quality_engineer", "plc_programmer", "maintenance_technician",
       "office_worker_general", "exec_assistant", "material_planner",
@@ -217,7 +217,7 @@ describe.skipIf(!process.env.DATABASE_URL)("catalog router — live Postgres rea
   it("listPackages reads real work_package + work_package_version rows", async () => {
     process.env.ARM_FIXTURE_MODE = "0";
     const r = await caller(realClaims).catalog.listPackages();
-    expect(r.packages.length).toBe(6);
+    expect(r.packages.length).toBe(7);
     const quality = r.packages.find((p) => p.roleKey === "quality_engineer")!;
     expect(quality.componentCount).toBe(10); // seeded from @arm/catalog's real components
     expect(quality.monthlyUsdCap).toBe(950);

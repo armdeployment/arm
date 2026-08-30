@@ -215,6 +215,19 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     // A6: unattended batch role — auto-approved, reviewed after the fact via /adoption.
     approval_required: false,
   },
+  {
+    id: "30000000-0000-4000-8000-000000000007",
+    tenant_id: FIXTURE_TENANT_ID,
+    role_key: "senior_manager",
+    name: "Senior Manager",
+    family: "Leadership",
+    mode: "copilot",
+    description:
+      "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals — the decision-maker persona, not a hands-on tool user.",
+    // A6/GTM beachhead (2026-08-25): low-friction self-serve for the persona
+    // most likely to be the buyer — no approver in the loop.
+    approval_required: false,
+  },
 ]);
 
 /** v1-shaped fixtures re-parsed through the v2 schema — permissions/

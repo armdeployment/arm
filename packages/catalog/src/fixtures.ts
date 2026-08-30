@@ -20,9 +20,12 @@
  * canonical manifest v2 JSON.
  *
  * ── Stable ids ───────────────────────────────────────────────────────────
- * The 6 pilot package/version ids below (`30000000…`/`40000000…`) are
- * consumed directly by `packages/trpc/src/catalog-router.ts` (frozen to this
- * module — not owned by `library`), which hardcodes them. Do not renumber.
+ * The 7 pilot package/version ids below (`30000000…`/`40000000…`) are
+ * consumed directly by `packages/trpc/src/catalog-router.ts` and
+ * `packages/trpc/src/onboarding-router.ts` (frozen to this module — not
+ * owned by `library`), which each hardcode a matching `WorkPackage` entry.
+ * Do not renumber; adding a new pilot package means adding its id/role_key
+ * to all three files in lockstep.
  */
 
 import { fixtureResolvableVersions } from "@arm/artifactory";
@@ -205,6 +208,34 @@ const PACKAGE_VERSION_SEEDS: PackageVersionSeedSpec[] = [
       modelRouting: { strategy: "small_model_batch", batch_window: "nightly" },
       budgetTemplate: { monthly_usd_cap: 600, model_tier: "cheap", high_volume: true },
       starterPrompts: ["Triage today's MRP exceptions", "Which ECNs touch part 4477-B?"],
+      minAgentVersion: "1.4.0",
+    },
+  },
+  {
+    id: "40000000-0000-4000-8000-000000000007",
+    packageId: "30000000-0000-4000-8000-000000000007",
+    seed: {
+      roleKey: "senior_manager",
+      name: "Senior Manager",
+      family: "Leadership",
+      mode: "copilot",
+      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals — the decision-maker persona, not a hands-on tool user.",
+      approvalRequired: false,
+      components: [
+        { component: "jira", componentVersion: "1.0.0", kind: "mcp", scopes: ["read:issue", "write:comment"] },
+        { component: "historian-pi", componentVersion: "1.0.0", kind: "connector", scopes: ["read:tags"] },
+        { component: "kpi-briefing-generator", componentVersion: "1.0.0", kind: "skill", scopes: [] },
+        { component: "exec-digest", componentVersion: "1.0.0", kind: "skill", scopes: [] },
+        { component: "approval-summaries", componentVersion: "1.0.0", kind: "skill", scopes: [] },
+        { component: "kpi-analyst", componentVersion: "1.0.0", kind: "subagent", scopes: [] },
+        { component: "tpl_kpi_brief", componentVersion: "1.0.0", kind: "template", scopes: [] },
+        { component: "tpl_exec_digest", componentVersion: "1.0.0", kind: "template", scopes: [] },
+      ],
+      jobFunctions: ["senior_manager"],
+      permissions: ["tool:jira:invoke"],
+      modelRouting: { strategy: "frontier_for_briefings", aggregates_only: true },
+      budgetTemplate: { monthly_usd_cap: 300, model_tier: "mixed", aggregates_only: true },
+      starterPrompts: ["Show my team's ARM adoption funnel", "What's waiting in my approvals inbox?"],
       minAgentVersion: "1.4.0",
     },
   },

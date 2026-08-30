@@ -175,6 +175,16 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     mode: "automated",
     description: "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs.",
   },
+  {
+    id: "30000000-0000-4000-8000-000000000007",
+    tenant_id: TENANT_ID,
+    role_key: "senior_manager",
+    name: "Senior Manager",
+    family: "Leadership",
+    mode: "copilot",
+    description:
+      "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals — the decision-maker persona, not a hands-on tool user.",
+  },
 ]);
 
 const ASSIGNMENT_FIXTURES: PackageAssignment[] = packageAssignmentSchema.array().parse([

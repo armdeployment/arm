@@ -4,7 +4,7 @@
  * D10 cutover: the Tool Registry landscape fixtures moved to
  * `@arm/artifactory` (see that package's own `test/fixtures.test.ts` for the
  * 40-callable + 38-installable component assertions). This file now covers
- * `@arm/catalog`'s OWN fixtures — the 6 pilot `work_package_version` rows
+ * `@arm/catalog`'s OWN fixtures — the 7 pilot `work_package_version` rows
  * built from slug-based seeds resolved through the Component Registry.
  */
 
@@ -13,8 +13,8 @@ import { packageVersionFixtures, manifestSha256, canonicalManifest } from "../sr
 import { componentFixturesBySlug } from "@arm/artifactory";
 
 describe("D10 pilot work package fixtures", () => {
-  it("ships exactly 6 pilot package versions with unique ids", () => {
-    expect(packageVersionFixtures).toHaveLength(6);
+  it("ships exactly 7 pilot package versions with unique ids", () => {
+    expect(packageVersionFixtures).toHaveLength(7);
     const ids = packageVersionFixtures.map((v) => v.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -76,6 +76,7 @@ describe("D10 pilot work package fixtures", () => {
       "40000000-0000-4000-8000-000000000004": "30000000-0000-4000-8000-000000000004",
       "40000000-0000-4000-8000-000000000005": "30000000-0000-4000-8000-000000000005",
       "40000000-0000-4000-8000-000000000006": "30000000-0000-4000-8000-000000000006",
+      "40000000-0000-4000-8000-000000000007": "30000000-0000-4000-8000-000000000007",
     };
     for (const v of packageVersionFixtures) {
       expect(v.package_id).toBe(byId[v.id]);
