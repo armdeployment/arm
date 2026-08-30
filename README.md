@@ -1,198 +1,135 @@
+<div align="center">
+
 # ARM — Agent Resource Management
 
-HR-style control plane for AI agents: identity, metering, routing, budgeting, policy enforcement, and resource-access control.
+**An HR-style control plane for AI agents:** identity, metering, routing,
+budgeting, policy enforcement, and resource access — for every agent in a
+company, not just the ones engineers run.
 
-Full spec: [`docs/arm-spec.md`](docs/arm-spec.md) (v0.5). Entry point for agents and humans: [`AGENTS.md`](AGENTS.md).
+[![Guardrails](https://github.com/armdeployment/arm/actions/workflows/guardrails.yml/badge.svg)](https://github.com/armdeployment/arm/actions/workflows/guardrails.yml)
+[![Typecheck](https://github.com/armdeployment/arm/actions/workflows/typecheck.yml/badge.svg)](https://github.com/armdeployment/arm/actions/workflows/typecheck.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+</div>
 
 ---
 
-## Quick Start — Frontend Dashboard
+## The problem
 
-### Prerequisites
+A company buys AI agents the way it buys laptops — but has none of the
+machinery it has for laptops. Nobody can answer: *Who has an agent? What
+is it allowed to touch? What did it cost? Did it actually get used?*
 
-| Tool | Version | Check |
-|---|---|---|
-| Node.js | ≥ 22.16 | `node -v` |
-| pnpm | 11.17+ (via corepack) | `pnpm -v` |
+ARM is the missing layer. An employee gets their agent in about a minute
+through a wizard with no terminal, no config file, and no API key. Their
+manager gets a dashboard showing adoption, spend, and approvals. Security
+gets a policy engine and an audit trail. Prompt bodies never leave the
+tenant's own network.
 
-### 1. Install dependencies
+## See it work
+
+**▶ [`demo/arm-full-demo.mp4`](demo/arm-full-demo.mp4)** — the whole system
+end to end: an employee installing their agent, a manager reading adoption
+and spend, the component library, and the metered data plane. Every screen
+in it is a real capture from a live run, not a mockup.
+
+## Quick start — 60 seconds, no dependencies
+
+No database, no Docker, no API key. Every router ships with in-memory
+fixtures (`ARM_FIXTURE_MODE=1`, the default), so the whole dashboard runs
+on a laptop with nothing installed but Node.
 
 ```bash
 corepack enable pnpm
 pnpm install
+pnpm --filter @arm-app/web build && pnpm --filter @arm-app/web start
 ```
 
-### 2. Start the dashboard (development mode)
+Open **<http://localhost:3100>**. Data flows through the real pipeline —
+`Browser → tRPC → tenant middleware → data source → UI` — the only thing
+swapped is what sits at the end of it.
+
+| Prerequisite | Version | Check |
+|---|---|---|
+| Node.js | ≥ 22.16 | `node -v` |
+| pnpm | 11.17 (via corepack) | `pnpm -v` |
+
+### Try the employee side too
 
 ```bash
-cd apps/control-plane/web
-pnpm build && pnpm start
+pnpm --filter @arm-app/onboarding build && pnpm --filter @arm-app/onboarding start
 ```
 
-Open **http://localhost:3100** in your browser.
-
-The dashboard runs entirely on fixture data — no database or external services required. Data flows through the real tRPC pipeline:
-
-```
-Browser → tRPC hooks → /api/trpc → tenant middleware → fixture data → UI
-```
-
-### 3. Production build
+Open **<http://localhost:3300>** → answer a few multiple-choice questions →
+get a package recommendation and a real 6-character activation code. Then
+redeem it with the installer, which opens a browser wizard rather than
+asking you to type anything:
 
 ```bash
-cd apps/control-plane/web
-pnpm build
-pnpm start
+pnpm --filter @arm-app/cli setup
 ```
 
-Same URL: **http://localhost:3100**
+## What you get
 
----
+| Surface | Port | What it is |
+|---|---|---|
+| Control-plane dashboard | 3100 | Manager view: adoption funnel, spend, approvals, library, policy, audit |
+| Employee onboarding | 3300 | Questionnaire → package recommendation → download / activation code |
+| Public site | 3200 | Marketing + docs site (statically exported) |
+| Data-plane proxy | 8787 | The metered LLM gateway agents actually call |
+| Artifact cache | 8788 | Content-addressed component blob delivery |
 
-## What You'll See
-
-Updated D10 (docs/guides/02-server-panels.md §1) — adoption leads, cost
-moved down (A1: agent adoption at scale is the primary value prop):
+### Dashboard routes
 
 | Route | Description |
 |---|---|
-| `/` | Role home — adoption + approvals lead, spend condensed to a strip |
-| `/adoption` | Activation funnel, stall breakdown, time-to-value, coverage, gaps, recent activations |
-| `/rollout` | Questionnaire designer, campaigns, download artifacts, live campaign funnel |
-| `/library` | Search + facets over packages and components (replaces the retired `/catalog`) |
+| `/` | Role home — adoption and approvals lead; spend condensed to a strip |
+| `/adoption` | Activation funnel, stall breakdown, time-to-value, coverage, gaps |
+| `/library` | Search + facets over work packages and components (the artifactory) |
 | `/assignments` | Org tree × package assignment matrix |
 | `/governance` | Package budgets, approvals inbox, cost-per-work-product |
+| `/organization` | Org tree editor — add, rename, reparent, delete |
+| `/spend` | Cost per active seat and per work product; model mix |
+| `/access` | Just-in-time access request approval queue |
 | `/agents` | Agent registry with status filters |
-| `/spend` | Cost per active seat & per work product (primary); closed-vs-self-hosted model mix (secondary) |
-| `/access` | JIT access request approval queue |
-| `/audit` | Access audit log viewer (placeholder — lands 1.1) |
+| `/audit` | Access audit log viewer |
 
----
+## Architecture
 
-## Testing
+ARM splits along a hard trust boundary, and that split is the product:
 
-```bash
-# All tests (unit + guardrails)
-pnpm test
-
-# Frontend unit tests
-pnpm --filter @arm-app/web test
-
-# End-to-end (Playwright — builds + starts server automatically)
-cd apps/control-plane/web
-pnpm e2e
+```
+┌─ CONTROL PLANE ────────────┐        ┌─ DATA PLANE (tenant VPC) ──────────┐
+│  metadata + audit ONLY     │        │  where prompts and content live    │
+│                            │        │                                    │
+│  • catalog / library       │◄──────►│  • proxy — meters, gates, routes   │
+│  • policy + budgets        │ config │  • artifact cache                  │
+│  • adoption analytics      │  only  │  • connectors                      │
+│  • approvals + audit       │        │  • meter agent                     │
+└────────────────────────────┘        └────────────────────────────────────┘
 ```
 
----
+**Prompt bodies and resource content never cross into the control plane.**
+That is Invariant 1 in [`docs/arm-spec.md`](docs/arm-spec.md) §11, and it's
+enforced by executable checks, not convention (see Guardrails below).
 
-## Employee Onboarding (questionnaire → download → first value)
+## Running against real infrastructure
 
-The employee-facing path is a web questionnaire, not a CLI role key
-(D10/D11 — `docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`,
-`docs/guides/03-client-downloader.md`):
-
-```bash
-cd apps/onboarding
-pnpm build && pnpm start   # port 3300
-```
-
-Open **http://localhost:3300** → answer a few multiple-choice questions
-(no free text — Invariant 1) → get a package recommendation → download a
-`.armsetup` file or a 6-character activation code. The employee's machine
-then runs the ONE signed generic `arm` client (never a per-user compiled
-binary — A4):
+The fixture mode above is for evaluating and developing. To run against
+real Postgres and ClickHouse:
 
 ```bash
-arm setup --token <jwt-or-6-char-code> --tenant-url <url>   # non-interactive
-arm setup --setup-file path/to/downloaded.armsetup           # double-click target
-arm setup                                                     # interactive prompt
-arm setup --role <key> --tenant-url <url>                     # advanced/CI path (unchanged D9 behaviour)
-arm doctor                                                    # re-run verification, print the failure taxonomy
-```
-
-Build the signed platform installer for the current OS:
-
-```bash
-node packaging/build-sea.mjs   # → packaging/dist/arm(.exe), unsigned-dev unless signing env vars are set
-```
-
-See `packaging/README.md` for the full release/signing runbook and
-`docs/agent-onboarding-guide.md` for the end-to-end employee guide.
-
-## Public Site + Live Demo
-
-`apps/public` is the marketing site (`docs/guides/04-public-site-demo.md`) — the
-ninety-second story, the product deep-dive, architecture and security pages, and a
-`/demo` landing page that links out to the dashboard above. Statically exported, no
-external hosts besides Google Fonts, no fabricated data.
-
-```bash
-cd apps/public
-pnpm build             # next build (output: "export" — writes ./out)
-pnpm start             # serve ./out on http://localhost:3200
-
-# or, for local editing:
-pnpm dev                # next dev --port 3200
-```
-
-Routes: `/`, `/product`, `/architecture`, `/security`, `/demo`, `/faq`.
-
-```bash
-pnpm --filter @arm-app/public test      # vitest — content-driven component tests
-pnpm --filter @arm-app/public e2e       # playwright — nav, a11y (axe), overflow, links
-pnpm --filter @arm-app/public figures   # regenerate docs/figures/*.svg from src/content
-```
-
----
-
-## Full Monorepo Commands
-
-```bash
-pnpm install          # install all workspace deps
-pnpm build && pnpm start              # start dev server (dashboard)
-pnpm build            # build all packages
-pnpm typecheck        # tsc --noEmit across all workspaces
-pnpm test             # run all test suites
-pnpm guardrails       # executable invariant checks (6 guards)
-pnpm format:check     # prettier check
-```
-
----
-
-## Local Dev Database (Wave 3 — real Postgres/ClickHouse)
-
-Every router in this repo defaults to `ARM_FIXTURE_MODE=1` (in-memory
-fixtures, no DB required) — that's what every command above uses. Currently
-wired to real databases: `adoption-router.ts` (ClickHouse, all six
-procedures), `catalog-router.ts` (Postgres, all six procedures), and
-`library-router.ts` (Postgres, 9 of 12 procedures — the Component
-Registry + Discovery surfaces; `listJobFunctions`/`recommendForJobFunction`/
-`gaps` stay on `@arm/profiles`' preset data in both modes, per D6).
-`docs/solutions/2026-08-21-d10-adoption-first-restructure.md` §8's Wave 3;
-see `docs/solutions/2026-08-24-wave3-adoption-router-db-wiring.md`,
-`docs/solutions/2026-08-25-wave3-catalog-router-postgres-wiring.md`, and
-`docs/solutions/2026-08-25-wave3-library-router-postgres-wiring.md` for
-what shipped and what didn't.
-
-```bash
-# Start local Postgres + ClickHouse (dev-only — not the enterprise
-# simulation or the data-plane proxy stack, see the compose file's header)
+# 1. Start local Postgres + ClickHouse
 docker compose -f infra/compose/docker-compose.dev-db.yml up -d
 
-# Apply migrations (--force: non-interactive, fine against a fresh dev DB)
+# 2. Apply schema + migrations
 DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
   pnpm --filter @arm/db exec drizzle-kit push --force
 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   node scripts/dev/apply-clickhouse-migrations.mjs
 
-# Seed both DBs with data derived from (or copied from) the same fixtures
-# each router's fixture mode already uses, so fixture mode and real mode
-# tell the same story. Tenant + user: apps/control-plane/web's and
-# apps/onboarding's dev routes inject d9d9d9d9-0000-4000-8000-000000000001
-# (tenant) / 60000000-0000-4000-8000-000000000001 (user) — both real UUIDs,
-# not human-readable placeholders like the old "tn_demo"/"dev-user" (every
-# Postgres tenant_id/owner_user_id/etc. column is uuid-typed with FK
-# constraints — those could never match a real row).
+# 3. Seed — from the same fixtures the in-memory path uses, so both
+#    modes tell the same story
 DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
   node scripts/dev/seed-postgres-catalog.mjs
 DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
@@ -200,62 +137,115 @@ DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
 CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   node scripts/dev/seed-clickhouse-adoption.mjs
 
-# Run the dashboard against real data
+# 4. Run against it
 ARM_FIXTURE_MODE=0 \
   DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm \
   CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123 \
   pnpm --filter @arm-app/web dev
 ```
 
-The live-DB integration tests in `packages/trpc/test/adoption-router.test.ts`
-and `packages/trpc/test/catalog-router.test.ts`
-(`describe.skipIf(!process.env.CLICKHOUSE_URL / DATABASE_URL)`) run
-automatically once the corresponding env var is set — that's the regression
-check for this wiring.
+Currently wired to real databases: `adoption-router` (ClickHouse, all six
+procedures), `catalog-router` (Postgres, all six), and `library-router`
+(Postgres, 9 of 12 — the rest are profile-preset data by design). Every
+other router still serves fixtures in both modes; that's a known, tracked
+state, not a silent gap.
 
----
+See [`.env.example`](.env.example) for every environment variable, and
+[`infra/`](infra/) for the Helm chart, Dockerfiles, and Terraform skeleton.
 
+> **Before deploying anywhere real,** read [SECURITY.md](SECURITY.md). ARM
+> is pre-1.0 and has documented gaps — notably a development fallback for
+> the setup-token signing secret and no live OIDC verification yet.
 
-## Sandbox Demo Environment
+## Sandbox — watch agents actually spend money
 
-Run a complete ARM demo locally with simulated agents and real metering:
-
-```bash
-# One-time: pull a small local model (no GPU needed)
-ollama pull tinyllama
-
-# Start everything (proxy, gateway, dashboard, ollama)
-bash scripts/sandbox/start.sh
-
-# In another terminal: run the agent simulator
-pnpm tsx scripts/sandbox/agent-simulator.ts
-
-# Open http://localhost:3100 to see live metering
-```
-
-The simulator spawns agents from the manufacturing org tree making realistic
-requests. You'll see live metering, DLP gate enforcement, priority-based quota,
-and security flags on the dashboard.
+Runs simulated employees making real LLM calls through the real proxy, with
+real metering, DLP gates, and priority-based quota:
 
 ```bash
-# Options
-NUM_AGENTS=20 INTERVAL_MS=1000 DURATION_SEC=600 pnpm tsx scripts/sandbox/agent-simulator.ts
-```
-
-### Docker (alternative)
-
-```bash
-docker compose -f infra/compose/docker-compose.sandbox.yml up
-docker exec <ollama-container> ollama pull tinyllama
+ollama pull tinyllama                     # small local model, no GPU needed
+bash scripts/sandbox/start.sh             # proxy, gateway, dashboard, ollama
 pnpm tsx scripts/sandbox/agent-simulator.ts
 ```
+
+Then watch <http://localhost:3100> populate.
+
+## Testing and guardrails
+
+```bash
+pnpm test        # unit + integration across every workspace
+pnpm typecheck   # tsc --noEmit everywhere
+pnpm guardrails  # 19 executable invariant checks
+pnpm lint
+pnpm format:check
+```
+
+The guardrails are the unusual part. Every cross-cutting invariant in the
+spec maps to a check that fails the build — content egress, tenant
+isolation, artifact integrity, questionnaire determinism, least privilege.
+Each security-critical one also carries a **mutation proof**: a test that
+deliberately breaks the protected behaviour and asserts the check goes red,
+because a guard that cannot fail is worse than no guard.
+
+Live-database integration tests activate automatically when `DATABASE_URL`
+/ `CLICKHOUSE_URL` are set, and skip cleanly when they aren't.
+
+## Repository layout
+
+```
+apps/
+  control-plane/web        Manager dashboard (Next.js)
+  control-plane/api        Control-plane API surface
+  control-plane/workers    Background jobs
+  data-plane/proxy         Metered LLM gateway — the hot path
+  data-plane/artifact-cache, connectors, meter-agent, open-gateway
+  onboarding               Employee questionnaire → download
+  public                   Marketing + docs site
+  cli                      The `arm` client (setup, doctor, refine)
+  simulation               Enterprise simulation harness
+  arm-video                Remotion sources for the demo videos
+packages/
+  proto                    Shared wire contracts (zod) — the seam
+  client-core              Client engine: manifests, install, GUI wizard
+  trpc                     Control-plane routers
+  profiles                 Industry presets (pure data)
+  questionnaire            Deterministic recommendation engine
+  artifactory, catalog, discovery, policy, auth, billing,
+  classifier, clickhouse, db, config, agent-sdk
+infra/                     Compose, Dockerfiles, Helm, Terraform
+docs/                      Spec, guides, and dated design records
+scripts/                   Guardrails, seeds, sandbox tooling
+```
+
+## Documentation
+
+| Doc | What's in it |
+|---|---|
+| [`docs/arm-spec.md`](docs/arm-spec.md) | The specification. §11 is the invariant list — start there. |
+| [`docs/guides/`](docs/guides/) | Implementation guides per subsystem |
+| [`docs/solutions/`](docs/solutions/) | Dated design records — *why* a subsystem looks the way it does, including what was deliberately left undone |
+| [`AGENTS.md`](AGENTS.md) | Working agreement for both human and AI contributors |
+| [`packaging/README.md`](packaging/README.md) | Release + code-signing runbook |
 
 ## Troubleshooting
 
-**`pnpm install` fails with ignored builds** — run `pnpm install` again after the first attempt; the `allowBuilds` config in `pnpm-workspace.yaml` permits esbuild/sharp postinstall scripts.
+**`pnpm install` fails with ignored builds** — run it again; the
+`allowBuilds` config in `pnpm-workspace.yaml` permits esbuild/sharp
+postinstall scripts on the second pass.
 
-**Port 3100 already in use** — kill the stale process: `lsof -ti:3100 | xargs kill -9`
+**Port already in use** — `lsof -ti:3100 | xargs kill -9`
 
-**Playwright reuses a stale server** — kill all next processes before running e2e: `pkill -f next && pnpm e2e`
+**Dashboard stuck on "Loading…"** — the tRPC route is dynamic; use
+`pnpm build && pnpm start`, not a static file open.
 
-**Browser shows "Loading…" indefinitely** — the tRPC API route (`/api/trpc`) is dynamic; ensure you're running `pnpm build && pnpm start` or `pnpm start` (not opening the HTML file directly).
+**Playwright reuses a stale server** — `pkill -f next && pnpm e2e`
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run
+`pnpm typecheck && pnpm test && pnpm guardrails` before opening a PR — CI
+runs the same.
+
+## License
+
+[Apache License 2.0](LICENSE). See [NOTICE](NOTICE).

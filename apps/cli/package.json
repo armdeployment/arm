@@ -6,7 +6,10 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "arm": "tsx src/index.ts",
+    "setup": "tsx src/index.ts setup",
+    "doctor": "tsx src/index.ts doctor"
   },
   "dependencies": {
     "@arm/proto": "workspace:*",
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "26.1.1",
+    "tsx": "4.20.6",
     "vitest": "4.1.10"
   }
 }

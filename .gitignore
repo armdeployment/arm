@@ -6,6 +6,7 @@ __pycache__/
 node_modules/
 .env
 .env.*
+!.env.example
 
 # build/CI artifacts
 .turbo/
@@ -28,5 +29,10 @@ apps/public/out/
 demo/arm-demo.mp4
 skills-lock.json
 
-# arm-video Remotion build output
+# arm-video Remotion build output + renders
 apps/arm-video/build/
+apps/arm-video/out/
+
+# local scratch — never commit
+_to_delete/
+releases/
