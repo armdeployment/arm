@@ -70,3 +70,12 @@ export type { ArmErrorCode } from "./errors.js";
 
 export { buildActivationEvent, emitActivationEvent, trackActivation } from "./activation.js";
 export type { ActivationEventInput } from "./activation.js";
+
+export { scanWorkFolder } from "./folder-scan.js";
+export type { FolderScanOptions, FolderScanResult } from "./folder-scan.js";
+
+export { scanInstalledTools } from "./plugin-scan.js";
+export type { DetectedTool, PathExistsFn } from "./plugin-scan.js";
+
+export { classifyPainPoints } from "./pain-points.js";
+export type { PainPointTag } from "./pain-points.js";

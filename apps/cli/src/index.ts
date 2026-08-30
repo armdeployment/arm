@@ -20,6 +20,19 @@
  *                                  behaviour from D9 Phase 1.6.
  *   arm doctor                     Re-run verification and print the
  *                                  failure taxonomy with fixes.
+ *   arm refine [--folder <path>] [--pain-points "<text>"]
+ *                                  Optional post-setup step (installation
+ *                                  wizard steps 2b–4, docs/solutions/
+ *                                  2026-08-25-gtm-market-tiers-and-wizard-
+ *                                  plan.md): describe pain points in free
+ *                                  text and/or point at a work folder — both
+ *                                  processed LOCALLY (A5/Invariant 1: no
+ *                                  free text or file content ever leaves
+ *                                  this machine, only derived tags print to
+ *                                  the terminal). Also scans for already-
+ *                                  installed engineering tools. No args:
+ *                                  interactive, every step skippable with
+ *                                  an empty answer.
  *   arm data-plane install         Register tenant → pull delegate key → render chart → apply.
  *   arm agent init                 Detect agent type → write config → verify metered round-trip.
  *
@@ -32,12 +45,18 @@ import {
   resolveFromSetupToken,
   renderGuideSteps,
   verifyMeteredRoundTrip,
+  scanWorkFolder,
+  scanInstalledTools,
+  classifyPainPoints,
   ARM_ERROR_CODES,
   ARM_ERROR_FIXES,
   ArmClientError,
   type SetupArgs,
   type SetupResult,
   type ArmErrorCode,
+  type FolderScanResult,
+  type DetectedTool,
+  type PainPointTag,
 } from "@arm/client-core";
 
 /** Default data-plane proxy address when --proxy-url is omitted. */
@@ -239,6 +258,161 @@ export async function runSetupCommand(
   });
 }
 
+/** Parsed `arm refine` flags — both optional, non-interactive mode when either is set. */
+export interface RefineCliArgs {
+  folderPath?: string;
+  painPoints?: string;
+}
+
+export function parseRefineArgs(argv: string[]): RefineCliArgs {
+  const values: Record<string, string> = {};
+  for (let i = 0; i < argv.length; i += 2) {
+    const flag = argv[i];
+    const value = argv[i + 1];
+    if (flag === undefined || !flag.startsWith("--") || value === undefined) break;
+    values[flag] = value;
+  }
+  return {
+    ...(values["--folder"] !== undefined ? { folderPath: values["--folder"] } : {}),
+    ...(values["--pain-points"] !== undefined ? { painPoints: values["--pain-points"] } : {}),
+  };
+}
+
+export type ScanWorkFolderFn = typeof scanWorkFolder;
+export type ScanInstalledToolsFn = typeof scanInstalledTools;
+export type ClassifyPainPointsFn = typeof classifyPainPoints;
+
+/** Injectable seams — same pattern as SetupCommandDeps, so tests never touch
+ *  a real filesystem, a real machine's installed apps, or a real TTY. */
+export interface RefineCommandDeps {
+  scanWorkFolderFn?: ScanWorkFolderFn;
+  scanInstalledToolsFn?: ScanInstalledToolsFn;
+  classifyPainPointsFn?: ClassifyPainPointsFn;
+  promptFn?: PromptFn;
+}
+
+export interface RefineResult {
+  painPointTags: PainPointTag[];
+  folderScan?: FolderScanResult;
+  installedTools: DetectedTool[];
+}
+
+/**
+ * Run the optional post-setup refinement flow. Interactive when neither
+ * `--folder` nor `--pain-points` is supplied (prompts for each, empty
+ * answer = skip); non-interactive otherwise (only runs the steps whose flag
+ * was given). The installed-tools scan always runs — it's a local presence
+ * check with no prompt needed and nothing to skip.
+ *
+ * Nothing this function does reaches the network. `painPoints`/`folderPath`
+ * are consumed locally (classifyPainPoints/scanWorkFolder) and never stored
+ * — the caller prints only the derived tags, per A5/Invariant 1.
+ *
+ * Interactive mode asks TWO sequential questions. `defaultPrompt` (used by
+ * `arm setup`, which only ever asks one) calls `rl.question()`, which
+ * attaches its 'line' listener only once awaited — fine for a single
+ * question on a real TTY (input always arrives after the prompt), but with
+ * piped/non-TTY stdin that already has both answer lines buffered (common
+ * in scripted/CI invocations), the second line can be delivered to the
+ * readline interface and silently dropped before the second `question()`
+ * call ever attaches its listener, hanging forever. So when no `promptFn`
+ * is injected, this function drives one shared readline interface's async
+ * iterator directly instead — pulling the next line on demand has no such
+ * race, whether that line was already buffered or arrives later.
+ */
+export async function runRefineCommand(
+  argv: string[],
+  deps: RefineCommandDeps = {},
+): Promise<RefineResult> {
+  const scanFolder = deps.scanWorkFolderFn ?? scanWorkFolder;
+  const scanTools = deps.scanInstalledToolsFn ?? scanInstalledTools;
+  const classify = deps.classifyPainPointsFn ?? classifyPainPoints;
+
+  const parsed = parseRefineArgs(argv);
+  const interactive = parsed.folderPath === undefined && parsed.painPoints === undefined;
+
+  let prompt = deps.promptFn;
+  let closeSharedInterface: (() => void) | undefined;
+  if (interactive && prompt === undefined) {
+    const { createInterface } = await import("node:readline/promises");
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const lineIterator = rl[Symbol.asyncIterator]();
+    prompt = async (question: string) => {
+      process.stdout.write(question);
+      const next = await lineIterator.next();
+      return next.done ? "" : next.value.trim();
+    };
+    closeSharedInterface = () => rl.close();
+  }
+
+  try {
+    let painPoints = parsed.painPoints ?? "";
+    if (interactive) {
+      painPoints = await prompt!(
+        "Describe a work pain point in your own words (optional, stays on this machine — press enter to skip): ",
+      );
+    }
+    const painPointTags = painPoints.trim().length > 0 ? classify(painPoints) : [];
+
+    let folderPath = parsed.folderPath ?? "";
+    if (interactive) {
+      folderPath = await prompt!(
+        "Path to a folder of your everyday work files (optional, only file extensions are read — press enter to skip): ",
+      );
+    }
+    const folderScan = folderPath.trim().length > 0 ? await scanFolder(folderPath.trim()) : undefined;
+
+    const installedTools = await scanTools();
+
+    return { painPointTags, ...(folderScan !== undefined ? { folderScan } : {}), installedTools };
+  } finally {
+    closeSharedInterface?.();
+  }
+}
+
+/** Friendly human summary of `arm refine` — every line here is exactly what
+ *  a caller may transmit; the raw pain-point text and folder contents never
+ *  appear because this function never receives them, only derived tags. */
+export function printRefineSummary(result: RefineResult): void {
+  console.log(
+    [
+      "",
+      "ARM Refine — nothing above this summary left your machine",
+      "──────────────────────────────────────────────────────────",
+    ].join("\n"),
+  );
+
+  if (result.painPointTags.length > 0) {
+    console.log("\nPain-point signals detected:");
+    for (const tag of result.painPointTags) {
+      console.log(`  • ${tag.tag} → ${tag.jobFunctionHint} (matched: ${tag.matchedKeywords.join(", ")})`);
+    }
+  } else {
+    console.log("\nPain-point signals: none (skipped, or nothing matched)");
+  }
+
+  if (result.folderScan) {
+    console.log(`\nWork-folder scan: ${result.folderScan.filesScanned} files (extensions only)`);
+    console.log(`  Tags: ${result.folderScan.tags.join(", ") || "(none)"}`);
+  } else {
+    console.log("\nWork-folder scan: skipped");
+  }
+
+  if (result.installedTools.length > 0) {
+    console.log("\nInstalled tools detected:");
+    for (const tool of result.installedTools) {
+      console.log(`  • ${tool.label} → ${tool.componentSlug}`);
+    }
+  } else {
+    console.log("\nInstalled tools detected: none of the known set");
+  }
+
+  console.log(
+    "\nThese are local signals only — nothing here changes your install yet." +
+      " Share them with your ARM admin to fine-tune your package.\n",
+  );
+}
+
 /** Friendly human summary of a completed setup — role, components, connections. */
 export function printSetupSummary(result: SetupResult): void {
   console.log(
@@ -387,6 +561,12 @@ ARM Setup — one-click employee provisioning
       break;
     }
 
+    case "refine": {
+      const result = await runRefineCommand(args.slice(3));
+      printRefineSummary(result);
+      break;
+    }
+
     case "data-plane":
       console.log(`
 ARM Data Plane Installer (spec §9 1.2)
@@ -421,6 +601,7 @@ ARM CLI — Agent Resource Management
 ───────────────────────────────────
   arm setup                One-click provisioning (token/activation code, or --role advanced)
   arm doctor                Re-run verification and print the failure taxonomy
+  arm refine               Optional: pain points + work-folder + installed-tools scan (local-only)
   arm data-plane install   Install data plane in customer VPC
   arm agent init           Onboard an agent to ARM
   arm help                 Show this help

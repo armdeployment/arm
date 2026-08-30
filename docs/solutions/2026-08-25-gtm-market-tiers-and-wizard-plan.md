@@ -98,13 +98,62 @@ This is also the natural home for the "embedded sub-agent" from the earlier
 design discussion (dynamic MCP install, connections wizard) — one local,
 post-install refinement flow, not three unrelated features.
 
+## Part 3 — the three local scan modules + `arm refine` (shipped this slice)
+
+`packages/client-core` gained three pure/deterministic-where-possible
+modules, none of which make a network call or import `@arm/questionnaire`
+(client-core stays scoped to `@arm/proto`+`@arm/config`, per the
+`boundaries` guardrail):
+
+- `folder-scan.ts` — `scanWorkFolder(path)` reads file **extensions only**
+  (never names, never content) up to a bounded depth/file count, maps the
+  extension histogram to tags (`cad_heavy`, `code_heavy`, ...) via a static
+  table, threshold-filtered so one stray file isn't a signal. Only
+  `extensionCounts`/paths are local-only detail; `tags` is what's meant to
+  be shared.
+- `plugin-scan.ts` — `scanInstalledTools()` checks for the *presence* of
+  known per-platform install paths (Teamcenter, Windchill, SolidWorks,
+  MATLAB, STAR-CCM+, VS Code, Docker, Slack, ...) — never opens or reads
+  them. `pathExists` is injectable so tests never touch a real filesystem.
+- `pain-points.ts` — `classifyPainPoints(text)`, a local deterministic
+  keyword classifier (not an LLM call — every match is auditable by
+  construction: "why did I get tagged X" always has a one-line keyword
+  answer). Callers must never log/store/transmit the raw `text` argument,
+  only this function's return value.
+
+`arm refine` (new CLI command, `apps/cli/src/index.ts`) wires all three
+into an optional, skippable post-`arm setup` step: interactive (prompts for
+pain points + a folder, empty answer skips either) or non-interactive
+(`--pain-points "..."`/`--folder <path>`), installed-tools scan always runs.
+`printRefineSummary` prints only derived tags — never the raw text or any
+file path/name — with an explicit "nothing above this summary left your
+machine" banner.
+
+**Real bug found by smoke-testing the interactive path, not by the unit
+tests**: `rl.question()` (used by `arm setup`'s existing single-prompt
+`defaultPrompt`) attaches its 'line' listener only once awaited. That's
+fine for one question on a real TTY (input arrives after the prompt), but
+`arm refine` asks two questions in sequence, and piped/non-TTY stdin with
+both answers already buffered (a scripted or CI invocation) can deliver the
+second line before the second `question()` call attaches its listener —
+silently dropped, hangs forever, no error. Fixed by driving one shared
+readline interface's async iterator directly (`for`-`await`-style
+`.next()` pulls) instead of two sequential `question()` calls — pulling a
+line on demand has no such race whether it was already buffered or arrives
+later. Verified against the exact repro (`printf "\n\n" | arm refine`
+hanging past a 10s timeout, vs. completing immediately after the fix).
+
+Tests: 22 new `@arm/client-core` unit tests (real temp dirs for the folder
+scan, an injected fake filesystem for the plugin scan, pure input/output
+checks for the classifier) + 10 new `@arm-app/cli` tests (parser +
+orchestration, every dependency injected — no real FS/network/TTY). Full
+monorepo build (17 packages) and all 19 guardrails pass unchanged.
+
 ## Next slice
 
-`packages/client-core`: `folder-scan.ts`, `plugin-scan.ts` (deterministic,
-metadata-only, unit-testable with no LLM/DB), `pain-points.ts` (local
-keyword-based classifier v1 — documented as upgradeable to a tenant-routed
-model later, never a network call today). Then wire into `arm setup` as an
-optional post-install refinement step, and a control-plane procedure that
-takes the resulting structured tags and extends the existing
-`requestAssignment`/approval flow (A6) — reusing machinery, not inventing a
-parallel one.
+A control-plane procedure that takes `arm refine`'s structured output and
+extends the existing `requestAssignment`/approval flow (A6) so a refinement
+can actually add an optional component to an assignment — today `arm
+refine` is diagnostic only (prints signals, changes nothing), which the
+CLI's own summary says explicitly. Reusing that existing approval machinery
+rather than inventing a parallel one is the point; wiring it is what's left.
