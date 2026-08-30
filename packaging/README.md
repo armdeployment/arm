@@ -62,9 +62,21 @@ CI runs a matrix, one job per platform).
   cannot own a document type. Tracked as a TODO in `macos/build-pkg.sh`.
   Until then, macOS users run `arm setup --setup-file ~/Downloads/x.armsetup`
   once from Terminal, or use the 6-character activation code (which needs
-  no file association at all). Windows (via the MSI's registry entries,
+  no file association at all — and, since `arm setup` with no other flags
+  now opens the wizard in a browser instead of prompting on stdin, opening
+  Terminal just to type the code is itself the last remaining terminal
+  step; see below). Windows (via the MSI's registry entries,
   `windows/arm.wxs`) and Linux (via the `.desktop`/MIME entries,
   `linux/build-deb.sh` / `arm.spec`) both register the association.
+- **Windows console flash on double-click**: `arm.exe` is still built as a
+  console-subsystem binary (`build-sea.mjs`'s Node SEA default). Since
+  `arm setup` with no args now serves the wizard over HTTP and opens the
+  browser (gui-server.ts) rather than prompting on stdin, double-clicking
+  the `.armsetup` file association briefly flashes an empty console window
+  before the browser opens — cosmetic (the actual UI is the browser page,
+  no input is ever needed in that window), but worth fixing by linking with
+  `/SUBSYSTEM:WINDOWS` for a real no-window launch. Not done here — needs a
+  Windows build/link step this sandboxed environment can't run and verify.
 
 ## Code signing — credential gates (AGENTS.md: never fabricate a credential)
 

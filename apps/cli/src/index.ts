@@ -11,9 +11,17 @@
  *                                  a downloaded .armsetup file (registered
  *                                  by the platform installer) and runs the
  *                                  same A4 path with no terminal input.
- *   arm setup                      No arguments: prints the tenant's
- *                                  /start URL and prompts for an activation
- *                                  code interactively.
+ *   arm setup                      No arguments — the default, no-terminal
+ *                                  path: opens the installation wizard in
+ *                                  the default browser (gui-server.ts) and
+ *                                  keeps running until it's closed. Nothing
+ *                                  is typed at a prompt; the activation
+ *                                  code, folder picks, and everything else
+ *                                  happen as clicks in that page.
+ *   arm setup --cli                Escape hatch to the old terminal-prompt
+ *                                  flow (scripted answers, accessibility,
+ *                                  no-browser environments) — same A4 path,
+ *                                  read from stdin instead of a page.
  *   arm setup --role <key> --tenant-url <url> [...]
  *                                  Advanced/CI path (retained) — direct
  *                                  role-key provisioning, unchanged wire
@@ -48,6 +56,8 @@ import {
   scanWorkFolder,
   scanInstalledTools,
   classifyPainPoints,
+  startInstallWizardServer,
+  openInBrowser,
   ARM_ERROR_CODES,
   ARM_ERROR_FIXES,
   ArmClientError,
@@ -57,6 +67,7 @@ import {
   type FolderScanResult,
   type DetectedTool,
   type PainPointTag,
+  type GuiServerHandle,
 } from "@arm/client-core";
 
 /** Default data-plane proxy address when --proxy-url is omitted. */
@@ -156,6 +167,38 @@ function isArmSetupFile(value: unknown): value is ArmSetupFile {
     typeof (value as { token?: unknown }).token === "string" &&
     typeof (value as { control_plane_url?: unknown }).control_plane_url === "string"
   );
+}
+
+export type StartInstallWizardServerFn = typeof startInstallWizardServer;
+export type OpenInBrowserFn = typeof openInBrowser;
+
+/** Injectable seams for the GUI path — tests never bind a real port or
+ *  shell out to `open`/`start`/`xdg-open`. */
+export interface SetupGuiCommandDeps {
+  startServerFn?: StartInstallWizardServerFn;
+  openBrowserFn?: OpenInBrowserFn;
+}
+
+/**
+ * `arm setup` with no arguments and no `--cli` flag — the default,
+ * no-terminal path (A1: "very easy" adoption breaks the moment setup asks
+ * someone to type a command). Starts the wizard server, opens it in the
+ * default browser, and returns the handle; the caller is responsible for
+ * keeping the process alive for as long as the wizard should stay reachable
+ * (main() does this by simply never resolving until the process exits).
+ */
+export async function runSetupGuiCommand(deps: SetupGuiCommandDeps = {}): Promise<GuiServerHandle> {
+  const startServerFn = deps.startServerFn ?? startInstallWizardServer;
+  const openBrowserFn = deps.openBrowserFn ?? openInBrowser;
+
+  const handle = await startServerFn({});
+  console.log(
+    `\nARM Setup is open in your browser: ${handle.url}\n` +
+      "If it didn't open automatically, paste that link into any browser.\n" +
+      "(Prefer the terminal? Run `arm setup --cli` instead.)\n",
+  );
+  await openBrowserFn(handle.url);
+  return handle;
 }
 
 /**
@@ -431,6 +474,9 @@ export function printSetupSummary(result: SetupResult): void {
       ...(result.installedPaths.length > 0
         ? [`  Installed:  ${result.installedPaths.join(", ")}`]
         : []),
+      ...(result.runtimesProvisioned.length > 0
+        ? [`  Runtimes:   ${result.runtimesProvisioned.join(", ")} (downloaded — not found on this machine)`]
+        : []),
     ].join("\n"),
   );
 
@@ -523,15 +569,37 @@ export async function main(args: string[]): Promise<void> {
 
   switch (cmd) {
     case "setup": {
+      const setupArgs = args.slice(3);
+
+      // No flags at all — the default, no-terminal path (A1). Opens the
+      // wizard in a browser and stays alive for as long as it's open; the
+      // process is meant to be closed by the user (Ctrl+C, or the platform
+      // installer that launched it tearing it down), not to exit on its own.
+      if (setupArgs.length === 0) {
+        try {
+          await runSetupGuiCommand();
+          await new Promise(() => {}); // keep listening until the process is killed
+        } catch (err) {
+          console.error(`arm setup: could not start the installation wizard: ${err instanceof Error ? err.message : String(err)}`);
+          process.exitCode = 1;
+        }
+        break;
+      }
+
+      // Explicit escape hatch back to the old terminal-prompt flow.
+      const cliArgs = setupArgs[0] === "--cli" ? setupArgs.slice(1) : setupArgs;
+
       try {
-        const result = await runSetupCommand(args.slice(3));
+        const result = await runSetupCommand(cliArgs);
         if (!result) {
           console.log(`
 ARM Setup — one-click employee provisioning
 ────────────────────────────────────────────
+  Default:  arm setup                       (opens the wizard in your browser)
+  Terminal: arm setup --cli                 (the old interactive prompt)
+
   Primary:  arm setup --token <jwt-or-6-char-code> --tenant-url <url>
             arm setup --setup-file <path-to.armsetup>  (double-click target)
-            arm setup                 (interactive — prompts for a code)
 
   Advanced: arm setup --role <key> --tenant-url <url>
             [--proxy-url <url>] [--sub-account-id <id>] [--tenant-id <id>]
@@ -599,7 +667,8 @@ ARM Agent Init (spec §8.1)
       console.log(`
 ARM CLI — Agent Resource Management
 ───────────────────────────────────
-  arm setup                One-click provisioning (token/activation code, or --role advanced)
+  arm setup                Opens the installation wizard in your browser — no terminal typing
+  arm setup --cli          Terminal-prompt fallback (scripted answers, no browser available)
   arm doctor                Re-run verification and print the failure taxonomy
   arm refine               Optional: pain points + work-folder + installed-tools scan (local-only)
   arm data-plane install   Install data plane in customer VPC
