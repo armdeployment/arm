@@ -195,6 +195,56 @@ function simulateResponse(model: string, provider: Provider, inputTokens: number
   };
 }
 
+// ── Real upstream (opt-in — unset by default, stub above is unchanged) ────
+//
+// "Real mode: delegates to upstream provider APIs when credentials are
+// configured" (this file's own header comment) — this is that mode's first
+// concrete implementation, scoped to an OpenAI-chat-completions-compatible
+// upstream (which covers a local Ollama instance, the sandbox demo
+// environment's own backend per docker-compose.enterprise.yml). The client
+// still requests an ARM-standard model name (so checkModelAccess's gate is
+// unchanged); the proxy decides which real backend model actually answers
+// it — the same abstraction a production deployment would make.
+const REAL_UPSTREAM_URL = process.env["ARM_PROXY_UPSTREAM_URL"];
+const REAL_UPSTREAM_MODEL = process.env["ARM_PROXY_UPSTREAM_MODEL"] ?? "minicpm5-1b";
+
+async function generateResponse(
+  model: string,
+  provider: Provider,
+  messages: { role: string; content: string }[],
+  inputTokens: number,
+): Promise<{ outputTokens: number; costUsd: number; content: string }> {
+  if (REAL_UPSTREAM_URL) {
+    try {
+      const res = await fetch(`${REAL_UPSTREAM_URL.replace(/\/+$/, "")}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: REAL_UPSTREAM_MODEL, messages }),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as {
+          choices?: { message?: { content?: string } }[];
+          usage?: { completion_tokens?: number };
+        };
+        const text = json.choices?.[0]?.message?.content;
+        if (text) {
+          const outputTokens = json.usage?.completion_tokens ?? Math.ceil(text.length / 4);
+          const pricePerMIn = provider === "openai" ? 2.5 : 3.0;
+          const pricePerMOut = provider === "openai" ? 10 : 15;
+          const costUsd =
+            Math.round(((inputTokens / 1_000_000) * pricePerMIn + (outputTokens / 1_000_000) * pricePerMOut) * 1000) /
+            1000;
+          return { outputTokens, costUsd, content: text };
+        }
+      }
+    } catch {
+      // Real upstream unreachable — degrade to the stub rather than fail
+      // the request; never blocks the install flow on a dev backend hiccup.
+    }
+  }
+  return simulateResponse(model, provider, inputTokens);
+}
+
 // ── Metering Event Emission ───────────────────────────────────────────────
 
 const meteringBuffer: MeteringEvent[] = [];
@@ -262,7 +312,7 @@ app.post("/v1/proxy", async (c) => {
 
   // ── Generate response ──
   const provider: Provider = CLOSED_MODELS.includes(model) ? "openai" : "anthropic";
-  const response = simulateResponse(model, provider, inputTokens);
+  const response = await generateResponse(model, provider, messages, inputTokens);
 
   // ── Emit metering event (metadata-only — no content) ──
   emitMeteringEvent({
