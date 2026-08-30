@@ -386,6 +386,39 @@ export const holdingProfile: IndustryProfilePreset = {
       minAgentVersion: "1.0.0",
       jobFunctions: ["executive_assistant"],
     },
+    {
+      roleKey: "senior_manager",
+      name: "Senior Manager",
+      family: "leadership",
+      mode: "copilot",
+      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
+      tools: [
+        { tool: "dashboards.api", toolVersion: "1.9.0" },
+        { tool: "approvals.inbox", toolVersion: "1.2.0" },
+        { tool: "web.search", toolVersion: "1.0.0" },
+      ],
+      skills: ["kpi-briefing", "exec-digest", "approval-summary"],
+      subagentConfigs: [],
+      permissions: [
+        "tool:dashboards.api:invoke",
+        "tool:approvals.inbox:invoke",
+        "tool:web.search:invoke",
+      ],
+      modelRouting: {
+        allowed_models: ["claude-sonnet", "minicpm5-1b"],
+        auto_downgrade_to: "minicpm5-1b",
+      },
+      budgetTemplate: { monthly_usd_cap: 300, critical_reserve_pct: 10 },
+      starterPrompts: [
+        "Show me my team's ARM adoption funnel and where people are stalling",
+        "What's waiting in my approvals inbox, ranked by urgency?",
+        "Summarize this month's spend against budget for my department",
+        "Draft a one-page rollout update for group leadership",
+      ],
+      templateRefs: ["tpl.kpi-briefing", "tpl.exec-digest", "tpl.approval-summary"],
+      minAgentVersion: "1.0.0",
+      jobFunctions: ["senior_manager"],
+    },
   ],
 
   // ── Job-function taxonomy (D10) ──────────────────────────────────────────

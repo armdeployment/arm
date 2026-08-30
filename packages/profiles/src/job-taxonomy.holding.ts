@@ -15,4 +15,5 @@ export const HOLDING_JOB_FUNCTIONS: JobFunctionSeed[] = [
   { key: "corporate_secretary", name: "Corporate Secretary", functionFamily: "Corporate Governance", aliases: ["corporate secretary"], headcountWeight: 2 },
   { key: "investor_relations_manager", name: "Investor Relations Manager", functionFamily: "Corporate Finance", aliases: ["investor relations manager"], headcountWeight: 4 },
   { key: "executive_assistant", name: "Executive Assistant", functionFamily: "Business Services", aliases: ["ea", "exec assistant"], headcountWeight: 6 },
+  { key: "senior_manager", name: "Senior Manager", functionFamily: "Business Services", aliases: ["department head", "senior manager", "team lead"], headcountWeight: 6, marketTier: "beachhead" },
 ];

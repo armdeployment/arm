@@ -39,6 +39,11 @@ const raw = {
           signals: { job_functions: ["hr_generalist"], components: [], weight: 3 },
         },
         {
+          value: "leading_team",
+          label: "Leading a team — budget, approvals, reporting up",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 3 },
+        },
+        {
           value: "none_of_these",
           label: "None of these describe my day",
           signals: { job_functions: [], components: [], weight: 1 },
@@ -74,6 +79,11 @@ const raw = {
           value: "process_onboarding",
           label: "Process new-hire onboarding paperwork",
           signals: { job_functions: ["hr_generalist"], components: [], weight: 1 },
+        },
+        {
+          value: "review_team_budget_approvals",
+          label: "Review team budget, spend, or approval requests",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 1 },
         },
       ],
       next: [{ when: null, goto: "systems" }],

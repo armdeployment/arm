@@ -265,6 +265,17 @@ export interface JobFunctionSeed {
   aliases: string[];
   /** Relative headcount sizing hint (fixture data, not a real metric) — feeds gap-analysis ranking. */
   headcountWeight: number;
+  /**
+   * Go-to-market priority tier for this job function (business decision,
+   * 2026-08-25): "beachhead" (senior managers — key decision maker, low-
+   * hanging fruit), "neighboring" (PD-DRE / engineering product managers,
+   * project managers), "other" (engineers — a differentiator, lower
+   * priority). Undefined = not part of the explicit GTM sequencing (mostly
+   * individual-contributor roles) — absence is not a demotion, just no
+   * signal either way. Read by the onboarding UI to bias which role sorts
+   * first in the questionnaire's role picker; never gates eligibility.
+   */
+  marketTier?: "beachhead" | "neighboring" | "other";
 }
 
 // ── Work packages (D9) ────────────────────────────────────────────────────

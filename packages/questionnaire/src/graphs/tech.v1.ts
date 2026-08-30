@@ -39,6 +39,16 @@ const raw = {
           signals: { job_functions: ["sales_engineer"], components: [], weight: 3 },
         },
         {
+          value: "leading_team",
+          label: "Leading a team — budget, approvals, reporting up",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 3 },
+        },
+        {
+          value: "coordinating_project",
+          label: "Coordinating a project across teams — status, blockers, timelines",
+          signals: { job_functions: ["project_manager"], components: [], weight: 3 },
+        },
+        {
           value: "office",
           label: "General office work — documents, email, scheduling",
           signals: { job_functions: ["office_worker_general"], components: [], weight: 3 },
@@ -89,6 +99,16 @@ const raw = {
           value: "draft_emails_schedule_meetings",
           label: "Draft emails and schedule meetings",
           signals: { job_functions: ["office_worker_general"], components: [], weight: 1 },
+        },
+        {
+          value: "review_team_budget_approvals",
+          label: "Review team budget, spend, or approval requests",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 1 },
+        },
+        {
+          value: "track_cross_team_status",
+          label: "Track cross-team status, blockers, or roadmap timelines",
+          signals: { job_functions: ["project_manager"], components: [], weight: 1 },
         },
       ],
       next: [{ when: null, goto: "systems" }],

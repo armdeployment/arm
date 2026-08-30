@@ -37,7 +37,8 @@ export const TECH_JOB_FUNCTIONS: JobFunctionSeed[] = [
   { key: "solutions_architect", name: "Solutions Architect", functionFamily: "Engineering", aliases: ["solution architect", "solutions architect"], headcountWeight: 6 },
   { key: "release_engineer", name: "Release Engineer", functionFamily: "Engineering", aliases: ["build engineer", "release engineer"], headcountWeight: 6 },
   { key: "code_reviewer", name: "Code Reviewer", functionFamily: "Engineering", aliases: ["code reviewer", "reviewer"], headcountWeight: 10 },
-  { key: "product_manager", name: "Product Manager", functionFamily: "Product & Design", aliases: ["pm", "product manager"], headcountWeight: 10 },
+  { key: "product_manager", name: "Product Manager", functionFamily: "Product & Design", aliases: ["pm", "product manager"], headcountWeight: 10, marketTier: "neighboring" },
+  { key: "project_manager", name: "Project Manager", functionFamily: "Product & Design", aliases: ["pgm", "program manager", "project manager"], headcountWeight: 8, marketTier: "neighboring" },
   { key: "product_designer", name: "Product Designer", functionFamily: "Product & Design", aliases: ["product designer", "ux/ui designer"], headcountWeight: 8 },
   { key: "ux_researcher", name: "UX Researcher", functionFamily: "Product & Design", aliases: ["user researcher", "ux researcher"], headcountWeight: 4 },
   { key: "technical_writer", name: "Technical Writer", functionFamily: "Product & Design", aliases: ["docs engineer", "documentation writer", "technical writer"], headcountWeight: 6 },
@@ -81,4 +82,5 @@ export const TECH_JOB_FUNCTIONS: JobFunctionSeed[] = [
   { key: "vp_of_sales", name: "VP of Sales", functionFamily: "Leadership", aliases: ["vp of sales"], headcountWeight: 2 },
   { key: "vp_of_marketing", name: "VP of Marketing", functionFamily: "Leadership", aliases: ["vp of marketing"], headcountWeight: 2 },
   { key: "head_of_people", name: "Head of People", functionFamily: "Leadership", aliases: ["chro", "head of people", "vp people"], headcountWeight: 2 },
+  { key: "senior_manager", name: "Senior Manager", functionFamily: "Leadership", aliases: ["department head", "senior manager", "team lead"], headcountWeight: 6, marketTier: "beachhead" },
 ];

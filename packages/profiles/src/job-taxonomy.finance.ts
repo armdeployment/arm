@@ -16,4 +16,5 @@ export const FINANCE_JOB_FUNCTIONS: JobFunctionSeed[] = [
   { key: "internal_auditor", name: "Internal Auditor", functionFamily: "Finance", aliases: ["internal auditor"], headcountWeight: 8 },
   { key: "compliance_officer", name: "Compliance Officer", functionFamily: "Finance", aliases: ["compliance officer"], headcountWeight: 4 },
   { key: "executive_assistant", name: "Executive Assistant", functionFamily: "Business Services", aliases: ["ea", "exec assistant"], headcountWeight: 6 },
+  { key: "senior_manager", name: "Senior Manager", functionFamily: "Business Services", aliases: ["department head", "senior manager", "team lead"], headcountWeight: 6, marketTier: "beachhead" },
 ];

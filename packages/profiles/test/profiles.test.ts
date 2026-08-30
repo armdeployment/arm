@@ -643,9 +643,9 @@ describe("Work packages (D9 — automotive OEM toolchain expansion)", () => {
     p.workPackages.filter((w) => NEW_PACKAGE_ROLE_KEYS.includes(w.roleKey)),
   );
 
-  it("manufacturing profile has exactly 20 work packages and tech exactly 7", () => {
-    expect(manufacturingProfile.workPackages.length).toBe(20);
-    expect(techProfile.workPackages.length).toBe(7);
+  it("manufacturing profile has exactly 22 work packages and tech exactly 9", () => {
+    expect(manufacturingProfile.workPackages.length).toBe(22);
+    expect(techProfile.workPackages.length).toBe(9);
   });
 
   it("every new tool slug used in a package exists in the canonical allowed-slug list", () => {
@@ -714,6 +714,26 @@ describe("Job-function taxonomy (D10 — docs/guides/01-library-artifactory.md �
         expect(pkg.jobFunctions.length).toBeGreaterThan(0);
         for (const key of pkg.jobFunctions) {
           expect(knownKeys.has(key), `${profile.id}/${pkg.roleKey}: unknown job function "${key}"`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("every profile seeds a beachhead senior_manager job function with a matching work package (2026-08-25 GTM decision)", () => {
+    for (const profile of PROFILES) {
+      const seniorManager = profile.jobFunctions.find((jf) => jf.key === "senior_manager");
+      expect(seniorManager, `${profile.id}: missing senior_manager job function`).toBeDefined();
+      expect(seniorManager?.marketTier).toBe("beachhead");
+      const pkg = profile.workPackages.find((wp) => wp.jobFunctions.includes("senior_manager"));
+      expect(pkg, `${profile.id}: no work package serves senior_manager`).toBeDefined();
+    }
+  });
+
+  it("marketTier, where set, is one of the three GTM tiers", () => {
+    for (const profile of PROFILES) {
+      for (const jf of profile.jobFunctions) {
+        if (jf.marketTier !== undefined) {
+          expect(["beachhead", "neighboring", "other"]).toContain(jf.marketTier);
         }
       }
     }

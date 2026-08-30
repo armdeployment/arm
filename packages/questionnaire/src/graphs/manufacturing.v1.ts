@@ -69,6 +69,16 @@ const raw = {
           signals: { job_functions: ["exec_assistant"], components: [], weight: 3 },
         },
         {
+          value: "leading_team",
+          label: "Leading a plant or department — budget, approvals, reporting up",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 3 },
+        },
+        {
+          value: "design_release",
+          label: "Owning a component's design release — PLM, ECNs, PPAP",
+          signals: { job_functions: ["design_release_engineer"], components: [], weight: 3 },
+        },
+        {
           value: "none_of_these",
           label: "None of these describe my day",
           signals: { job_functions: [], components: [], weight: 1 },
@@ -135,6 +145,16 @@ const raw = {
           label: "Prepare KPI briefings or approvals-inbox summaries",
           signals: { job_functions: ["exec_assistant"], components: [], weight: 1 },
         },
+        {
+          value: "review_team_budget_approvals",
+          label: "Review team budget, spend, or approval requests",
+          signals: { job_functions: ["senior_manager"], components: [], weight: 1 },
+        },
+        {
+          value: "track_ecn_ppap_status",
+          label: "Track ECN impacts or PPAP release status",
+          signals: { job_functions: ["design_release_engineer"], components: [], weight: 1 },
+        },
       ],
       next: [{ when: null, goto: "systems" }],
     },
@@ -173,6 +193,16 @@ const raw = {
           value: "studio5000",
           label: "Studio 5000",
           signals: { job_functions: ["plc_programmer"], components: ["studio-5000"], weight: 1 },
+        },
+        {
+          value: "teamcenter",
+          label: "Teamcenter",
+          signals: { job_functions: ["design_release_engineer"], components: ["teamcenter"], weight: 1 },
+        },
+        {
+          value: "windchill",
+          label: "Windchill",
+          signals: { job_functions: ["design_release_engineer"], components: ["windchill"], weight: 1 },
         },
       ],
       next: [{ when: null, goto: "code_plc" }],
