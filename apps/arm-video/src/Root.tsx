@@ -3,6 +3,7 @@ import { ArmVideo } from "./ArmVideo";
 import { ArmVideo1 } from "./ArmVideo1";
 import { ArmVideo2 } from "./ArmVideo2";
 import { ArmVideo3 } from "./ArmVideo3";
+import { ArmVideo4 } from "./ArmVideo4";
 import { SceneIntro } from "./Scenes/SceneIntro";
 import { SceneProfiles } from "./Scenes/SceneProfiles";
 import { SceneWorkType } from "./Scenes/SceneWorkType";
@@ -79,6 +80,14 @@ export const RemotionRoot: React.FC = () => {
         id="ArmVideo3-DbWiring"
         component={ArmVideo3}
         durationInFrames={(4 + 6 + 7 + 7 + 8) * FPS - 4 * T}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      <Composition
+        id="ArmVideo4-InstallWizard"
+        component={ArmVideo4}
+        durationInFrames={(5 + 7 + 6 + 9 + 9 + 7) * FPS - 5 * T}
         fps={FPS}
         width={W}
         height={H}
