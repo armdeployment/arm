@@ -4,6 +4,7 @@ import { ArmVideo1 } from "./ArmVideo1";
 import { ArmVideo2 } from "./ArmVideo2";
 import { ArmVideo3 } from "./ArmVideo3";
 import { ArmVideo4 } from "./ArmVideo4";
+import { ArmVideo5 } from "./ArmVideo5";
 import { SceneIntro } from "./Scenes/SceneIntro";
 import { SceneProfiles } from "./Scenes/SceneProfiles";
 import { SceneWorkType } from "./Scenes/SceneWorkType";
@@ -88,6 +89,14 @@ export const RemotionRoot: React.FC = () => {
         id="ArmVideo4-InstallWizard"
         component={ArmVideo4}
         durationInFrames={(5 + 7 + 6 + 9 + 9 + 7) * FPS - 5 * T}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      <Composition
+        id="ArmVideo5-ChatAndFolders"
+        component={ArmVideo5}
+        durationInFrames={(5 + 6 + 8 + 8 + 7) * FPS - 4 * T}
         fps={FPS}
         width={W}
         height={H}
