@@ -112,16 +112,42 @@ export async function scanWorkFolder(
 
   await walk(rootPath, 0);
 
+  return { filesScanned, extensionCounts, tags: tagsFromExtensionCounts(extensionCounts) };
+}
+
+function tagsFromExtensionCounts(extensionCounts: Record<string, number>): string[] {
   const tagCounts = new Map<string, number>();
   for (const [ext, count] of Object.entries(extensionCounts)) {
     const tag = EXTENSION_TAGS[ext];
     if (tag === undefined) continue;
     tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + count);
   }
-  const tags = [...tagCounts.entries()]
+  return [...tagCounts.entries()]
     .filter(([, count]) => count >= TAG_THRESHOLD)
     .sort((a, b) => b[1] - a[1])
     .map(([tag]) => tag);
+}
 
-  return { filesScanned, extensionCounts, tags };
+/**
+ * Scan several work folders (installation wizard's multi-project picker —
+ * an employee often has more than one project directory open) and union
+ * the results. Each folder is scanned independently, so one unreadable path
+ * never blocks the others — same never-throw contract as `scanWorkFolder`.
+ */
+export async function scanWorkFolders(
+  rootPaths: string[],
+  options: FolderScanOptions = {},
+): Promise<FolderScanResult> {
+  const perFolder = await Promise.all(rootPaths.map((path) => scanWorkFolder(path, options)));
+
+  const extensionCounts: Record<string, number> = {};
+  let filesScanned = 0;
+  for (const result of perFolder) {
+    filesScanned += result.filesScanned;
+    for (const [ext, count] of Object.entries(result.extensionCounts)) {
+      extensionCounts[ext] = (extensionCounts[ext] ?? 0) + count;
+    }
+  }
+
+  return { filesScanned, extensionCounts, tags: tagsFromExtensionCounts(extensionCounts) };
 }

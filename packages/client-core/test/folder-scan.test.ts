@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { scanWorkFolder } from "../src/folder-scan.js";
+import { scanWorkFolder, scanWorkFolders } from "../src/folder-scan.js";
 
 describe("scanWorkFolder", () => {
   const tempDirs: string[] = [];
@@ -94,5 +94,64 @@ describe("scanWorkFolder", () => {
     await writeFile(join(dir, "notes.xyz123"), "x");
     const result = await scanWorkFolder(dir);
     expect(result.tags).toEqual([]);
+  });
+});
+
+describe("scanWorkFolders (multi-project picker)", () => {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
+    for (const dir of tempDirs.splice(0)) {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  async function makeTempDir(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "arm-folder-scan-multi-"));
+    tempDirs.push(dir);
+    return dir;
+  }
+
+  it("unions extension counts and tags across multiple folders", async () => {
+    const cadProject = await makeTempDir();
+    const codeProject = await makeTempDir();
+    for (let i = 0; i < 4; i++) await writeFile(join(cadProject, `part${i}.sldprt`), "x");
+    for (let i = 0; i < 4; i++) await writeFile(join(codeProject, `f${i}.ts`), "x");
+
+    const result = await scanWorkFolders([cadProject, codeProject]);
+    expect(result.filesScanned).toBe(8);
+    expect(result.extensionCounts[".sldprt"]).toBe(4);
+    expect(result.extensionCounts[".ts"]).toBe(4);
+    expect(result.tags).toContain("cad_heavy");
+    expect(result.tags).toContain("code_heavy");
+  });
+
+  it("combines counts of the SAME extension across folders before applying the threshold", async () => {
+    const projectA = await makeTempDir();
+    const projectB = await makeTempDir();
+    await writeFile(join(projectA, "a.xlsx"), "x");
+    await writeFile(join(projectB, "b.xlsx"), "x");
+    // 1 file each — below the per-folder threshold, but 2 combined clears it? No: threshold is 3.
+    // Add a third across a third folder to confirm the union, not per-folder, is what's thresholded.
+    const projectC = await makeTempDir();
+    await writeFile(join(projectC, "c.xlsx"), "x");
+
+    const result = await scanWorkFolders([projectA, projectB, projectC]);
+    expect(result.extensionCounts[".xlsx"]).toBe(3);
+    expect(result.tags).toContain("spreadsheet_heavy");
+  });
+
+  it("one unreadable folder among several never blocks the others", async () => {
+    const realProject = await makeTempDir();
+    for (let i = 0; i < 4; i++) await writeFile(join(realProject, `f${i}.py`), "x");
+
+    const result = await scanWorkFolders(["/definitely/does/not/exist", realProject]);
+    expect(result.filesScanned).toBe(4);
+    expect(result.tags).toContain("code_heavy");
+  });
+
+  it("returns an empty result for an empty list of folders", async () => {
+    const result = await scanWorkFolders([]);
+    expect(result).toEqual({ filesScanned: 0, extensionCounts: {}, tags: [] });
   });
 });

@@ -72,7 +72,7 @@ export type { ArmErrorCode } from "./errors.js";
 export { buildActivationEvent, emitActivationEvent, trackActivation } from "./activation.js";
 export type { ActivationEventInput } from "./activation.js";
 
-export { scanWorkFolder } from "./folder-scan.js";
+export { scanWorkFolder, scanWorkFolders } from "./folder-scan.js";
 export type { FolderScanOptions, FolderScanResult } from "./folder-scan.js";
 
 export { scanInstalledTools } from "./plugin-scan.js";
@@ -92,3 +92,6 @@ export type { RuntimeKind, RuntimeProbe, ProvisionTarget, ProvisionIO, ExecFileF
 
 export { startInstallWizardServer, openInBrowser, DEFAULT_ARM_PROXY_URL } from "./gui-server.js";
 export type { GuiServerOptions, GuiServerDeps, GuiServerHandle } from "./gui-server.js";
+
+export { sendChatMessage, INSTALL_ASSISTANT_SYSTEM_PROMPT } from "./llm-chat.js";
+export type { ChatMessage, ChatRole, ChatTurnArgs } from "./llm-chat.js";

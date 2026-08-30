@@ -106,13 +106,13 @@ describe("startInstallWizardServer", () => {
     expect(body.error.message).toContain("expired");
   });
 
-  it("POST /api/refine wires pain points, folder scan (only when a path is given), and always scans installed tools", async () => {
-    let sawFolderScanCall = false;
+  it("POST /api/refine wires pain points, a multi-folder scan (only when paths are given), and always scans installed tools", async () => {
+    let capturedPaths: string[] | undefined;
     handle = await startInstallWizardServer({
       classifyPainPointsFn: (text) => [{ tag: "budget_approval_pain", jobFunctionHint: "senior_manager", matchedKeywords: [text] }],
-      scanWorkFolderFn: async () => {
-        sawFolderScanCall = true;
-        return { filesScanned: 3, extensionCounts: { ".xlsx": 3 }, tags: ["spreadsheet_heavy"] };
+      scanWorkFoldersFn: async (paths) => {
+        capturedPaths = paths;
+        return { filesScanned: 6, extensionCounts: { ".xlsx": 3, ".sldprt": 3 }, tags: ["spreadsheet_heavy", "cad_heavy"] };
       },
       scanInstalledToolsFn: async () => [{ id: "vscode", label: "Visual Studio Code", componentSlug: "vscode" }],
     });
@@ -120,7 +120,7 @@ describe("startInstallWizardServer", () => {
     const res = await fetch(new URL("/api/refine", handle.url), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ painPoints: "budget approvals", folderPath: "/Users/alice/work" }),
+      body: JSON.stringify({ painPoints: "budget approvals", folderPaths: ["/Users/alice/finance", "/Users/alice/cad-project"] }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -129,15 +129,33 @@ describe("startInstallWizardServer", () => {
       installedTools: unknown[];
     };
     expect(body.painPointTags).toHaveLength(1);
-    expect(body.folderScan.tags).toEqual(["spreadsheet_heavy"]);
+    expect(body.folderScan.tags).toEqual(["spreadsheet_heavy", "cad_heavy"]);
     expect(body.installedTools).toHaveLength(1);
-    expect(sawFolderScanCall).toBe(true);
+    expect(capturedPaths).toEqual(["/Users/alice/finance", "/Users/alice/cad-project"]);
   });
 
-  it("POST /api/refine skips the folder scan when no folderPath is given", async () => {
+  it("POST /api/refine still accepts the singular folderPath for back-compat", async () => {
+    let capturedPaths: string[] | undefined;
+    handle = await startInstallWizardServer({
+      scanWorkFoldersFn: async (paths) => {
+        capturedPaths = paths;
+        return { filesScanned: 3, extensionCounts: { ".xlsx": 3 }, tags: ["spreadsheet_heavy"] };
+      },
+      scanInstalledToolsFn: async () => [],
+    });
+    const res = await fetch(new URL("/api/refine", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ folderPath: "/Users/alice/work" }),
+    });
+    expect(res.status).toBe(200);
+    expect(capturedPaths).toEqual(["/Users/alice/work"]);
+  });
+
+  it("POST /api/refine skips the folder scan when no folder paths are given", async () => {
     let sawFolderScanCall = false;
     handle = await startInstallWizardServer({
-      scanWorkFolderFn: async () => {
+      scanWorkFoldersFn: async () => {
         sawFolderScanCall = true;
         return { filesScanned: 0, extensionCounts: {}, tags: [] };
       },
@@ -164,5 +182,84 @@ describe("startInstallWizardServer", () => {
     handle = await startInstallWizardServer({});
     const res = await fetch(new URL("/api/nonexistent", handle.url), { method: "POST" });
     expect(res.status).toBe(404);
+  });
+
+  it("POST /api/chat is refused before an install has completed — no proxy credentials to route through yet", async () => {
+    handle = await startInstallWizardServer({});
+    const res = await fetch(new URL("/api/chat", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("POST /api/chat routes through the tenant's proxy using the credentials captured at redeem time", async () => {
+    let capturedArgs: { armProxyUrl: string; agentToken: string; subAccountId: string; tenantId: string; messages: unknown[] } | undefined;
+    handle = await startInstallWizardServer({
+      resolveFn: async (args) => ({
+        controlPlaneUrl: args.controlPlaneUrl,
+        token: "catalog-token",
+        roleKey: "senior_manager",
+        armProxyUrl: "http://localhost:8787",
+        subAccountId: "sa_1",
+        tenantId: TENANT_ID,
+        manifest: makeManifest(),
+        pendingApproval: false,
+        agentToken: "arm_mtr_real-token",
+      }),
+      runSetupFn: async () => STUB_RESULT,
+      sendChatMessageFn: async (args) => {
+        capturedArgs = args;
+        return "Sounds like budget approvals eat a lot of your week — is that the biggest one?";
+      },
+    });
+
+    await fetch(new URL("/api/redeem", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "G7NHCF", controlPlaneUrl: "http://localhost:3300" }),
+    });
+
+    const res = await fetch(new URL("/api/chat", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "I spend a lot of time on budget approvals" }] }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { role: string; content: string };
+    expect(body.role).toBe("assistant");
+    expect(body.content).toContain("budget approvals");
+    expect(capturedArgs?.armProxyUrl).toBe("http://localhost:8787");
+    expect(capturedArgs?.agentToken).toBe("arm_mtr_real-token");
+    expect(capturedArgs?.messages).toEqual([{ role: "user", content: "I spend a lot of time on budget approvals" }]);
+  });
+
+  it("POST /api/chat rejects an empty message list", async () => {
+    handle = await startInstallWizardServer({
+      resolveFn: async (args) => ({
+        controlPlaneUrl: args.controlPlaneUrl,
+        token: "catalog-token",
+        roleKey: "senior_manager",
+        armProxyUrl: "http://localhost:8787",
+        subAccountId: "sa_1",
+        tenantId: TENANT_ID,
+        manifest: makeManifest(),
+        pendingApproval: false,
+        agentToken: "arm_mtr_real-token",
+      }),
+      runSetupFn: async () => STUB_RESULT,
+    });
+    await fetch(new URL("/api/redeem", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "G7NHCF", controlPlaneUrl: "http://localhost:3300" }),
+    });
+    const res = await fetch(new URL("/api/chat", handle.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: [] }),
+    });
+    expect(res.status).toBe(400);
   });
 });

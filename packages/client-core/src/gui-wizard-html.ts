@@ -60,6 +60,19 @@ export const WIZARD_HTML = `<!doctype html>
   .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);
     margin: 26px 0 10px; }
   .section-title:first-child { margin-top: 0; }
+  .chat-log { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; }
+  .chat-log:empty::before { content: "Say hello to get started."; color: var(--text-muted); font-size: 13px; }
+  .bubble { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .bubble.user { align-self: flex-end; background: var(--navy); color: white; }
+  .bubble.assistant { align-self: flex-start; background: white; border: 1px solid var(--border); }
+  .bubble.pending { align-self: flex-start; background: white; border: 1px solid var(--border); color: var(--text-muted); font-style: italic; }
+  .folder-list { display: flex; flex-direction: column; gap: 6px; }
+  .folder-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; font-family: ui-monospace, monospace; }
+  .folder-row .path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-row .remove { cursor: pointer; color: var(--text-muted); font-weight: 700; background: none; border: none; padding: 0 4px; }
+  .folder-list:empty::before { content: "No folders added yet."; color: var(--text-muted); font-size: 13px; font-family: -apple-system, sans-serif; }
 </style>
 </head>
 <body>
@@ -108,14 +121,22 @@ export const WIZARD_HTML = `<!doctype html>
 
     <div class="section-title">Optional — help us fine-tune your setup</div>
     <div class="card">
-      <p class="help" style="margin-bottom:14px;">Nothing below leaves this machine (A5) — only the tags we detect are shown to you.</p>
-      <label for="painPoints">Describe a work pain point</label>
-      <textarea id="painPoints" placeholder="e.g. I spend too much time chasing budget approvals..."></textarea>
-      <label>Work folder</label>
-      <div class="row">
-        <input type="text" id="folderPath" placeholder="No folder chosen — or type a path">
-        <button class="secondary" id="chooseFolderBtn">Choose&hellip;</button>
+      <p class="help" style="margin-bottom:14px;">Chat with the install assistant about what you do — it runs through
+        your company's own ARM connection, the same one every tool call you make later will use, never a third party
+        and never ARM itself. The folders you add below are scanned for file types only, right here on this machine (A5).</p>
+
+      <label>Talk it through</label>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="row" style="margin-top:8px;">
+        <input type="text" id="chatInput" placeholder="e.g. I lead a plant and spend a lot of time on approvals...">
+        <button class="secondary" id="chatSendBtn">Send</button>
       </div>
+      <div id="chatError" class="error"></div>
+
+      <label style="margin-top:24px;">Project folders</label>
+      <div id="folderList" class="folder-list"></div>
+      <button class="secondary" id="addFolderBtn" style="margin-top:8px;">+ Add folder&hellip;</button>
+
       <button class="primary" id="refineBtn">Analyze</button>
       <div id="refineResults" style="display:none;margin-top:18px;"></div>
     </div>
@@ -232,9 +253,76 @@ function renderComplete(result) {
   }
 }
 
-$("chooseFolderBtn").addEventListener("click", async () => {
+// ── Chat ──────────────────────────────────────────────────────────────────
+let chatMessages = []; // {role: "user"|"assistant", content}
+
+function addBubble(role, text, pending) {
+  const div = document.createElement("div");
+  div.className = "bubble " + (pending ? "pending" : role);
+  div.textContent = text;
+  $("chatLog").appendChild(div);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const input = $("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  $("chatError").style.display = "none";
+  input.value = "";
+  $("chatSendBtn").disabled = true;
+  addBubble("user", text);
+  chatMessages.push({ role: "user", content: text });
+  const pendingBubble = addBubble("assistant", "\\u2026", true);
+  try {
+    const result = await api("/api/chat", { messages: chatMessages });
+    pendingBubble.remove();
+    addBubble("assistant", result.content);
+    chatMessages.push({ role: "assistant", content: result.content });
+  } catch (err) {
+    pendingBubble.remove();
+    showError("chatError", err.message);
+  } finally {
+    $("chatSendBtn").disabled = false;
+    input.focus();
+  }
+}
+$("chatSendBtn").addEventListener("click", sendChat);
+$("chatInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
+
+// ── Multi-folder picker ───────────────────────────────────────────────────
+let folderPaths = [];
+
+function renderFolderList() {
+  const list = $("folderList");
+  list.innerHTML = "";
+  for (const path of folderPaths) {
+    const row = document.createElement("div");
+    row.className = "folder-row";
+    const pathSpan = document.createElement("span");
+    pathSpan.className = "path";
+    pathSpan.textContent = path;
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "remove";
+    removeBtn.textContent = "\\u2715";
+    removeBtn.setAttribute("aria-label", "Remove " + path);
+    removeBtn.addEventListener("click", () => {
+      folderPaths = folderPaths.filter((p) => p !== path);
+      renderFolderList();
+    });
+    row.appendChild(pathSpan);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  }
+}
+
+$("addFolderBtn").addEventListener("click", async () => {
   const result = await api("/api/pick-folder", {});
-  if (result.path) $("folderPath").value = result.path;
+  if (result.path && !folderPaths.includes(result.path)) {
+    folderPaths.push(result.path);
+    renderFolderList();
+  }
 });
 
 $("refineBtn").addEventListener("click", async () => {
@@ -242,7 +330,8 @@ $("refineBtn").addEventListener("click", async () => {
   btn.disabled = true;
   btn.textContent = "Analyzing\\u2026";
   try {
-    const result = await api("/api/refine", { painPoints: $("painPoints").value, folderPath: $("folderPath").value });
+    const painPoints = chatMessages.filter((m) => m.role === "user").map((m) => m.content).join(". ");
+    const result = await api("/api/refine", { painPoints, folderPaths });
     renderRefine(result);
   } finally {
     btn.disabled = false;

@@ -25,9 +25,10 @@ import { platform as osPlatform } from "node:os";
 import { runSetup, type SetupArgs, type SetupResult } from "./setup.js";
 import { resolveFromSetupToken } from "./setup-token.js";
 import { renderGuideSteps } from "./connections.js";
-import { scanWorkFolder, type FolderScanResult } from "./folder-scan.js";
+import { scanWorkFolders, type FolderScanResult } from "./folder-scan.js";
 import { scanInstalledTools, type DetectedTool } from "./plugin-scan.js";
 import { classifyPainPoints, type PainPointTag } from "./pain-points.js";
+import { sendChatMessage, type ChatMessage } from "./llm-chat.js";
 import { ArmClientError } from "./errors.js";
 import { WIZARD_HTML } from "./gui-wizard-html.js";
 
@@ -40,10 +41,11 @@ export const DEFAULT_ARM_PROXY_URL = "http://localhost:8787";
 export interface GuiServerDeps {
   resolveFn?: typeof resolveFromSetupToken;
   runSetupFn?: typeof runSetup;
-  scanWorkFolderFn?: typeof scanWorkFolder;
+  scanWorkFoldersFn?: typeof scanWorkFolders;
   scanInstalledToolsFn?: typeof scanInstalledTools;
   classifyPainPointsFn?: typeof classifyPainPoints;
   pickFolderFn?: () => Promise<string | null>;
+  sendChatMessageFn?: typeof sendChatMessage;
 }
 
 export interface GuiServerOptions extends GuiServerDeps {
@@ -124,11 +126,20 @@ type RedeemResponse = SetupResult & {
 export async function startInstallWizardServer(options: GuiServerOptions = {}): Promise<GuiServerHandle> {
   const resolveFn = options.resolveFn ?? resolveFromSetupToken;
   const runSetupFn = options.runSetupFn ?? runSetup;
-  const scanWorkFolderFn = options.scanWorkFolderFn ?? scanWorkFolder;
+  const scanWorkFoldersFn = options.scanWorkFoldersFn ?? scanWorkFolders;
   const scanInstalledToolsFn = options.scanInstalledToolsFn ?? scanInstalledTools;
   const classifyPainPointsFn = options.classifyPainPointsFn ?? classifyPainPoints;
   const pickFolderFn = options.pickFolderFn ?? defaultPickFolder;
+  const sendChatMessageFn = options.sendChatMessageFn ?? sendChatMessage;
   const armProxyUrl = options.armProxyUrl ?? DEFAULT_ARM_PROXY_URL;
+
+  // Proxy credentials captured once redemption succeeds — the chat
+  // assistant needs them (it talks to the tenant's own proxy, same as
+  // any other agent call), and only exists once the tenant/agent identity
+  // is known. This server serves exactly one install session at a time
+  // (a local wizard for one employee), so module-scoped mutable state is
+  // the right amount of "session" here — no multi-user concern.
+  let chatCredentials: { armProxyUrl: string; agentToken: string; subAccountId: string; tenantId: string } | undefined;
 
   const server: Server = createServer((req, res) => {
     void handleRequest(req, res);
@@ -153,6 +164,14 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
           return;
         }
         const resolved: SetupArgs = await resolveFn({ token, controlPlaneUrl });
+        if (resolved.agentToken !== undefined) {
+          chatCredentials = {
+            armProxyUrl: resolved.armProxyUrl,
+            agentToken: resolved.agentToken,
+            subAccountId: resolved.subAccountId,
+            tenantId: resolved.tenantId,
+          };
+        }
         // `resolved.armProxyUrl` is always populated by resolveFromSetupToken
         // (falls back to controlPlaneUrl itself if the redemption response
         // carried no proxy_url) — this GUI server's own `armProxyUrl` default
@@ -181,10 +200,18 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
       if (req.method === "POST" && url.pathname === "/api/refine") {
         const body = await readJsonBody(req);
         const painPoints = String(body["painPoints"] ?? "").trim();
-        const folderPath = String(body["folderPath"] ?? "").trim();
+        // Accepts the plural (the wizard's multi-project "Add folder" picker)
+        // and, for back-compat with any caller still on the old shape, the
+        // singular too — both fold into the same folder list.
+        const folderPathsRaw = body["folderPaths"];
+        const folderPaths = (Array.isArray(folderPathsRaw) ? folderPathsRaw.map(String) : [])
+          .concat(String(body["folderPath"] ?? ""))
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+
         const painPointTags: PainPointTag[] = painPoints.length > 0 ? classifyPainPointsFn(painPoints) : [];
         const folderScan: FolderScanResult | undefined =
-          folderPath.length > 0 ? await scanWorkFolderFn(folderPath) : undefined;
+          folderPaths.length > 0 ? await scanWorkFoldersFn(folderPaths) : undefined;
         const installedTools: DetectedTool[] = await scanInstalledToolsFn();
         sendJson(res, 200, { painPointTags, folderScan, installedTools });
         return;
@@ -193,6 +220,30 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
       if (req.method === "POST" && url.pathname === "/api/pick-folder") {
         const path = await pickFolderFn();
         sendJson(res, 200, { path });
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/chat") {
+        if (!chatCredentials) {
+          sendJson(res, 409, {
+            error: { code: "BAD_REQUEST", message: "install first — the assistant needs your tenant's proxy connection" },
+          });
+          return;
+        }
+        const body = await readJsonBody(req);
+        const rawMessages = body["messages"];
+        const messages: ChatMessage[] = (Array.isArray(rawMessages) ? rawMessages : [])
+          .filter(
+            (m): m is { role: string; content: string } =>
+              typeof m === "object" && m !== null && typeof (m as Record<string, unknown>)["content"] === "string",
+          )
+          .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
+        if (messages.length === 0) {
+          sendJson(res, 400, { error: { code: "BAD_REQUEST", message: "messages must include at least one entry" } });
+          return;
+        }
+        const reply = await sendChatMessageFn({ ...chatCredentials, messages });
+        sendJson(res, 200, { role: "assistant", content: reply });
         return;
       }
 
