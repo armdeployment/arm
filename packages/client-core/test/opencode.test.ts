@@ -1,11 +1,29 @@
 import { describe, it, expect } from "vitest";
+import { homedir } from "node:os";
 import {
   renderOpencodeConfig,
   assertNoSecretsInConfig,
   mcpTokenEnvVar,
   componentToMcpEntry,
+  resolveAgentHome,
+  DEFAULT_OPENCODE_HOME,
 } from "../src/opencode.js";
 import { makeManifest, makeResolvedComponent, makeComponent, makeComponentVersion, TENANT_ID } from "./helpers.js";
+
+describe("resolveAgentHome", () => {
+  it("expands the bare '~' default to the real home directory — never a literal '~' passed to fs calls", () => {
+    expect(resolveAgentHome(undefined)).toBe(`${homedir()}/.config/opencode`);
+    expect(resolveAgentHome(DEFAULT_OPENCODE_HOME)).toBe(`${homedir()}/.config/opencode`);
+  });
+
+  it("expands a '~/...' prefix", () => {
+    expect(resolveAgentHome("~/custom-agent-dir")).toBe(`${homedir()}/custom-agent-dir`);
+  });
+
+  it("leaves an already-absolute path untouched", () => {
+    expect(resolveAgentHome("/tmp/some-agent-home")).toBe("/tmp/some-agent-home");
+  });
+});
 
 describe("renderOpencodeConfig", () => {
   const rendered = renderOpencodeConfig({
@@ -16,7 +34,9 @@ describe("renderOpencodeConfig", () => {
   });
 
   it("points the runtime at the ARM proxy with an env-var token reference", () => {
-    expect(rendered.configPath).toBe("~/.config/opencode/config.json");
+    // Real expanded path, never a literal "~" — Node's fs calls don't
+    // expand it themselves (resolveAgentHome does, see its own tests).
+    expect(rendered.configPath).toBe(`${homedir()}/.config/opencode/config.json`);
     const parsed = rendered.parsed as Record<string, unknown>;
     expect(parsed["base_url"]).toBe("https://data.arm.acme.com");
     expect(parsed["api_key"]).toBe("${ARM_AGENT_TOKEN}");

@@ -19,6 +19,8 @@
  * `assertNoSecretsInConfig` enforces this contract on every rendered config.
  */
 
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { ClientPackageManifest, ResolvedComponent } from "./manifest.js";
 import { isCallableComponentKind } from "./manifest.js";
 
@@ -32,15 +34,41 @@ export interface RenderOpencodeConfigArgs {
   agentHome?: string;
 }
 
+/** One `cli`-kind component whose `config_schema.runtime` names a language
+ *  runtime ("python"/"node") its command needs — resolved post-render by
+ *  `runSetup` via `runtime-provision.ts`, never here (rendering stays pure). */
+export interface McpRuntimeRequirement {
+  mcpKey: string;
+  runtime: "python" | "node";
+}
+
 /** Render result: path on disk, serialized content, and parsed object. */
 export interface RenderedOpencodeConfig {
   configPath: string;
   content: string;
   parsed: unknown;
+  /** Every `mcp` entry whose command needs a bundled/detected runtime. */
+  runtimeRequirements: McpRuntimeRequirement[];
 }
 
 /** Default opencode config directory when no agentHome is given. */
 export const DEFAULT_OPENCODE_HOME = "~/.config/opencode";
+
+/**
+ * Expand a leading `~` to the real home directory. Node's `fs` module never
+ * does this itself (that's shell-only behavior) — passing `~/.config/...`
+ * straight to `mkdir`/`writeFile` silently creates a literal directory
+ * named `~` in the process's cwd instead of writing under the user's real
+ * home. Every caller that turns `agentHome` into an actual filesystem path
+ * must go through this first; `DEFAULT_OPENCODE_HOME`'s only safe use is as
+ * the pre-expansion default passed in here.
+ */
+export function resolveAgentHome(agentHome?: string): string {
+  const raw = agentHome ?? DEFAULT_OPENCODE_HOME;
+  if (raw === "~") return homedir();
+  if (raw.startsWith("~/")) return join(homedir(), raw.slice(2));
+  return raw;
+}
 
 /** Sanitize a component name into a safe config key / env-var token. */
 function sanitizeComponentName(name: string): string {
@@ -64,6 +92,11 @@ export function mcpTokenEnvVar(componentName: string): string {
  *   block maps `ARM_MCP_<NAME>_TOKEN` to the env-var reference
  *   `${ARM_MCP_<NAME>_TOKEN}` — the runtime resolves it from the keychain /
  *   vault broker. No auth → no env block at all.
+ *   `config_schema.runtime` ("python"/"node"), when present, is NOT
+ *   resolved here — `renderOpencodeConfig` collects it into
+ *   `runtimeRequirements` and `runSetup` patches the final `command` after
+ *   detecting/provisioning a real interpreter (runtime-provision.ts). This
+ *   function stays synchronous and I/O-free; provisioning is not.
  * - `mcp` / `http_api` / `connector` components → `http` entry against the
  *   component endpoint. The Authorization header is an env-var reference
  *   only — raw credentials must never appear here.
@@ -99,12 +132,18 @@ export function componentToMcpEntry(resolved: ResolvedComponent): Record<string,
  */
 export function renderOpencodeConfig(args: RenderOpencodeConfigArgs): RenderedOpencodeConfig {
   const { manifest, armProxyUrl, subAccountId, tenantId } = args;
-  const agentHome = args.agentHome ?? DEFAULT_OPENCODE_HOME;
+  const agentHome = resolveAgentHome(args.agentHome);
 
   const mcp: Record<string, unknown> = {};
+  const runtimeRequirements: McpRuntimeRequirement[] = [];
   for (const resolved of manifest.components) {
     if (!isCallableComponentKind(resolved.component.kind)) continue; // installed to disk, not wired as MCP
-    mcp[sanitizeComponentName(resolved.component.name)] = componentToMcpEntry(resolved);
+    const mcpKey = sanitizeComponentName(resolved.component.name);
+    mcp[mcpKey] = componentToMcpEntry(resolved);
+    const runtime = resolved.version.config_schema["runtime"];
+    if (runtime === "python" || runtime === "node") {
+      runtimeRequirements.push({ mcpKey, runtime });
+    }
   }
 
   const config = {
@@ -123,7 +162,7 @@ export function renderOpencodeConfig(args: RenderOpencodeConfigArgs): RenderedOp
   };
 
   const content = `${JSON.stringify(config, null, 2)}\n`;
-  return { configPath: `${agentHome}/config.json`, content, parsed: JSON.parse(content) };
+  return { configPath: `${agentHome}/config.json`, content, parsed: JSON.parse(content), runtimeRequirements };
 }
 
 const SECRET_LITERAL_PATTERNS: ReadonlyArray<RegExp> = [

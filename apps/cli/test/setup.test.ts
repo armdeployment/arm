@@ -28,6 +28,7 @@ const STUB_RESULT: SetupResult = {
   envFilePath: "/tmp/opencode/.arm-env",
   budgetHint: "$150/month",
   pendingApproval: false,
+  runtimesProvisioned: [],
 };
 
 afterEach(() => {

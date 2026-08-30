@@ -19,8 +19,9 @@ import {
   buildCanonicalManifest,
   type ClientPackageManifest,
 } from "./manifest.js";
-import { renderOpencodeConfig, assertNoSecretsInConfig, DEFAULT_OPENCODE_HOME } from "./opencode.js";
+import { renderOpencodeConfig, assertNoSecretsInConfig, resolveAgentHome } from "./opencode.js";
 import { installComponents } from "./components.js";
+import { provisionRuntime } from "./runtime-provision.js";
 import { ArmClientError } from "./errors.js";
 import type { ConnectionsManifestEntry, ConnectionMethod } from "./connections.js";
 
@@ -80,6 +81,10 @@ export interface SetupResult {
   /** Path of the companion env file; present only when an agentToken was provided. */
   envFilePath?: string;
   budgetHint: string;
+  /** Runtime kinds ("python"/"node") auto-downloaded because no usable copy
+   *  was already on this machine — empty when every `cli` component's
+   *  declared runtime was already present, or none declared one. */
+  runtimesProvisioned: string[];
   /** A6 — true when tool access is pending manager approval. */
   pendingApproval: boolean;
 }
@@ -254,13 +259,34 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
   // in depth — verifyManifestIntegrity already calls it internally too).
   void buildCanonicalManifest(manifest.version);
 
+  const agentHome = resolveAgentHome(args.agentHome);
+
   const rendered = renderOpencodeConfig({
     manifest,
     armProxyUrl: args.armProxyUrl,
     subAccountId: args.subAccountId,
     tenantId: args.tenantId,
-    ...(args.agentHome !== undefined ? { agentHome: args.agentHome } : {}),
+    agentHome,
   });
+
+  const runtimesProvisioned: string[] = [];
+  if (rendered.runtimeRequirements.length > 0) {
+    const resolvedPathByRuntime = new Map<string, string>();
+    for (const requirement of rendered.runtimeRequirements) {
+      if (!resolvedPathByRuntime.has(requirement.runtime)) {
+        const result = await provisionRuntime(requirement.runtime, { agentHome });
+        resolvedPathByRuntime.set(requirement.runtime, result.path);
+        if (result.provisioned) runtimesProvisioned.push(requirement.runtime);
+      }
+    }
+    const parsed = rendered.parsed as { mcp: Record<string, { command?: string }> };
+    for (const requirement of rendered.runtimeRequirements) {
+      const entry = parsed.mcp[requirement.mcpKey];
+      if (entry) entry.command = resolvedPathByRuntime.get(requirement.runtime)!;
+    }
+    rendered.content = `${JSON.stringify(parsed, null, 2)}\n`;
+  }
+
   assertNoSecretsInConfig(rendered.content);
 
   try {
@@ -276,7 +302,6 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     throw err;
   }
 
-  const agentHome = args.agentHome ?? DEFAULT_OPENCODE_HOME;
   let envFilePath: string | undefined;
   if (args.agentToken !== undefined) {
     envFilePath = `${agentHome}/.arm-env`;
@@ -312,5 +337,6 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     ...(envFilePath !== undefined ? { envFilePath } : {}),
     budgetHint: budgetHint(manifest.version.budget_template),
     pendingApproval: args.pendingApproval ?? false,
+    runtimesProvisioned,
   };
 }

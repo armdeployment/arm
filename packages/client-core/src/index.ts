@@ -48,8 +48,9 @@ export {
   componentToMcpEntry,
   mcpTokenEnvVar,
   DEFAULT_OPENCODE_HOME,
+  resolveAgentHome,
 } from "./opencode.js";
-export type { RenderOpencodeConfigArgs, RenderedOpencodeConfig } from "./opencode.js";
+export type { RenderOpencodeConfigArgs, RenderedOpencodeConfig, McpRuntimeRequirement } from "./opencode.js";
 
 export { GUIDE_LIBRARY, getConnectionGuide, renderGuideSteps } from "./connections.js";
 export type { ConnectionMethod, ConnectionGuide, ConnectionsManifestEntry } from "./connections.js";
@@ -79,3 +80,15 @@ export type { DetectedTool, PathExistsFn } from "./plugin-scan.js";
 
 export { classifyPainPoints } from "./pain-points.js";
 export type { PainPointTag } from "./pain-points.js";
+
+export {
+  detectRuntime,
+  provisionRuntime,
+  resolveProvisionTarget,
+  parseExpectedChecksum,
+  bundledRuntimeBinDir,
+} from "./runtime-provision.js";
+export type { RuntimeKind, RuntimeProbe, ProvisionTarget, ProvisionIO, ExecFileFn } from "./runtime-provision.js";
+
+export { startInstallWizardServer, openInBrowser, DEFAULT_ARM_PROXY_URL } from "./gui-server.js";
+export type { GuiServerOptions, GuiServerDeps, GuiServerHandle } from "./gui-server.js";
