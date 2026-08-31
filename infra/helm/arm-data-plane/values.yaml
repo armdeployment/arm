@@ -1,7 +1,14 @@
 # ARM Data Plane Helm Chart — Values
 # Tenant overrides injected at install time by `arm data-plane install`.
 
+# ── Naming ──
+nameOverride: ""
+fullnameOverride: ""
+
 # ── Control plane connection (required) ──
+# Both are `required` in the templates rather than defaulted: a proxy that
+# starts with an empty CONTROL_PLANE_URL reports healthy and meters nothing,
+# which is the worst possible failure for a metering boundary.
 controlPlane:
   url: "" # Set at install: https://control.arm.example.com
   tenantId: "" # Set at install: tenant UUID from registration
@@ -9,7 +16,7 @@ controlPlane:
 # ── Closed proxy ──
 proxy:
   enabled: true
-  replicas: 2
+  replicas: 2 # ignored when autoscaling.enabled — the HPA owns the count
   image:
     repository: arm/closed-proxy
     tag: latest
@@ -42,8 +49,21 @@ openGateway:
   vllmEndpoint: "" # Set at install: http://vllm:8000
 
 # ── Meter agent ──
+#
+# NOT DEPLOYED. There is no meter-agent Deployment in this chart and no
+# `arm/meter-agent` image to run one from: apps/data-plane/meter-agent is a
+# library (it exports ingestEvent/flushToControlPlane and has no entrypoint),
+# nothing imports it, and infra/docker has no Dockerfile for it.
+#
+# What IS wired: `buffer.*` below becomes the METER_AGENT_BUFFER_* environment
+# the proxy container reads via @arm/config, and `buffer.dir` is where the
+# meter-buffer volume mounts. So events accumulate in the buffer and nothing
+# drains them to the control plane yet.
+#
+# The image/resources keys are kept as a record of the intended shape. They
+# are not read by any template.
 meterAgent:
-  enabled: true
+  enabled: false
   image:
     repository: arm/meter-agent
     tag: latest
@@ -56,6 +76,15 @@ meterAgent:
     requests: { cpu: "100m", memory: "128Mi" }
     limits: { cpu: "500m", memory: "256Mi" }
 
+# ── Service account ──
+serviceAccount:
+  create: true
+  name: ""
+  # For IRSA / Workload Identity, e.g.
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/arm-data-plane
+  # infra/terraform/main.tf sets exactly this annotation.
+  annotations: {}
+
 # ── Service ──
 service:
   type: ClusterIP
@@ -63,22 +92,53 @@ service:
   gatewayPort: 8788
 
 # ── Ingress (optional) ──
+# hosts entries take the shape:
+#   - host: proxy.arm.example.com
+#     paths:
+#       - path: /
+#         pathType: Prefix
+#         service: proxy      # "proxy" | "gateway"
+#         port: 8787
 ingress:
   enabled: false
   className: ""
+  annotations: {}
   hosts: []
+  tls: []
 
 # ── Persistence ──
+# ReadWriteOnce. With more than one proxy replica this only works on a storage
+# class that supports multi-attach — see the warning NOTES.txt prints.
 persistence:
   enabled: true
   storageClass: ""
   size: 10Gi
 
+# ── Security context ──
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
 # ── Monitoring ──
+# Requires the Prometheus Operator; the template fails the install with a
+# clear message if monitoring.coreos.com/v1 is not present.
 serviceMonitor:
-  enabled: false # Enable if Prometheus Operator is installed
+  enabled: false
+  path: /health
+  interval: 30s
+  labels: {}
 
 # ── TLS / mTLS ──
+# The secret is NOT created by this chart — it never generates or holds key
+# material. Create it before installing; NOTES.txt prints the command.
 tls:
   controlPlaneMTLS:
     enabled: true

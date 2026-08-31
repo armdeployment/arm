@@ -1,0 +1,41 @@
+ARM data plane {{ .Chart.AppVersion }} installed as {{ .Release.Name }} in {{ .Release.Namespace }}.
+
+What is running:
+{{ if .Values.proxy.enabled }}  closed-proxy   {{ include "arm-data-plane.fullname" . }}-proxy   :{{ .Values.service.proxyPort }}{{ if .Values.proxy.autoscaling.enabled }}  ({{ .Values.proxy.autoscaling.minReplicas }}-{{ .Values.proxy.autoscaling.maxReplicas }} replicas, HPA){{ else }}  ({{ .Values.proxy.replicas }} replicas){{ end }}
+{{ end }}{{ if .Values.openGateway.enabled }}  open-gateway   {{ include "arm-data-plane.fullname" . }}-gateway :{{ .Values.service.gatewayPort }}  ({{ .Values.openGateway.replicas }} replicas)
+{{ end }}
+Check it is healthy:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "arm-data-plane.fullname" . }}-proxy {{ .Values.service.proxyPort }}:{{ .Values.service.proxyPort }}
+  curl localhost:{{ .Values.service.proxyPort }}/health
+
+{{- if .Values.tls.controlPlaneMTLS.enabled }}
+
+mTLS to the control plane is ENABLED. This chart never creates or holds key
+material, so the secret must already exist or the pods will stay Pending:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ .Values.tls.controlPlaneMTLS.certSecretName }} \
+    --from-file=tls.crt=client.crt --from-file=tls.key=client.key --from-file=ca.crt=ca.crt
+
+  kubectl -n {{ .Release.Namespace }} get secret {{ .Values.tls.controlPlaneMTLS.certSecretName }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled (or .Values.proxy.autoscaling.enabled (gt (int .Values.proxy.replicas) 1)) }}
+
+WARNING — the meter buffer PVC is ReadWriteOnce and you are running more than
+one proxy replica. Replicas past the first will not schedule unless your
+storage class supports multi-attach. Use a ReadWriteMany class, or set
+persistence.enabled=false and accept that a restart drops buffered events.
+{{- end }}
+
+{{- if not .Values.ingress.enabled }}
+
+No Ingress was created. Nothing outside the cluster can reach the data plane
+yet — that is the default on purpose. Set ingress.enabled=true with hosts, or
+expose it through your own gateway.
+{{- end }}
+
+Read before treating this as production: infra/README.md lists what this chart
+still does not do. In particular there is NO meter-agent deployment — the
+proxy writes metering events to its buffer and nothing drains them to the
+control plane yet.

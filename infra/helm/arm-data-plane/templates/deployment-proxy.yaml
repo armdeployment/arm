@@ -1,26 +1,39 @@
+{{- if .Values.proxy.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "arm-data-plane.fullname" . }}-proxy
   labels:
-    app.kubernetes.io/name: arm-closed-proxy
     {{- include "arm-data-plane.labels" . | nindent 4 }}
+    # Not `selectorLabels` — that also sets app.kubernetes.io/instance, and a
+    # duplicate key in one YAML map is a parse error, not a merge.
+    app.kubernetes.io/name: arm-closed-proxy
+    app.kubernetes.io/component: closed-proxy
 spec:
+  {{- if not .Values.proxy.autoscaling.enabled }}
   replicas: {{ .Values.proxy.replicas }}
+  {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: arm-closed-proxy
+      {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "closed-proxy") | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: arm-closed-proxy
+        {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "closed-proxy") | nindent 8 }}
+        app.kubernetes.io/component: closed-proxy
     spec:
+      serviceAccountName: {{ include "arm-data-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: proxy
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: {{ .Values.proxy.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
-            - containerPort: {{ .Values.proxy.port }}
+            - name: http
+              containerPort: {{ .Values.proxy.port }}
               protocol: TCP
           env:
             - name: PROXY_PORT
@@ -29,28 +42,47 @@ spec:
               value: {{ .Values.proxy.env.ARM_FAIL_MODE | quote }}
             - name: PROXY_PERFORMANCE_BUDGET_MS
               value: {{ .Values.proxy.env.PROXY_PERFORMANCE_BUDGET_MS | quote }}
-            - name: CONTROL_PLANE_URL
-              value: {{ .Values.controlPlane.url | quote }}
-            - name: TENANT_ID
-              value: {{ .Values.controlPlane.tenantId | quote }}
+            {{- include "arm-data-plane.controlPlaneEnv" . | nindent 12 }}
+            # The buffer the proxy writes metering events into. @arm/config
+            # reads these three; the drainer that would ship them onward is
+            # not deployed — see meterAgent in values.yaml.
+            - name: METER_AGENT_BUFFER_DIR
+              value: {{ .Values.meterAgent.buffer.dir | quote }}
+            - name: METER_AGENT_BUFFER_MAX_BYTES
+              value: {{ .Values.meterAgent.buffer.maxBytes | quote }}
+            - name: METER_AGENT_BUFFER_MAX_AGE_HOURS
+              value: {{ .Values.meterAgent.buffer.maxAgeHours | quote }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.proxy.port }}
+              port: http
             initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.proxy.port }}
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
             {{- toYaml .Values.proxy.resources | nindent 12 }}
           volumeMounts:
+            # readOnlyRootFilesystem is on, and the entrypoint is
+            # `node --import tsx`, which transpiles to a cache under the
+            # system temp dir. Without a writable /tmp the container fails at
+            # startup rather than at some later write.
+            - name: tmp
+              mountPath: /tmp
             - name: meter-buffer
-              mountPath: /data/meter-buffer
+              mountPath: {{ .Values.meterAgent.buffer.dir }}
+            {{- if .Values.tls.controlPlaneMTLS.enabled }}
+            - name: control-plane-mtls
+              mountPath: /etc/arm/mtls
+              readOnly: true
+            {{- end }}
       volumes:
+        - name: tmp
+          emptyDir: {}
         - name: meter-buffer
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
@@ -58,3 +90,12 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.tls.controlPlaneMTLS.enabled }}
+        - name: control-plane-mtls
+          secret:
+            # NOT created by this chart — the chart never generates or holds
+            # key material. Create it out of band before installing; see
+            # NOTES.txt for the exact command.
+            secretName: {{ .Values.tls.controlPlaneMTLS.certSecretName }}
+        {{- end }}
+{{- end }}

@@ -1,0 +1,66 @@
+{{- if .Values.openGateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-gateway
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+    # Not `selectorLabels` — that also sets app.kubernetes.io/instance, and a
+    # duplicate key in one YAML map is a parse error, not a merge.
+    app.kubernetes.io/name: arm-open-gateway
+    app.kubernetes.io/component: open-gateway
+spec:
+  replicas: {{ .Values.openGateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "open-gateway") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "open-gateway") | nindent 8 }}
+        app.kubernetes.io/component: open-gateway
+    spec:
+      serviceAccountName: {{ include "arm-data-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: gateway
+          image: "{{ .Values.openGateway.image.repository }}:{{ .Values.openGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.openGateway.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.openGateway.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.openGateway.port }}"
+            {{- include "arm-data-plane.controlPlaneEnv" . | nindent 12 }}
+            {{- with .Values.openGateway.vllmEndpoint }}
+            - name: VLLM_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.openGateway.resources | nindent 12 }}
+          volumeMounts:
+            # See the note in deployment-proxy.yaml — readOnlyRootFilesystem
+            # plus a `node --import tsx` entrypoint needs a writable /tmp.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

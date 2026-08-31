@@ -1,0 +1,39 @@
+{{- if .Values.proxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-proxy
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: closed-proxy
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.proxyPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "closed-proxy") | nindent 4 }}
+{{- end }}
+{{- if and .Values.openGateway.enabled .Values.proxy.enabled }}
+---
+{{- end }}
+{{- if .Values.openGateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-gateway
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: open-gateway
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.gatewayPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "open-gateway") | nindent 4 }}
+{{- end }}

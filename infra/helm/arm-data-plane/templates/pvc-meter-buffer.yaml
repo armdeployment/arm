@@ -1,0 +1,22 @@
+{{- if and .Values.persistence.enabled .Values.proxy.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-meter-buffer
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    # ReadWriteOnce, and note what that implies: with proxy.replicas > 1 or
+    # autoscaling on, replicas beyond the first will fail to schedule unless
+    # the storage class supports multi-attach. Either use a RWX class or run
+    # the proxy with persistence.enabled=false and accept that a restart
+    # loses buffered events.
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

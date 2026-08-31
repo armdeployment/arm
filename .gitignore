@@ -36,3 +36,13 @@ apps/arm-video/out/
 # local scratch — never commit
 _to_delete/
 releases/
+
+# Terraform / OpenTofu working files. `infra/terraform` is a reusable module,
+# not a root module, so the lock file belongs to whoever consumes it — and
+# .terraform/ is 700MB of downloaded providers.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example

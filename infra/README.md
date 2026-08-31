@@ -4,20 +4,23 @@ What each directory here is, and — more importantly — **how finished it
 is**. ARM is pre-1.0, and the deployment story is the least finished part
 of it. Nothing below is padded to look more complete than it is.
 
-Read [SECURITY.md](../SECURITY.md) before deploying anywhere real. The
-short version: there is no live OIDC verification yet, so any deployment
-today is trusted-network only.
+Read [SECURITY.md](../SECURITY.md) before deploying anywhere real, and
+[docs/sso-setup.md](../docs/sso-setup.md) before exposing anything. The
+short version: ARM verifies IdP bearer tokens once you configure an issuer,
+and refuses every authenticated request under `NODE_ENV=production` until
+you do. It does not run the browser login flow that obtains a token, so put
+a reverse proxy that does in front of it.
 
 ## Status at a glance
 
-| Piece                                | State        | Use it for                                                |
-| ------------------------------------ | ------------ | --------------------------------------------------------- |
-| `compose/docker-compose.dev-db.yml`  | **Works**    | Local Postgres + ClickHouse for development               |
-| `compose/docker-compose.sandbox.yml` | **Works**    | The full local sandbox: ollama, proxy, gateway, dashboard |
-| `compose/docker-compose.yml`         | **Works**    | Just the two data-plane services, built from source       |
-| `docker/*.Dockerfile`                | **Works**    | Images the compose files build                            |
-| `helm/arm-data-plane`                | **Skeleton** | Reference only — renders one Deployment, see below        |
-| `terraform/main.tf`                  | **Skeleton** | Reference only — expects an existing cluster, see below   |
+| Piece                                | State     | Use it for                                                |
+| ------------------------------------ | --------- | --------------------------------------------------------- |
+| `compose/docker-compose.dev-db.yml`  | **Works** | Local Postgres + ClickHouse for development               |
+| `compose/docker-compose.sandbox.yml` | **Works** | The full local sandbox: ollama, proxy, gateway, dashboard |
+| `compose/docker-compose.yml`         | **Works** | Just the two data-plane services, built from source       |
+| `docker/*.Dockerfile`                | **Works** | Images the compose files build                            |
+| `helm/arm-data-plane`                | **Works** | Installs proxy + gateway with Services, HPA, PVC, ingress |
+| `terraform/`                         | **Works** | IRSA role + the Helm release; expects an existing cluster |
 
 ## Local development
 
@@ -54,37 +57,89 @@ There is a second, non-identical `docker-compose.sandbox.yml` at the repo
 root, driven by `scripts/sandbox/start.sh`. If you're following the root
 README's sandbox section, use that script rather than this file.
 
-## Helm chart — skeleton, read before trusting
+## Helm chart
 
-`values.yaml` is the misleading part: it declares configuration for
-`proxy`, `openGateway`, `meterAgent`, `service`, `ingress`, `persistence`,
-`serviceMonitor` and `tls`, which reads like a complete chart.
-
-`templates/` contains exactly one file:
-
-```
-templates/deployment-proxy.yaml
+```bash
+helm install arm-data-plane infra/helm/arm-data-plane \
+  --namespace arm --create-namespace \
+  --set controlPlane.url=https://control.arm.example.com \
+  --set controlPlane.tenantId=<tenant-uuid>
 ```
 
-So the chart renders **a single proxy Deployment**. There is no Service,
-no Ingress, no ServiceAccount, no Secret handling and no `NOTES.txt`,
-despite values existing for several of them. `helm install` will not give
-you a reachable, working data plane as-is.
+That renders seven objects: a ServiceAccount, Deployments and Services for
+the closed proxy and the open gateway, an HPA for the proxy, and a PVC for
+the meter buffer. `ingress.enabled=true` adds an Ingress;
+`serviceMonitor.enabled=true` adds a ServiceMonitor (and fails the install
+with a clear message if the Prometheus Operator CRDs are absent).
 
-Treat it as a starting point that captures the intended shape and the
-tuning knobs (fail-closed mode, the 25 ms p50 latency budget, autoscaling
-targets), not as a deployable artifact.
+`controlPlane.url` and `controlPlane.tenantId` are `required` rather than
+defaulted — a proxy that starts with an empty control-plane URL reports
+healthy and meters nothing, which is the worst way for a metering boundary
+to fail.
 
-## Terraform — skeleton, read before trusting
+**Until 2026-08-31 this chart rendered nothing at all.** The single
+`deployment-proxy.yaml` referenced `arm-data-plane.fullname` and
+`arm-data-plane.labels`, and there was no `_helpers.tpl` defining either,
+so `helm template` failed on the first line that used one. The description
+in this file — "renders a single proxy Deployment" — was optimistic.
 
-`main.tf` creates the IAM role and policy for data-plane S3 federation, a
-Kubernetes service account, and a `helm_release` pointing at the chart
-above — which inherits that chart's incompleteness.
+Two honest caveats:
 
-It does **not** create a cluster. `cluster_name` is an input variable and
-the module assumes the EKS cluster already exists, along with configured
-`kubernetes` and `helm` providers. Required inputs: `cluster_name`,
-`tenant_id`, `control_plane_url`, and optionally `region`.
+- **The chart is verified by rendering, not by running.** `helm lint`
+  passes, and every values permutation renders manifests that pass
+  `kubeconform -strict`. It has not been applied to a live cluster,
+  because the images it names (`arm/closed-proxy`, `arm/open-gateway`)
+  are not published anywhere — build and push them from
+  `docker/*.Dockerfile` first, then override `image.repository`.
+- **There is no meter-agent.** `values.yaml` still carries a `meterAgent`
+  block and the proxy still mounts a meter buffer, but no Deployment is
+  templated for it and no image exists:
+  `apps/data-plane/meter-agent` is a library with no entrypoint that
+  nothing imports. Events accumulate in the buffer and nothing drains them
+  to the control plane. `meterAgent.enabled` now defaults to `false` to
+  stop that reading as a shipped component.
+
+## Terraform
+
+A module, not a root module — no provider blocks, so configure `aws` and
+`helm` in the configuration that calls it:
+
+```hcl
+module "arm_data_plane" {
+  source            = "./infra/terraform"
+  cluster_name      = "acme-prod"
+  tenant_id         = "d9d9d9d9-0000-4000-8000-000000000001"
+  control_plane_url = "https://control.arm.acme.com"
+  s3_bucket_arns    = ["arn:aws:s3:::acme-agent-data"]
+}
+```
+
+It creates an IRSA role for the data plane and a `helm_release` installing
+the chart above. It does **not** create a cluster: `cluster_name` must name
+an existing EKS cluster whose IAM OIDC provider is already registered.
+
+**Until 2026-08-31 this did not parse.** `variable "region" { type =
+string, default = "us-east-1" }` is a syntax error — HCL block bodies take
+one argument per line, not comma-separated ones — so nothing here had ever
+run. Three further defects were fixed on the way to `tofu validate`
+passing:
+
+- The IRSA trust policy federated to
+  `oidc-provider/${var.cluster_name}` and conditioned on
+  `${var.cluster_name}:sub`. IRSA keys off the cluster's OIDC **issuer
+  host**, not its name, so the role was creatable and permanently
+  unassumable. It now derives both from `aws_eks_cluster`, and pins
+  `:aud` to `sts.amazonaws.com`.
+- The module created a `kubernetes_service_account` that the Helm chart
+  also creates — two owners for one object. The chart owns it now, and
+  Terraform passes the role ARN through as an annotation.
+- The header claimed S3 federation while the policy granted only
+  CloudWatch and Logs. `s3_bucket_arns` now grants scoped `GetObject` /
+  `ListBucket`, and defaults to `[]` — no buckets, no S3 access.
+
+Verified with `tofu fmt`, `tofu init` and `tofu validate` against real
+provider schemas. Not `plan`-verified: that needs AWS credentials and a
+live cluster.
 
 ## What's missing
 
@@ -92,7 +147,12 @@ Being explicit, so nobody discovers these halfway through a rollout:
 
 - **No control-plane deployment manifests.** Everything here targets the
   data plane. The control plane runs from `infra/docker/control-plane.Dockerfile`
-  in the sandbox, but has no chart or production manifest.
+  in the sandbox, but has no chart or production manifest. Note that image
+  sets `NODE_ENV=production`, so without OIDC configured it refuses every
+  authenticated request by design — see [`../docs/sso-setup.md`](../docs/sso-setup.md).
+- **No published images.** Nothing pushes `arm/closed-proxy` or
+  `arm/open-gateway` to a registry. Build them from `docker/` yourself and
+  point `image.repository` at wherever you put them.
 - **No secret management.** `ARM_SETUP_TOKEN_SECRET` and database
   credentials have no documented delivery mechanism beyond environment
   variables. See [`.env.example`](../.env.example).
