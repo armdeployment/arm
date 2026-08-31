@@ -90,11 +90,16 @@ pnpm --filter @arm/db db:generate   # regenerate Drizzle migrations
 | Workflow             | Trigger             | What it checks                                               |
 | -------------------- | ------------------- | ------------------------------------------------------------ |
 | `typecheck.yml`      | PR + push to main   | `tsc --noEmit` across workspaces                             |
+| `test.yml`           | PR + push to main   | `pnpm test` across workspaces (fixture mode)                 |
 | `guardrails.yml`     | PR + push to main   | Invariants-as-code (spec §14.1)                              |
+| `format.yml`         | PR + push to main   | `prettier --check .`                                         |
 | `contract-check.yml` | PR (schema changes) | Generated types match committed output                       |
 | `security-audit.yml` | PR + daily cron     | Dependency advisories; baselined entries carry justification |
 
-This table is kept in sync with `.github/workflows/*` by a CI check once workflows exist.
+The first four are the same four CONTRIBUTING asks you to run before opening a
+PR, in the same order. This table is kept in sync with `.github/workflows/*` by
+the `ci-sync` guardrail — add a workflow without adding its row here and the
+gate goes red.
 
 ## External References
 

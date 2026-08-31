@@ -1,0 +1,31 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# CONTRIBUTING tells contributors to run typecheck + test + guardrails +
+# format:check before opening a PR, and says CI runs the same four. Until this
+# workflow existed that was only true of two of them.
+#
+# The live-database integration tests skip themselves when DATABASE_URL /
+# CLICKHOUSE_URL are unset, so this job exercises the fixture-mode path — the
+# same one a contributor gets on a fresh clone.
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test

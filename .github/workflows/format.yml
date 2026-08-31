@@ -1,0 +1,29 @@
+name: format
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The fourth of the four checks CONTRIBUTING asks for before a PR.
+#
+# `--ignore-scripts` skips the root postinstall, which builds every package
+# under packages/*. Prettier reads source, so none of that output matters here
+# and skipping it takes the job from minutes to seconds.
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm format:check
