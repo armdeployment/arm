@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@arm/proto": "workspace:*",
+    "@arm/auth": "workspace:*",
     "@arm/config": "workspace:*",
     "@arm/trpc": "workspace:*",
     "@arm/questionnaire": "workspace:*",

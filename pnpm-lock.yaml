@@ -124,6 +124,9 @@ importers:
 
   apps/control-plane/web:
     dependencies:
+      '@arm/auth':
+        specifier: workspace:*
+        version: link:../../../packages/auth
       '@arm/config':
         specifier: workspace:*
         version: link:../../../packages/config
@@ -350,6 +353,9 @@ importers:
 
   apps/onboarding:
     dependencies:
+      '@arm/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@arm/client-core':
         specifier: workspace:*
         version: link:../../packages/client-core

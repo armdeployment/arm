@@ -65,6 +65,13 @@ services:
       dockerfile: infra/docker/control-plane.Dockerfile
     ports:
       - "3100:3100"
+    environment:
+      # The image sets NODE_ENV=production, and production with no IdP
+      # configured refuses every authenticated request by design. This is a
+      # sandbox with no IdP, so it opts in to the shared development identity
+      # explicitly rather than being handed one silently. Never set this on a
+      # real deployment — configure OIDC instead (docs/sso-setup.md).
+      ARM_ALLOW_DEV_IDENTITY: "1"
     restart: unless-stopped
 
 volumes:

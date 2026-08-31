@@ -41,10 +41,20 @@ oversights:
 - **`ARM_SETUP_TOKEN_SECRET` has a well-known development fallback.** If
   you do not set it, setup tokens are signed with a public string. Set it
   to a long random value in any deployment reachable by anyone else.
-- **No live OIDC verification yet.** `apps/control-plane/web` and
-  `apps/onboarding` inject a fixed development tenant/user identity rather
-  than verifying a real IdP token (`TODO(1.1)` in their tRPC routes). Do
-  not expose these to untrusted networks as-is.
+- **OIDC verification is live, but only bearer-token verification.**
+  `apps/control-plane/web` and `apps/onboarding` verify `Authorization:
+Bearer` tokens against your IdP's JWKS when `ARM_OIDC_ISSUER_URL`,
+  `ARM_OIDC_JWKS_URL` and `ARM_OIDC_AUDIENCE` are set — see
+  [`docs/sso-setup.md`](docs/sso-setup.md). With none of them set they fall
+  back to a fixed development identity, and under `NODE_ENV=production`
+  they **refuse every authenticated request** rather than doing so silently.
+  What is still missing: ARM does not run the browser login flow that
+  obtains a token (put a reverse proxy in front of it), and the `groups`
+  claim is not yet mapped to ARM roles.
+- **SCIM and SAML are stubs.** `provisionSCIMUser`, `provisionSCIMGroup`
+  and `verifySAMLAssertion` in `packages/auth` return fixture data without
+  contacting or validating anything. Do not point an IdP's provisioning
+  push at them.
 - **The data-plane proxy's quota store is in-memory.** Restarting the proxy
   resets consumption; it is not yet a durable enforcement boundary.
 - **`ARM_DEMO` read-only mode covers fixture-mode mutations only.** It does

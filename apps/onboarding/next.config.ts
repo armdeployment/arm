@@ -6,6 +6,7 @@ const config: NextConfig = {
   // Transpile all workspace packages (they export raw .ts).
   transpilePackages: [
     "@arm/proto",
+    "@arm/auth",
     "@arm/config",
     "@arm/trpc",
     "@arm/questionnaire",

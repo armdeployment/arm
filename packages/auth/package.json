@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mock-idp": "node scripts/mock-idp.mjs"
   },
   "dependencies": {
     "@arm/config": "workspace:*",

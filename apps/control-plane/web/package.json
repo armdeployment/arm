@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@arm/proto": "workspace:*",
+    "@arm/auth": "workspace:*",
     "@arm/config": "workspace:*",
     "@arm/profiles": "workspace:*",
     "@tanstack/react-table": "8.21.3",

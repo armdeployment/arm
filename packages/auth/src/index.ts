@@ -32,11 +32,38 @@ export interface OIDCVerifierConfig {
   issuerUrl: string;
   jwksUrl: string;
   audience: string;
+  /**
+   * Claim carrying the ARM tenant id. Defaults to `tenant_id`, which is what
+   * an ARM-issued agent token has. An external IdP will not mint that claim
+   * unless someone configures it, which is what `fixedTenantId` is for.
+   */
+  tenantClaim?: string;
+  /**
+   * Tenant to assign when the token carries no tenant claim — the normal case
+   * for one ARM deployment serving one company. Without either this or a
+   * tenant claim in the token, verification fails: a verified identity with no
+   * tenant cannot be scoped, and Invariant 6 makes an unscoped identity
+   * useless anyway.
+   */
+  fixedTenantId?: string;
+  /** Claim carrying the user's email. Entra, Okta and Google all use `email`. */
+  emailClaim?: string;
 }
 
 /**
- * Verifies an OIDC token against a remote JWKS (external IdP trust).
- * Throws on invalid signature, expired token, or wrong audience.
+ * Verifies an OIDC token against a remote JWKS (external IdP trust) and maps
+ * its claims onto ARM's own claim shape.
+ *
+ * Throws on invalid signature, expired token, wrong issuer, wrong audience, or
+ * a token that cannot be resolved to a tenant.
+ *
+ * On the tenant mapping: this used to `armClaimsSchema.parse(payload)` the raw
+ * token, which requires a `tenant_id` claim. No real Okta, Entra or Google
+ * token has one, so that path could only ever have verified ARM's own tokens —
+ * every external IdP token would have failed schema parsing *after* passing
+ * signature verification, which reads as "SSO is broken" rather than "SSO was
+ * never mapped". The tenant now comes from a configurable claim, falling back
+ * to a configured fixed tenant.
  */
 export async function verifyOIDCToken(
   token: string,
@@ -47,7 +74,191 @@ export async function verifyOIDCToken(
     issuer: config.issuerUrl,
     audience: config.audience,
   });
-  return armClaimsSchema.parse(payload);
+  return mapVerifiedPayload(payload, config);
+}
+
+/**
+ * Maps an already-verified JWT payload onto ARM claims. Split out from
+ * `verifyOIDCToken` so the mapping — the part with the interesting edge cases —
+ * is testable without a live JWKS endpoint or a signing key.
+ */
+export function mapVerifiedPayload(
+  payload: JWTPayload & Record<string, unknown>,
+  config: Pick<OIDCVerifierConfig, "tenantClaim" | "fixedTenantId" | "emailClaim">,
+): ARMClaims {
+  const tenantClaim = config.tenantClaim ?? "tenant_id";
+  const emailClaim = config.emailClaim ?? "email";
+
+  const claimed = payload[tenantClaim];
+  const tenantId =
+    typeof claimed === "string" && claimed.length > 0 ? claimed : config.fixedTenantId;
+
+  if (!tenantId) {
+    throw new Error(
+      `OIDC token verified but could not be resolved to a tenant: no "${tenantClaim}" claim ` +
+        `and no fixed tenant configured. Set ARM_OIDC_TENANT_ID for a single-tenant deployment, ` +
+        `or ARM_OIDC_TENANT_CLAIM to the claim your IdP puts the tenant in.`,
+    );
+  }
+
+  const email = payload[emailClaim];
+  const scope = payload.scope;
+
+  return armClaimsSchema.parse({
+    sub: payload.sub,
+    tenant_id: tenantId,
+    ...(typeof email === "string" ? { email } : {}),
+    ...(typeof scope === "string" ? { scope } : {}),
+    ...(typeof payload.agent_id === "string" ? { agent_id: payload.agent_id } : {}),
+    ...(typeof payload.sub_account_id === "string"
+      ? { sub_account_id: payload.sub_account_id }
+      : {}),
+    ...(typeof payload.priority_tier === "string" ? { priority_tier: payload.priority_tier } : {}),
+  });
+}
+
+// ── Request authentication (what the tRPC routes actually call) ────────────
+
+/**
+ * How this process authenticates an incoming request, decided once from env.
+ *
+ *   oidc        — ARM_OIDC_ISSUER_URL + _JWKS_URL + _AUDIENCE are all set.
+ *                 Bearer tokens are verified against the IdP's JWKS.
+ *   development — none of them are set and this is not production. The caller's
+ *                 built-in development identity is used, so a fresh clone runs
+ *                 with zero configuration, matching ARM_FIXTURE_MODE=1.
+ *   refuse      — none of them are set and this IS production. Every request is
+ *                 unauthenticated, which makes protected procedures return
+ *                 UNAUTHORIZED. Failing closed is the point: the alternative is
+ *                 a production deployment silently authenticating every caller
+ *                 as the same fixed user with the same fixed tenant.
+ *   misconfigured — some but not all of the three are set. Also refuses; a
+ *                 half-configured verifier is more dangerous than none.
+ */
+export type AuthMode =
+  | { kind: "oidc"; config: OIDCVerifierConfig }
+  | { kind: "development"; reason: string }
+  | { kind: "refuse"; reason: string };
+
+/** The env vars `resolveAuthMode` reads. Injected so it stays testable. */
+export interface AuthEnv {
+  ARM_OIDC_ISSUER_URL?: string | undefined;
+  ARM_OIDC_JWKS_URL?: string | undefined;
+  ARM_OIDC_AUDIENCE?: string | undefined;
+  ARM_OIDC_TENANT_CLAIM?: string | undefined;
+  ARM_OIDC_TENANT_ID?: string | undefined;
+  ARM_OIDC_EMAIL_CLAIM?: string | undefined;
+  ARM_ALLOW_DEV_IDENTITY?: boolean | undefined;
+  NODE_ENV?: string | undefined;
+}
+
+export function resolveAuthMode(env: AuthEnv): AuthMode {
+  const issuerUrl = env.ARM_OIDC_ISSUER_URL;
+  const jwksUrl = env.ARM_OIDC_JWKS_URL;
+  const audience = env.ARM_OIDC_AUDIENCE;
+  const present = [issuerUrl, jwksUrl, audience].filter(Boolean).length;
+
+  if (present === 3) {
+    return {
+      kind: "oidc",
+      config: {
+        issuerUrl: issuerUrl!,
+        jwksUrl: jwksUrl!,
+        audience: audience!,
+        ...(env.ARM_OIDC_TENANT_CLAIM ? { tenantClaim: env.ARM_OIDC_TENANT_CLAIM } : {}),
+        ...(env.ARM_OIDC_TENANT_ID ? { fixedTenantId: env.ARM_OIDC_TENANT_ID } : {}),
+        ...(env.ARM_OIDC_EMAIL_CLAIM ? { emailClaim: env.ARM_OIDC_EMAIL_CLAIM } : {}),
+      },
+    };
+  }
+
+  if (present > 0) {
+    const missing = [
+      issuerUrl ? null : "ARM_OIDC_ISSUER_URL",
+      jwksUrl ? null : "ARM_OIDC_JWKS_URL",
+      audience ? null : "ARM_OIDC_AUDIENCE",
+    ].filter(Boolean);
+    return {
+      kind: "refuse",
+      reason: `OIDC is partially configured — missing ${missing.join(", ")}. Refusing rather than running with a half-built verifier.`,
+    };
+  }
+
+  if (env.NODE_ENV === "production" && !env.ARM_ALLOW_DEV_IDENTITY) {
+    return {
+      kind: "refuse",
+      reason:
+        "NODE_ENV=production with no OIDC configuration. Set ARM_OIDC_ISSUER_URL, " +
+        "ARM_OIDC_JWKS_URL and ARM_OIDC_AUDIENCE (see docs/sso-setup.md), or set " +
+        "ARM_ALLOW_DEV_IDENTITY=1 if you intend everyone to share one fixed identity.",
+    };
+  }
+
+  return {
+    kind: "development",
+    reason: env.ARM_ALLOW_DEV_IDENTITY
+      ? "ARM_ALLOW_DEV_IDENTITY=1 — every caller shares one fixed identity."
+      : "no OIDC configuration; using the built-in development identity.",
+  };
+}
+
+/** Just enough of `Headers` to read one header, so tests need no DOM types. */
+export interface HeaderReader {
+  get(name: string): string | null;
+}
+
+/** Pulls the token out of `Authorization: Bearer <token>`, case-insensitively. */
+export function bearerToken(headers: HeaderReader): string | null {
+  const raw = headers.get("authorization") ?? headers.get("Authorization");
+  if (!raw) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(raw.trim());
+  return match ? match[1]!.trim() : null;
+}
+
+export interface AuthenticateOptions {
+  /** Identity to use in `development` mode. Each app supplies its own. */
+  developmentIdentity: ARMClaims;
+  /** Overridable so tests don't need a live JWKS endpoint. */
+  verify?: (token: string, config: OIDCVerifierConfig) => Promise<ARMClaims>;
+  /** Overridable so tests can assert on what was reported. */
+  onDiagnostic?: (message: string) => void;
+}
+
+/**
+ * Resolves a request to ARM claims, or to `null` when it cannot be
+ * authenticated. `null` is not an error path — `createContext` accepts it and
+ * every protected procedure then returns UNAUTHORIZED, so an unauthenticated
+ * request fails closed at the router rather than throwing out of the handler.
+ */
+export async function authenticateRequest(
+  headers: HeaderReader,
+  mode: AuthMode,
+  options: AuthenticateOptions,
+): Promise<ARMClaims | null> {
+  const report = options.onDiagnostic ?? ((m: string) => console.error(`[auth] ${m}`));
+
+  if (mode.kind === "refuse") {
+    report(mode.reason);
+    return null;
+  }
+
+  if (mode.kind === "development") {
+    return options.developmentIdentity;
+  }
+
+  const token = bearerToken(headers);
+  if (!token) return null;
+
+  try {
+    const verify = options.verify ?? verifyOIDCToken;
+    return await verify(token, mode.config);
+  } catch (err) {
+    // Deliberately coarse: never report *why* a token failed to the caller.
+    // The reason goes to the server log; the caller gets an unauthenticated
+    // context and a plain UNAUTHORIZED from the router.
+    report(`token rejected: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
 }
 
 // ── RBAC Permission Checking ───────────────────────────────────────────────

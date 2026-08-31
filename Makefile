@@ -4,7 +4,7 @@
 PNPM_VERSION = 11.17.0
 NODE_VERSION = 22			# enforced via package.json engines; corepack supplies pnpm
 
-.PHONY: install dev dev-data-plane test guardrails typecheck lint format-check clean bootstrap
+.PHONY: install dev dev-data-plane mock-idp test guardrails typecheck lint format-check clean bootstrap
 
 bootstrap:
 	@corepack enable pnpm && corepack prepare pnpm@$(PNPM_VERSION) --activate
@@ -17,6 +17,9 @@ dev: ## Start control-plane web in production mode (fixes Turbopack dev hang)
 
 dev-data-plane: ## Start the data-plane services: proxy (8787) + artifact cache (8788)
 	pnpm --parallel --filter @arm-app/proxy --filter @arm-app/artifact-cache run dev
+
+mock-idp: ## Local OIDC issuer (9999) for testing SSO without an IdP tenant — docs/sso-setup.md
+	pnpm --filter @arm/auth mock-idp
 
 test:
 	pnpm test
