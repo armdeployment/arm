@@ -172,31 +172,48 @@ procedures), `catalog-router` (Postgres, all six), and `library-router`
 other router still serves fixtures in both modes; that's a known, tracked
 state, not a silent gap.
 
-See [`.env.example`](.env.example) for every environment variable, and
-[`infra/README.md`](infra/README.md) for what is deployable today versus
-what is still a skeleton.
+See [`.env.example`](.env.example) for every environment variable,
+[`docs/sso-setup.md`](docs/sso-setup.md) for connecting it to your identity
+provider, and [`infra/README.md`](infra/README.md) for the honest state of
+each deployment path.
 
 ## How far you can take it today
 
 ARM is pre-1.0, and it's worth being blunt about where it currently stops
 so you don't discover it halfway through a rollout.
 
-| You want to…                                      | State                   | What's involved                                                                                                                                         |
-| ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Evaluate it on a laptop                           | **Works now**           | The quick start above. No database, no config.                                                                                                          |
-| Run it against real Postgres + ClickHouse         | **Works now**           | The section above. Three routers read real data; the rest serve fixtures in both modes.                                                                 |
-| Pilot it with a team you control                  | **Possible, with care** | Set `ARM_SETUP_TOKEN_SECRET`, keep it on a trusted network, accept that quota resets when the proxy restarts.                                           |
-| Deploy it for untrusted / multi-tenant production | **Not yet**             | There is no live OIDC verification — the control-plane and onboarding apps inject a fixed development identity rather than validating a real IdP token. |
+| You want to…                                      | State         | What's involved                                                                                                                                  |
+| ------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Evaluate it on a laptop                           | **Works now** | The quick start above. No database, no config.                                                                                                   |
+| Run it against real Postgres + ClickHouse         | **Works now** | The section above. Three routers read real data; the rest serve fixtures in both modes.                                                          |
+| Pilot it with a team you control                  | **Works now** | Point it at your IdP ([`docs/sso-setup.md`](docs/sso-setup.md)), set `ARM_SETUP_TOKEN_SECRET`, accept that quota resets when the proxy restarts. |
+| Deploy it for untrusted / multi-tenant production | **Not yet**   | ARM verifies IdP tokens but does not obtain them, and no admin flow provisions a tenant. See below.                                              |
 
-**The gating item is authentication.** `apps/control-plane/web` and
-`apps/onboarding` carry a `TODO(1.1)` where identity should be verified.
-Until that lands, treat any deployment as trusted-network only. There is
-also no tenant-provisioning or first-admin flow yet: tenants and org trees
-come from the industry-profile seeds in
-[`packages/profiles`](packages/profiles), not from an admin UI.
+**Authentication works now.** Set `ARM_OIDC_ISSUER_URL`,
+`ARM_OIDC_JWKS_URL` and `ARM_OIDC_AUDIENCE` and both apps verify real
+bearer tokens against your IdP's JWKS; with none of them set under
+`NODE_ENV=production` they refuse every authenticated request rather than
+falling back to a shared identity. `make mock-idp` lets you prove the
+wiring end to end without an Okta or Entra tenant.
+[`docs/sso-setup.md`](docs/sso-setup.md) has working config for Entra,
+Okta and Google.
 
-[SECURITY.md](SECURITY.md) lists all four known gaps in full. Read it
-before deploying anywhere real.
+**What still gates untrusted production**, in order of how likely you are
+to hit it:
+
+- ARM verifies bearer tokens but does not run the browser login flow that
+  obtains one — put a reverse proxy that does (oauth2-proxy, an ingress
+  auth annotation) in front of it.
+- The `groups` claim is not mapped to ARM roles yet; RBAC resolves from
+  `roleTable`, so roles are assigned in ARM rather than inherited from
+  your IdP.
+- No tenant-provisioning or first-admin flow: tenants and org trees come
+  from the industry-profile seeds in
+  [`packages/profiles`](packages/profiles), not from an admin UI.
+- The proxy's quota store is in memory, so a restart resets consumption.
+
+[SECURITY.md](SECURITY.md) lists the known gaps in full. Read it before
+deploying anywhere real.
 
 ## Sandbox — watch agents actually spend money
 
@@ -266,7 +283,7 @@ scripts/                   Guardrails, seeds, sandbox tooling
 | [`docs/agent-onboarding-guide.md`](docs/agent-onboarding-guide.md) | **The employee's guide.** How someone connects their agent, the connections wizard (OAuth and PAT tiers), manual setup for all four agent types, and troubleshooting.                                                    |
 | [`docs/sso-setup.md`](docs/sso-setup.md)                           | **The operator's guide.** Connecting ARM to Entra, Okta or Google; what happens when you don't; and a local OIDC issuer for testing it without an IdP tenant.                                                            |
 | [`docs/arm-spec.md`](docs/arm-spec.md)                             | The specification. §11 is the invariant list — start there.                                                                                                                                                              |
-| [`infra/README.md`](infra/README.md)                               | What deploys today, what is a skeleton, and the honest state of each piece.                                                                                                                                              |
+| [`infra/README.md`](infra/README.md)                               | What deploys today, how it was verified, and what each path still cannot do.                                                                                                                                             |
 | [`docs/solutions/`](docs/solutions/)                               | Dated design records — _why_ a subsystem looks the way it does, including what was deliberately left undone                                                                                                              |
 | [`docs/guides/`](docs/guides/)                                     | Design guides written _during_ the build and kept as a record. Written for the sub-agents that implemented each subsystem, so they read as work allocation ("owner agent", "wave") — useful as history, not as a how-to. |
 | [`AGENTS.md`](AGENTS.md)                                           | Working agreement for both human and AI contributors                                                                                                                                                                     |
