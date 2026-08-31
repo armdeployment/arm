@@ -24,6 +24,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     title: "Six Questions. No Free Text, Ever.",
     image: "install-e2e/01-role-cluster.png",
     imagePosition: "50% 12%",
+    zoom: 1.2,
     caption: "Real screenshot — the manufacturing questionnaire graph",
     facts: [
       { label: "Deterministic by construction", detail: "score() is pure — no LLM, no I/O. The same answers always rank the same job function, so a manager can be told exactly why someone got a package.", tone: "good" },
@@ -38,6 +39,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     title: "One Package, One Real Code",
     image: "install-e2e/03-download.png",
     imagePosition: "50% 20%",
+    zoom: 1.2,
     caption: "Real screenshot — a real 6-character code with a real 15-minute expiry",
     facts: [
       { label: "Recommended", value: "Senior Manager", tone: "neutral" },
@@ -53,6 +55,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     title: "The Installer Opens a Browser, Not a Prompt",
     image: "install-e2e/04-gui-activate.png",
     imagePosition: "50% 18%",
+    zoom: 1.2,
     caption: "Real screenshot — a local server on 127.0.0.1 the CLI just started",
     facts: [
       { label: "Zero terminal typing", detail: "Paste the code or drop the .armsetup file. That is the entire interaction.", tone: "good" },
@@ -67,6 +70,10 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     title: "Installed, Online, Tools Ready to Connect",
     image: "install-e2e/05-gui-installed.png",
     imagePosition: "50% 4%",
+    // No zoom here: this capture is tall, and magnifying it pushes three of
+    // the five guided connection steps out of frame — the very thing the
+    // title promises. Legibility is already fine at full width.
+    zoom: 1,
     caption: "Real screenshot — package, budget, 8 components, guided connection steps",
     facts: [
       { label: "Package", value: "senior_manager", tone: "neutral" },
@@ -82,6 +89,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     title: "Describe the Job. Scan the Projects.",
     image: "install-e2e/07-gui-refine.png",
     imagePosition: "50% 58%",
+    zoom: 1.2,
     caption: "Real screenshot — a real LLM reply and a real two-folder scan",
     facts: [
       { label: "Chat runs through the tenant's own proxy", detail: "Same armProxyUrl + agentToken as every other tool call. Never a third party, never ARM's control plane.", tone: "accent" },
@@ -97,7 +105,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Manager · /adoption",
     title: "Where Adoption Actually Stalls",
     image: "full-demo/mgr-02-adoption.png",
-    imagePosition: "0% 6%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — live ClickHouse activation_event rows",
     facts: [
       { label: "Weekly active", value: "103", tone: "good" },
@@ -113,7 +121,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Manager · /governance",
     title: "Budgets, Approvals, Cost per Work Product",
     image: "full-demo/mgr-04-governance.png",
-    imagePosition: "0% 4%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — package budgets and a live approvals inbox",
     facts: [
       { label: "Material Planner over cap", value: "$612 / $600", tone: "neutral" },
@@ -128,7 +136,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Manager · /organization",
     title: "Every Company Shape, One Tool",
     image: "full-demo/mgr-06-organization.png",
-    imagePosition: "0% 6%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — HQ + three plants, with regulatory tags",
     facts: [
       { label: "22 nodes · 3 plants", detail: "Manufacturing HQ + plants, holding-company subsidiaries, or a flat fintech with Chinese walls — provisioned from industry profiles.", tone: "neutral" },
@@ -144,7 +152,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Server · /library — packages",
     title: "The Library: Signed, Versioned, Immutable",
     image: "full-demo/srv-01-library-packages.png",
-    imagePosition: "0% 6%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — work packages served from Postgres",
     facts: [
       { label: "A package is a role's whole toolkit", detail: "MCP tools, skills, sub-agents, permissions, model routing, budget template, starter prompts — pinned to exact versions.", tone: "neutral" },
@@ -158,7 +166,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Server · /library — components",
     title: "79 Components, Faceted Live",
     image: "full-demo/srv-02-library-components.png",
-    imagePosition: "0% 6%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — facet counts computed over real Postgres rows",
     facts: [
       { label: "Kinds", detail: "21 CLI · 20 skill · 15 http_api · 13 template · 5 subagent · 2 MCP · 2 connector · 1 prompt pack", tone: "neutral" },
@@ -172,7 +180,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Server · /library — discovery",
     title: "New Tools Enter Through One Reviewed Door",
     image: "full-demo/srv-03-library-discovery.png",
-    imagePosition: "0% 10%",
+    imagePosition: "50% 2%",
     caption: "Real screenshot — a candidate awaiting scope-admin triage",
     facts: [
       { label: "Promote writes a real component", detail: "review_status='draft', source_kind='imported' — it enters the same signed pipeline as anything first-party.", tone: "good" },
@@ -186,7 +194,7 @@ const SHOWCASE: Array<ShowcaseSceneProps & { name: string; seconds: number }> = 
     kicker: "Server · /assignments",
     title: "Who Has What, and Who Approved It",
     image: "full-demo/mgr-03-assignments.png",
-    imagePosition: "0% 4%",
+    imagePosition: "50% 0%",
     caption: "Real screenshot — the D9 assignment state machine in Postgres",
     facts: [
       { label: "requested → approved → active → revoked", detail: "Every transition is a real row with an approver and a timestamp — this is the audit trail, not a log line.", tone: "accent" },

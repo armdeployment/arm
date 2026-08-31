@@ -22,11 +22,11 @@ export const ActCard: React.FC<{
       fontFamily: FONT_SANS, padding: "40px 60px",
     }}>
       <div style={{ opacity: appear, transform: `translateY(${y}px)`, textAlign: "center" }}>
-        <div style={{ fontSize: 13, color: accent, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase", marginBottom: 14 }}>
+        <div style={{ fontSize: 18, color: accent, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase", marginBottom: 14 }}>
           {act}
         </div>
-        <div style={{ fontSize: 42, fontWeight: 700, color: COLORS.white, letterSpacing: -1 }}>{title}</div>
-        <div style={{ fontSize: 15.5, color: COLORS.textDarkMuted, marginTop: 16, maxWidth: 760, margin: "16px auto 0", lineHeight: 1.6 }}>
+        <div style={{ fontSize: 54, fontWeight: 700, color: COLORS.white, letterSpacing: -1 }}>{title}</div>
+        <div style={{ fontSize: 21, color: COLORS.textDarkMuted, marginTop: 16, maxWidth: 980, margin: "16px auto 0", lineHeight: 1.6 }}>
           {blurb}
         </div>
       </div>
@@ -36,9 +36,9 @@ export const ActCard: React.FC<{
           <div key={b} style={{
             opacity: interpolate(frame, [22 + i * 8, 36 + i * 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
             backgroundColor: COLORS.slate800, border: `1px solid ${COLORS.borderDark}`,
-            borderRadius: 8, padding: "11px 16px",
+            borderRadius: 9, padding: "13px 20px",
           }}>
-            <span style={{ fontSize: 12.5, color: COLORS.white, fontFamily: FONT_MONO }}>{b}</span>
+            <span style={{ fontSize: 17, color: COLORS.white, fontFamily: FONT_MONO }}>{b}</span>
           </div>
         ))}
       </div>

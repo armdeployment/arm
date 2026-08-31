@@ -28,10 +28,14 @@ tenant's own network.
 
 ## See it work
 
-**▶ [`demo/arm-full-demo.mp4`](demo/arm-full-demo.mp4)** — the whole system
-end to end: an employee installing their agent, a manager reading adoption
-and spend, the component library, and the metered data plane. Every screen
-in it is a real capture from a live run, not a mockup.
+[![ARM — the complete system, end to end](demo/arm-full-demo-poster.png)](https://github.com/armdeployment/arm/blob/main/demo/arm-full-demo.mp4)
+
+**▶ [Play the full demo — 1:47](https://github.com/armdeployment/arm/blob/main/demo/arm-full-demo.mp4)**
+
+The whole system in one pass: an employee installing their agent with no
+terminal, a manager reading adoption and spend, the server-side component
+library, and the metered data plane. Every screen in it is a real capture
+from a live run against real Postgres and ClickHouse — not a mockup.
 
 ## Quick start — 60 seconds, no dependencies
 

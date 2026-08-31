@@ -7,6 +7,7 @@ import { ArmVideo4 } from "./ArmVideo4";
 import { ArmVideo5 } from "./ArmVideo5";
 import { ArmVideo6 } from "./ArmVideo6";
 import { ArmVideo7, ARM_VIDEO_7_DURATION } from "./ArmVideo7";
+import { DemoPoster } from "./Scenes/Video7/DemoPoster";
 import { SceneIntro } from "./Scenes/SceneIntro";
 import { SceneProfiles } from "./Scenes/SceneProfiles";
 import { SceneWorkType } from "./Scenes/SceneWorkType";
@@ -115,6 +116,15 @@ export const RemotionRoot: React.FC = () => {
         id="ArmVideo7-FullSystem"
         component={ArmVideo7}
         durationInFrames={ARM_VIDEO_7_DURATION}
+        fps={FPS}
+        width={W}
+        height={H}
+      />
+      {/* Single-frame composition rendered to demo/arm-full-demo-poster.png. */}
+      <Composition
+        id="ArmVideo7-Poster"
+        component={DemoPoster}
+        durationInFrames={1}
         fps={FPS}
         width={W}
         height={H}
