@@ -73,13 +73,30 @@ NodeNext convention colliding with raw-`.ts`-as-`main` that breaks.
   `apps/control-plane/web/next.config.ts`). Instead, each package has a
   `tsconfig.build.json` (`extends` the package's own `tsconfig.json`,
   `noEmit: false`, `emitDeclarationOnly: true`, `outDir: "dist"`,
-  `rootDir: "src"`) and `"build": "tsup && (tsc --project tsconfig.build.json || true)"`.
-- The `|| true` matters: `tsc` still emits best-effort `.d.ts` output even
-  when there are type errors (no `noEmitOnError` is set anywhere in this
-  repo), but its exit code would otherwise fail the package's `build`
-  script. `build` (JS/`.d.ts` emission) and `typecheck` (the strict gate)
-  are intentionally decoupled — the same split CI already relies on
-  (`typecheck.yml` runs `pnpm typecheck` separately from `pnpm build`).
+  `rootDir: "src"`) and `"build": "tsup && tsc --project tsconfig.build.json"`.
+- **Superseded (2026-08-31): the `tsc` step was originally wrapped `|| true`.**
+  The reason was real at the time — `@arm/catalog` and `@arm/client-core`
+  carried pre-existing type errors from the D10 manifest-v2 migration, and
+  `tsc` emits best-effort `.d.ts` anyway (no `noEmitOnError` is set in this
+  repo), so swallowing the exit code kept `build` and `typecheck` decoupled
+  rather than blocking every downstream app on two packages' drift.
+
+  That drift is gone: all ten packages now compile clean under
+  `tsconfig.build.json`, so the wrapper protects nothing and costs something.
+  It let a **failed** declaration build produce a dist/ that turbo then cached
+  as a successful one, so consumers hit `TS7016` against a package that had
+  quietly shipped no types — far from the cause and with no failing build to
+  point at. The `|| true` is removed.
+
+  Note what removing it does _not_ buy: the worst instance of this bug had
+  `tsc` exiting **0**. `tsconfig.build.tsbuildinfo` used to sit outside
+  `dist/`, so tsup's clean took the outputs and left the state file behind;
+  tsc read it, concluded it was up to date, and emitted nothing, successfully.
+  Two things close that: `tsBuildInfoFile` now lives inside `dist/` (fixed
+  2026-08-30), and the `declared-types-shipped` guardrail checks the artifact
+  rather than the exit code — the only way to catch a toolchain that succeeds
+  at doing nothing.
+
 - Root `package.json` gained `"postinstall": "turbo run build --filter='./packages/*'"`.
   Without it, a bare `pnpm --filter <app> test` (bypassing turbo's own
   `dependsOn: ["^build"]` on the `test`/`typecheck` tasks) breaks the moment
@@ -92,18 +109,18 @@ install` into a slow `next build`.
 ## Consequences
 
 - Pre-built declarations also **isolate** each package's type errors from
-  its consumers. `@arm/catalog` has pre-existing type errors against
-  `@arm/proto`'s manifest-v2 schema (unrelated D10 migration drift, not
-  fixed here) — before this change those errors leaked into every
-  transitive consumer's `tsc --noEmit` (`@arm/trpc`, `@arm/guardrails`,
-  `apps/control-plane/web`, `apps/cli`, `apps/data-plane/plugin-ingest` all
-  failed typecheck because of it). After this change only `@arm/catalog`
-  and `@arm/client-core` themselves report the error — everything
-  downstream typechecks clean again.
-- That same drift still causes a **runtime** failure
-  (`@arm/client-core`'s `manifest.ts` does `toolSchema.extend(...)` where
-  `toolSchema` is `undefined`) in anything that actually imports
-  `@arm/client-core` — `apps/cli`, `apps/data-plane/plugin-ingest`. This is
-  pre-existing (reproduces identically on a clean `git stash` of this
-  change) and out of scope here; it needs a `@arm/proto`/`@arm/catalog`
-  schema-alignment fix, tracked separately.
+  its consumers. When this was written, `@arm/catalog` and
+  `@arm/client-core` carried type errors against `@arm/proto`'s manifest-v2
+  schema (D10 migration drift), and before this change those errors leaked
+  into every transitive consumer's `tsc --noEmit` — `@arm/trpc`,
+  `@arm/guardrails`, `apps/control-plane/web`, `apps/cli` and
+  `apps/data-plane/plugin-ingest` all failed typecheck because of it. The
+  build split confined the failure to the two packages that actually had it.
+- **Resolved (2026-08-31).** The D10 drift this section describes is gone.
+  All ten dist-backed packages compile clean under `tsconfig.build.json`;
+  `toolSchema` no longer appears in `@arm/client-core`'s `manifest.ts`, and
+  the runtime failure it caused (`toolSchema.extend(...)` on an `undefined`)
+  no longer reproduces — `@arm/client-core` imports and resolves 49 exports
+  from both `apps/cli` and `apps/data-plane/plugin-ingest`, and
+  `@arm/catalog` resolves 18 from `@arm/trpc`. That the drift is gone is
+  what made removing `|| true` safe.

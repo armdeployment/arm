@@ -15,7 +15,7 @@
     "arm-client": "./dist/cli-entry.js"
   },
   "scripts": {
-    "build": "tsup && (tsc --project tsconfig.build.json || true)",
+    "build": "tsup && tsc --project tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

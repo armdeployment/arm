@@ -26,7 +26,7 @@ not prose. Run them:
 pnpm guardrails
 ```
 
-There are 19. They exist because the invariants they protect are the
+There are 20. They exist because the invariants they protect are the
 product — for example, that prompt bodies never leave the tenant VPC, that
 the questionnaire's recommendation stays deterministic and auditable, and
 that a component's blob is content-addressed. If a guardrail fails, the

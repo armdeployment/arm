@@ -21,7 +21,7 @@ pnpm typecheck && pnpm test && pnpm guardrails
 
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm test` passes
-- [ ] `pnpm guardrails` passes (all 19)
+- [ ] `pnpm guardrails` passes (all 20)
 
 ## Invariants
 

@@ -22,6 +22,7 @@ import "./checks/blob-residency.js";
 import "./checks/questionnaire-determinism.js";
 import "./checks/no-content-in-activation.js";
 import "./checks/demo-mode-readonly.js";
+import "./checks/declared-types-shipped.js";
 
 export * from "./types.js";
 export { checkTenantIsolation, shapeOf } from "./checks/tenant-isolation.js";
@@ -74,3 +75,8 @@ export {
   type ActivationContentCheckInput,
 } from "./checks/no-content-in-activation.js";
 export { checkDemoModeReadonly, type DemoModeViolation } from "./checks/demo-mode-readonly.js";
+export {
+  checkDeclaredTypesShipped,
+  collectDeclaredEntries,
+  type DeclaredEntry,
+} from "./checks/declared-types-shipped.js";

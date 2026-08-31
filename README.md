@@ -216,7 +216,7 @@ Then watch <http://localhost:3100> populate.
 ```bash
 pnpm test        # unit + integration across every workspace
 pnpm typecheck   # tsc --noEmit everywhere
-pnpm guardrails  # 19 executable invariant checks
+pnpm guardrails  # 20 executable invariant checks
 pnpm lint
 pnpm format:check
 ```

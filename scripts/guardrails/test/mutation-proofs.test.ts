@@ -17,6 +17,10 @@ import { checkNoProfileBranching } from "../src/checks/no-profile-branching.js";
 import { checkTaxonomyScope, type TaxonomyRow } from "../src/checks/taxonomy-scope.js";
 import { includesChain, countChain } from "../src/source-match.js";
 import {
+  checkDeclaredTypesShipped,
+  collectDeclaredEntries,
+} from "../src/checks/declared-types-shipped.js";
+import {
   checkWorkTypeUnknown,
   UNKNOWN_THRESHOLD_PCT,
   type ClassificationStats,
@@ -1256,5 +1260,88 @@ describe("source-match — schema needles survive formatting, not mutation", () 
   it("counts a wrapped chain once per occurrence, like the unwrapped form", () => {
     expect(countChain(WRAPPED + INLINE, 'uuid("tenant_id").notNull()')).toBe(2);
     expect(countChain(MUTATED, 'uuid("tenant_id").notNull()')).toBe(0);
+  });
+});
+
+describe("declared-types-shipped — a built package ships the types it advertises", () => {
+  // The bug this guards: tsup cleans dist/, tsc reads a build-info file that
+  // survived that clean, concludes it is up to date, emits nothing, and exits
+  // 0. Removing `|| true` does not catch it — the exit code is 0. Only looking
+  // at the artifact does.
+  const ok = { entry: "@arm/policy", jsBuilt: true, typesShipped: true };
+
+  it("FAILS when a built package's declared .d.ts is missing", () => {
+    const r = checkDeclaredTypesShipped([
+      ok,
+      { entry: "@arm/db", jsBuilt: true, typesShipped: false },
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.detail).toContain("@arm/db");
+    expect(r.detail).toContain("TS7016");
+  });
+
+  it("PASSES when every built package ships its declarations", () => {
+    const r = checkDeclaredTypesShipped([
+      ok,
+      { entry: "@arm/db#./schema", jsBuilt: true, typesShipped: true },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(2);
+  });
+
+  it("SKIPS entries whose JS is not built — an unbuilt package is not a violation", () => {
+    const r = checkDeclaredTypesShipped([
+      ok,
+      { entry: "@arm/trpc", jsBuilt: false, typesShipped: false },
+    ]);
+    expect(r.status).toBe("pass");
+    expect(r.scanned).toBe(1);
+  });
+
+  it("FAILS as VACUOUS when nothing is built at all (asserts negative)", () => {
+    const r = checkDeclaredTypesShipped([
+      { entry: "@arm/trpc", jsBuilt: false, typesShipped: false },
+    ]);
+    expect(r.status).toBe("fail");
+    expect(r.scanned).toBe(0);
+    expect(r.assertsNegative).toBe(true);
+  });
+
+  it("only tracks dist-backed entries — src-backed packages have no separate emit to lose", () => {
+    const srcBacked = collectDeclaredEntries(
+      "@arm/proto",
+      { types: "./src/index.ts", main: "./src/index.ts" },
+      () => true,
+      () => true,
+    );
+    expect(srcBacked).toEqual([]);
+  });
+
+  it("reads every exports subpath, not just the root (@arm/db ships ./schema too)", () => {
+    const entries = collectDeclaredEntries(
+      "@arm/db",
+      {
+        exports: {
+          ".": { types: "./dist/index.d.ts", default: "./dist/index.js" },
+          "./schema": { types: "./dist/schema/index.d.ts", default: "./dist/schema/index.js" },
+        },
+      },
+      (rel) => rel.endsWith(".js"), // JS built, declarations absent
+      () => true,
+    );
+    expect(entries.map((e) => e.entry)).toEqual(["@arm/db", "@arm/db#./schema"]);
+    expect(entries.every((e) => e.jsBuilt && !e.typesShipped)).toBe(true);
+    expect(checkDeclaredTypesShipped(entries).status).toBe("fail");
+  });
+
+  it("treats a zero-byte .d.ts as not shipped", () => {
+    const entries = collectDeclaredEntries(
+      "@arm/catalog",
+      { types: "./dist/index.d.ts", main: "./dist/index.js" },
+      () => true, // both files exist …
+      (rel) => !rel.endsWith(".d.ts"), // … but the declaration is empty
+    );
+    expect(entries[0]!.typesShipped).toBe(false);
+    expect(checkDeclaredTypesShipped(entries).status).toBe("fail");
   });
 });
