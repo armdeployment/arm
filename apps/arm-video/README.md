@@ -39,8 +39,13 @@ occasionally resolves to the wrong one, which lacks `ts.sys`. Work around it wit
 touching the shared dependency graph:
 
 ```console
-NODE_OPTIONS="--require $(pwd)/fix-ts-resolution.cjs" npx remotion render <id> <out>
+NODE_OPTIONS="--require ./fix-ts-resolution.cjs" npx remotion render <id> <out>
 ```
+
+**`npm run build` already applies this** — the workaround is baked into the
+`build` script, because without it `remotion bundle` fails and takes the
+whole repo-root `pnpm build` down with it. You only need the incantation
+above for `render` and `still`, which are invoked directly.
 
 **Upgrade Remotion**
 

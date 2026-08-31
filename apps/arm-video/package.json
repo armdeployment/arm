@@ -24,7 +24,7 @@
   },
   "scripts": {
     "dev": "remotion studio",
-    "build": "remotion bundle",
+    "build": "NODE_OPTIONS=\"--require ./fix-ts-resolution.cjs\" remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },
