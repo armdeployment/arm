@@ -1,0 +1,58 @@
+name: Feature request
+description: Propose a capability ARM doesn't have yet.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: [`infra/README.md`](../../infra/README.md) and
+        [`SECURITY.md`](../../SECURITY.md) list what's deliberately
+        unfinished. If your request is already there, a comment saying you
+        need it is more useful than a new issue.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What can't you do today?
+      description: The situation you're stuck in, not the solution you have in mind.
+      placeholder: |
+        I want to give a whole plant a package without assigning it person
+        by person, and I can't see a way to do that from the assignments view.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of ARM?
+      options:
+        - Control plane (dashboard, policy, budgets, audit)
+        - Data plane (proxy, artifact cache, connectors, metering)
+        - Employee onboarding / questionnaire
+        - Client installer (`arm setup`)
+        - Library (packages, components, discovery)
+        - Deployment / infrastructure
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like instead
+      description: Optional. If you have a shape in mind, describe it.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Invariants
+      description: |
+        ARM's hard rule is that prompt bodies and resource content never
+        reach the control plane (Invariant 1, `docs/arm-spec.md` §11). It's
+        enforced by executable guardrails, so a proposal that needs content
+        in the control plane won't be accepted as written.
+      options:
+        - label: This doesn't require content or prompt bodies to reach the control plane.
+          required: false

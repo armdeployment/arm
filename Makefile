@@ -12,13 +12,11 @@ bootstrap:
 install:
 	pnpm install --frozen-lockfile
 
-dev:
 dev: ## Start control-plane web in production mode (fixes Turbopack dev hang)
 	pnpm dev
 
-dev-data-plane:
-	@echo "data-plane docker-compose target lands in 1.2 (spec §9)"
-	@exit 1
+dev-data-plane: ## Start the data-plane services: proxy (8787) + artifact cache (8788)
+	pnpm --parallel --filter @arm-app/proxy --filter @arm-app/artifact-cache run dev
 
 test:
 	pnpm test

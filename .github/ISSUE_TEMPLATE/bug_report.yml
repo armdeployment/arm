@@ -1,0 +1,66 @@
+name: Bug report
+description: Something in ARM behaves differently from how it's documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. The most useful bug reports say what you ran and
+        what happened — the rest we can usually work out from there.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+      placeholder: |
+        I ran the quick start and the dashboard returned 500 on /adoption.
+        I expected it to render the funnel from fixtures.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The exact commands, starting from a clone if you can.
+      render: shell
+      placeholder: |
+        pnpm install
+        pnpm --filter @arm-app/web build && pnpm --filter @arm-app/web start
+        curl localhost:3100/adoption
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which data mode?
+      description: Fixture mode is the default — `ARM_FIXTURE_MODE=1`.
+      options:
+        - Fixture mode (default, no database)
+        - Real Postgres / ClickHouse (ARM_FIXTURE_MODE=0)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Output of `node -v`, `pnpm -v`, and your OS.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: checks
+    attributes:
+      label: Do the checks pass?
+      description: |
+        If you can, paste the tail of `pnpm guardrails` and `pnpm test`. A
+        failing guardrail usually names the invariant that broke, which is
+        often the fastest route to the cause.
+      render: shell
+    validations:
+      required: false

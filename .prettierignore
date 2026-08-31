@@ -1,0 +1,23 @@
+# Build output and caches
+node_modules/
+dist/
+.next/
+.turbo/
+out/
+coverage/
+*.tsbuildinfo
+
+# Lockfile — pnpm owns its formatting
+pnpm-lock.yaml
+
+# Vendored agent skills and tooling, kept byte-identical to upstream so
+# they can be diffed against it. Not ours to reformat.
+.agents/
+.claude/
+.opencode/
+
+# Generated and binary demo assets
+demo/*.mp4
+demo/*.png
+apps/arm-video/public/
+apps/*/*/public/

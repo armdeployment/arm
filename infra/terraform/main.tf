@@ -1,6 +1,13 @@
 # ARM Data Plane — Terraform Module (spec §9 1.2)
 # Deploys the ARM data plane into a customer VPC (AWS).
-# Creates IAM role for S3 federation + EKS cluster targeting the Helm chart.
+#
+# Creates the IAM role for S3 federation, a Kubernetes service account, and
+# a helm_release targeting the chart in ../helm. It does NOT create the EKS
+# cluster: `cluster_name` names one that must already exist, with the
+# `kubernetes` and `helm` providers already configured against it.
+#
+# Skeleton — the chart it installs renders only a proxy Deployment. See
+# ../README.md before relying on this.
 
 terraform {
   required_providers {

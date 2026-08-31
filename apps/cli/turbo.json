@@ -1,0 +1,7 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  // build here is `tsc --noEmit` — it typechecks and emits nothing, so it
+  // declares no outputs. Without this, turbo warns "no output files found".
+  "tasks": { "build": { "outputs": [] } }
+}

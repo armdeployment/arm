@@ -17,8 +17,8 @@ company, not just the ones engineers run.
 ## The problem
 
 A company buys AI agents the way it buys laptops — but has none of the
-machinery it has for laptops. Nobody can answer: *Who has an agent? What
-is it allowed to touch? What did it cost? Did it actually get used?*
+machinery it has for laptops. Nobody can answer: _Who has an agent? What
+is it allowed to touch? What did it cost? Did it actually get used?_
 
 ARM is the missing layer. An employee gets their agent in about a minute
 through a wizard with no terminal, no config file, and no API key. Their
@@ -53,10 +53,15 @@ Open **<http://localhost:3100>**. Data flows through the real pipeline —
 `Browser → tRPC → tenant middleware → data source → UI` — the only thing
 swapped is what sits at the end of it.
 
-| Prerequisite | Version | Check |
-|---|---|---|
-| Node.js | ≥ 22.16 | `node -v` |
-| pnpm | 11.17 (via corepack) | `pnpm -v` |
+| Prerequisite | Version              | Check     |
+| ------------ | -------------------- | --------- |
+| Node.js      | ≥ 22.16              | `node -v` |
+| pnpm         | 11.17 (via corepack) | `pnpm -v` |
+
+There's also a `Makefile` wrapping the common tasks, if you prefer it:
+`make bootstrap` (pins pnpm via corepack), `make install`, `make dev`,
+`make dev-data-plane`, `make test`, `make guardrails`, `make typecheck`,
+`make lint`, `make clean`.
 
 ### Try the employee side too
 
@@ -70,33 +75,46 @@ redeem it with the installer, which opens a browser wizard rather than
 asking you to type anything:
 
 ```bash
-pnpm --filter @arm-app/cli setup
+pnpm --filter @arm-app/cli run setup
 ```
+
+> The `run` is load-bearing. `pnpm setup` is a **built-in pnpm command**
+> that configures `PNPM_HOME` and edits your shell profile — without
+> `run`, pnpm answers it itself and ARM's installer never starts.
 
 ## What you get
 
-| Surface | Port | What it is |
-|---|---|---|
-| Control-plane dashboard | 3100 | Manager view: adoption funnel, spend, approvals, library, policy, audit |
-| Employee onboarding | 3300 | Questionnaire → package recommendation → download / activation code |
-| Public site | 3200 | Marketing + docs site (statically exported) |
-| Data-plane proxy | 8787 | The metered LLM gateway agents actually call |
-| Artifact cache | 8788 | Content-addressed component blob delivery |
+Every surface below can be started on its own. The two control-plane apps
+are built then started; the data-plane services run straight from source.
+
+| Surface                 | Port | Start it with                                                                        | What it is                                                              |
+| ----------------------- | ---- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Control-plane dashboard | 3100 | `pnpm --filter @arm-app/web build && pnpm --filter @arm-app/web start`               | Manager view: adoption funnel, spend, approvals, library, policy, audit |
+| Employee onboarding     | 3300 | `pnpm --filter @arm-app/onboarding build && pnpm --filter @arm-app/onboarding start` | Questionnaire → package recommendation → download / activation code     |
+| Public site             | 3200 | `pnpm --filter @arm-app/public dev`                                                  | Marketing + docs site (statically exported)                             |
+| Data-plane proxy        | 8787 | `pnpm --filter @arm-app/proxy dev`                                                   | The metered LLM gateway agents actually call — check `/health`          |
+| Artifact cache          | 8788 | `pnpm --filter @arm-app/artifact-cache dev`                                          | Content-addressed component blob delivery — check `/health`             |
+
+```bash
+# the two data-plane services, verified up
+curl localhost:8787/health   # {"status":"ok","service":"closed-proxy",...}
+curl localhost:8788/health   # {"status":"ok","service":"artifact-cache",...}
+```
 
 ### Dashboard routes
 
-| Route | Description |
-|---|---|
-| `/` | Role home — adoption and approvals lead; spend condensed to a strip |
-| `/adoption` | Activation funnel, stall breakdown, time-to-value, coverage, gaps |
-| `/library` | Search + facets over work packages and components (the artifactory) |
-| `/assignments` | Org tree × package assignment matrix |
-| `/governance` | Package budgets, approvals inbox, cost-per-work-product |
-| `/organization` | Org tree editor — add, rename, reparent, delete |
-| `/spend` | Cost per active seat and per work product; model mix |
-| `/access` | Just-in-time access request approval queue |
-| `/agents` | Agent registry with status filters |
-| `/audit` | Access audit log viewer |
+| Route           | Description                                                         |
+| --------------- | ------------------------------------------------------------------- |
+| `/`             | Role home — adoption and approvals lead; spend condensed to a strip |
+| `/adoption`     | Activation funnel, stall breakdown, time-to-value, coverage, gaps   |
+| `/library`      | Search + facets over work packages and components (the artifactory) |
+| `/assignments`  | Org tree × package assignment matrix                                |
+| `/governance`   | Package budgets, approvals inbox, cost-per-work-product             |
+| `/organization` | Org tree editor — add, rename, reparent, delete                     |
+| `/spend`        | Cost per active seat and per work product; model mix                |
+| `/access`       | Just-in-time access request approval queue                          |
+| `/agents`       | Agent registry with status filters                                  |
+| `/audit`        | Access audit log viewer                                             |
 
 ## Architecture
 
@@ -155,11 +173,30 @@ other router still serves fixtures in both modes; that's a known, tracked
 state, not a silent gap.
 
 See [`.env.example`](.env.example) for every environment variable, and
-[`infra/`](infra/) for the Helm chart, Dockerfiles, and Terraform skeleton.
+[`infra/README.md`](infra/README.md) for what is deployable today versus
+what is still a skeleton.
 
-> **Before deploying anywhere real,** read [SECURITY.md](SECURITY.md). ARM
-> is pre-1.0 and has documented gaps — notably a development fallback for
-> the setup-token signing secret and no live OIDC verification yet.
+## How far you can take it today
+
+ARM is pre-1.0, and it's worth being blunt about where it currently stops
+so you don't discover it halfway through a rollout.
+
+| You want to…                                      | State                   | What's involved                                                                                                                                         |
+| ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Evaluate it on a laptop                           | **Works now**           | The quick start above. No database, no config.                                                                                                          |
+| Run it against real Postgres + ClickHouse         | **Works now**           | The section above. Three routers read real data; the rest serve fixtures in both modes.                                                                 |
+| Pilot it with a team you control                  | **Possible, with care** | Set `ARM_SETUP_TOKEN_SECRET`, keep it on a trusted network, accept that quota resets when the proxy restarts.                                           |
+| Deploy it for untrusted / multi-tenant production | **Not yet**             | There is no live OIDC verification — the control-plane and onboarding apps inject a fixed development identity rather than validating a real IdP token. |
+
+**The gating item is authentication.** `apps/control-plane/web` and
+`apps/onboarding` carry a `TODO(1.1)` where identity should be verified.
+Until that lands, treat any deployment as trusted-network only. There is
+also no tenant-provisioning or first-admin flow yet: tenants and org trees
+come from the industry-profile seeds in
+[`packages/profiles`](packages/profiles), not from an admin UI.
+
+[SECURITY.md](SECURITY.md) lists all four known gaps in full. Read it
+before deploying anywhere real.
 
 ## Sandbox — watch agents actually spend money
 
@@ -223,13 +260,16 @@ scripts/                   Guardrails, seeds, sandbox tooling
 
 ## Documentation
 
-| Doc | What's in it |
-|---|---|
-| [`docs/arm-spec.md`](docs/arm-spec.md) | The specification. §11 is the invariant list — start there. |
-| [`docs/guides/`](docs/guides/) | Implementation guides per subsystem |
-| [`docs/solutions/`](docs/solutions/) | Dated design records — *why* a subsystem looks the way it does, including what was deliberately left undone |
-| [`AGENTS.md`](AGENTS.md) | Working agreement for both human and AI contributors |
-| [`packaging/README.md`](packaging/README.md) | Release + code-signing runbook |
+| Doc                                                                | What's in it                                                                                                                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`docs/CONCEPTS.md`](docs/CONCEPTS.md)                             | The vocabulary — package, component, org node, budget, work product. Read first if a term here is unfamiliar.                                                                                                            |
+| [`docs/agent-onboarding-guide.md`](docs/agent-onboarding-guide.md) | **The employee's guide.** How someone connects their agent, the connections wizard (OAuth and PAT tiers), manual setup for all four agent types, and troubleshooting.                                                    |
+| [`docs/arm-spec.md`](docs/arm-spec.md)                             | The specification. §11 is the invariant list — start there.                                                                                                                                                              |
+| [`infra/README.md`](infra/README.md)                               | What deploys today, what is a skeleton, and the honest state of each piece.                                                                                                                                              |
+| [`docs/solutions/`](docs/solutions/)                               | Dated design records — _why_ a subsystem looks the way it does, including what was deliberately left undone                                                                                                              |
+| [`docs/guides/`](docs/guides/)                                     | Design guides written _during_ the build and kept as a record. Written for the sub-agents that implemented each subsystem, so they read as work allocation ("owner agent", "wave") — useful as history, not as a how-to. |
+| [`AGENTS.md`](AGENTS.md)                                           | Working agreement for both human and AI contributors                                                                                                                                                                     |
+| [`packaging/README.md`](packaging/README.md)                       | Release + code-signing runbook                                                                                                                                                                                           |
 
 ## Troubleshooting
 

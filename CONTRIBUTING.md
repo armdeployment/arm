@@ -15,7 +15,7 @@ pnpm test
 Requires Node ≥ 22.16 and pnpm 11.17 (supplied by corepack). No database,
 Docker, or API key is needed — every router defaults to
 `ARM_FIXTURE_MODE=1` (in-memory fixtures). See [`.env.example`](.env.example)
-for what you *can* configure, none of which is required.
+for what you _can_ configure, none of which is required.
 
 ## The one thing that will surprise you: guardrails
 
@@ -59,28 +59,34 @@ CI runs the same four (`.github/workflows/`). All must pass.
   reviewer sees.
 - **Match the surrounding code.** Comment density, naming, and structure
   are consistent within each package; follow the file you're editing.
-- **Document what you did *not* do.** Solution docs in `docs/solutions/`
+- **Document what you did _not_ do.** Solution docs in `docs/solutions/`
   carry an explicit "known limitations, not fixed here" section. Keep that
   habit — an honest gap is useful, a silent one is a trap.
 
 ## Where things live
 
-| Path | What it is |
-|---|---|
-| `packages/proto` | Shared wire contracts (zod schemas). Changes here ripple everywhere. |
-| `packages/client-core` | The client engine — one engine, every shape (CLI, GUI installer, future platform installers). |
-| `packages/trpc` | Control-plane routers. Each gates fixture vs. real mode with `isFixtureMode()`. |
-| `packages/profiles` | Industry presets. Pure data — profiles set *defaults*, never gate capabilities. |
-| `apps/control-plane/web` | The manager-facing dashboard. |
-| `apps/onboarding` | The employee-facing questionnaire → download flow. |
-| `apps/data-plane/proxy` | The metered LLM gateway agents actually call. |
-| `docs/arm-spec.md` | The specification. §11 lists the cross-cutting invariants. |
-| `docs/solutions/` | Dated design records — read these before changing a subsystem. |
+| Path                     | What it is                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| `packages/proto`         | Shared wire contracts (zod schemas). Changes here ripple everywhere.                          |
+| `packages/client-core`   | The client engine — one engine, every shape (CLI, GUI installer, future platform installers). |
+| `packages/trpc`          | Control-plane routers. Each gates fixture vs. real mode with `isFixtureMode()`.               |
+| `packages/profiles`      | Industry presets. Pure data — profiles set _defaults_, never gate capabilities.               |
+| `apps/control-plane/web` | The manager-facing dashboard.                                                                 |
+| `apps/onboarding`        | The employee-facing questionnaire → download flow.                                            |
+| `apps/data-plane/proxy`  | The metered LLM gateway agents actually call.                                                 |
+| `docs/arm-spec.md`       | The specification. §11 lists the cross-cutting invariants.                                    |
+| `docs/solutions/`        | Dated design records — read these before changing a subsystem.                                |
 
 ## Reporting security issues
 
 Please don't open a public issue for a vulnerability. See
 [SECURITY.md](SECURITY.md).
+
+## Code of conduct
+
+Participation is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Conduct reports go through the same private channel as security reports, so
+you never have to raise one in public.
 
 ## License
 

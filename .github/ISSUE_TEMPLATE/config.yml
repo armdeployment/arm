@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/armdeployment/arm/security/advisories/new
+    about: Please report security issues privately, never as a public issue. See SECURITY.md.
+  - name: Known gaps before you file
+    url: https://github.com/armdeployment/arm/blob/main/SECURITY.md
+    about: ARM is pre-1.0. No live OIDC yet, in-memory proxy quota, and more — these are documented, not bugs.
+  - name: What deploys today
+    url: https://github.com/armdeployment/arm/blob/main/infra/README.md
+    about: Which infrastructure pieces are working and which are skeletons.

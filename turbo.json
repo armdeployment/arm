@@ -5,7 +5,9 @@
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^build"] },
     "typecheck": { "dependsOn": ["^build"] },
-    "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
+    // No outputs: vitest runs without --coverage anywhere in this repo, so a
+    // coverage/** glob only produced "no output files found" on every run.
+    "test": { "dependsOn": ["^build"], "outputs": [] },
     "guardrails": { "dependsOn": ["^build"], "outputs": [] }
   }
 }
