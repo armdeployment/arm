@@ -16,29 +16,29 @@
 
 :root {
   /* ── Brand ── */
-  --navy: #1E3A8A;               /* primary — institutional authority */
-  --navy-dark: #1E2A5E;          /* hover/pressed */
-  --navy-light: #EFF2F8;         /* tint background */
-  --gold: #B45309;               /* heritage accent — use sparingly */
-  --gold-light: #FEF7E6;         /* gold tint */
+  --navy: #1e3a8a; /* primary — institutional authority */
+  --navy-dark: #1e2a5e; /* hover/pressed */
+  --navy-light: #eff2f8; /* tint background */
+  --gold: #b45309; /* heritage accent — use sparingly */
+  --gold-light: #fef7e6; /* gold tint */
 
   /* ── Surfaces ── */
-  --bg-app: #F8FAFC;             /* app background — slate-50 */
-  --bg-surface: #FFFFFF;         /* cards */
-  --bg-elevated: #F1F5F9;        /* hover/table stripes — slate-100 */
-  --bg-sidebar: #FBFCFD;         /* sidebar — barely distinguishable from app */
-  --bg-dark: #0F172A;            /* dark sections — slate-900 */
+  --bg-app: #f8fafc; /* app background — slate-50 */
+  --bg-surface: #ffffff; /* cards */
+  --bg-elevated: #f1f5f9; /* hover/table stripes — slate-100 */
+  --bg-sidebar: #fbfcfd; /* sidebar — barely distinguishable from app */
+  --bg-dark: #0f172a; /* dark sections — slate-900 */
 
   /* ── Text ── */
-  --text-primary: #0F172A;       /* slate-900 — maximum contrast */
-  --text-secondary: #475569;     /* slate-600 */
-  --text-muted: #64748B;         /* slate-500 — was slate-400 (#94A3B8), bumped for WCAG AA contrast (axe color-contrast, e2e) */
-  --text-label: #64748B;         /* slate-500 — for metadata labels */
+  --text-primary: #0f172a; /* slate-900 — maximum contrast */
+  --text-secondary: #475569; /* slate-600 */
+  --text-muted: #64748b; /* slate-500 — was slate-400 (#94A3B8), bumped for WCAG AA contrast (axe color-contrast, e2e) */
+  --text-label: #64748b; /* slate-500 — for metadata labels */
 
   /* ── Borders (Swiss discipline — hairlines) ── */
-  --border: #E2E8F0;             /* slate-200 — primary hairline */
-  --border-strong: #CBD5E1;      /* slate-300 */
-  --border-navy: #1E3A8A;        /* active state border */
+  --border: #e2e8f0; /* slate-200 — primary hairline */
+  --border-strong: #cbd5e1; /* slate-300 */
+  --border-navy: #1e3a8a; /* active state border */
 
   /* ── Accent (mapped to navy for consistency) ── */
   --accent: var(--navy);
@@ -47,25 +47,25 @@
   --accent-text: var(--navy);
 
   /* ── Semantic ── */
-  --success: #15803D;            /* green-700 — muted, professional */
-  --success-soft: #F0FDF4;
-  --warning: #B45309;            /* amber-700 — matches gold */
-  --warning-soft: #FEF7E6;
-  --danger: #B91C1C;             /* red-700 — muted */
-  --danger-soft: #FEF2F2;
-  --info: #1E3A8A;               /* maps to navy */
+  --success: #15803d; /* green-700 — muted, professional */
+  --success-soft: #f0fdf4;
+  --warning: #b45309; /* amber-700 — matches gold */
+  --warning-soft: #fef7e6;
+  --danger: #b91c1c; /* red-700 — muted */
+  --danger-soft: #fef2f2;
+  --info: #1e3a8a; /* maps to navy */
 
   /* ── Aliases used by provisioning UI ── */
   --green: var(--success);
   --critical: var(--danger);
   --critical-bg: var(--danger-soft);
   --warning-bg: var(--warning-soft);
-  --bg-hover: #F1F5F9;          /* slate-100 */
+  --bg-hover: #f1f5f9; /* slate-100 */
 
   /* ── Tier colors ── */
-  --tier-critical: #B91C1C;
+  --tier-critical: #b91c1c;
   --tier-standard: var(--navy);
-  --tier-background: #64748B;
+  --tier-background: #64748b;
 
   /* ── Shadows (minimal — Swiss modernism avoids shadows) ── */
   --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
@@ -90,7 +90,12 @@
 body {
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family:
+    "IBM Plex Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
@@ -98,10 +103,20 @@ body {
 }
 
 /* ── Typography hierarchy (weight + size, not color) ── */
-h1, h2, h3 { letter-spacing: -0.02em; }
-h1 { font-weight: 600; }
-h2 { font-weight: 600; }
-h3 { font-weight: 600; }
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+h1 {
+  font-weight: 600;
+}
+h2 {
+  font-weight: 600;
+}
+h3 {
+  font-weight: 600;
+}
 
 /* Metadata labels — uppercase, tracked, muted */
 .label-meta {
@@ -113,9 +128,17 @@ h3 { font-weight: 600; }
 }
 
 /* ── Scrollbar (minimal) ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
 
 /* ── Selection ── */
 ::selection {
@@ -167,5 +190,8 @@ h3 { font-weight: 600; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

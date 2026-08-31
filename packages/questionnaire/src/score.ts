@@ -33,7 +33,10 @@ function selectedValues(answer: QuestionnaireAnswer[string]): string[] {
  * questionnaire graph, producing job functions ranked by accumulated
  * weight, descending, tie-broken by key ascending.
  */
-export function score(answers: QuestionnaireAnswer, graph: QuestionnaireGraph): RankedJobFunction[] {
+export function score(
+  answers: QuestionnaireAnswer,
+  graph: QuestionnaireGraph,
+): RankedJobFunction[] {
   const totals = new Map<string, number>();
   const nodesById = new Map(graph.nodes.map((n) => [n.id, n]));
 
@@ -60,7 +63,10 @@ export function score(answers: QuestionnaireAnswer, graph: QuestionnaireGraph): 
 }
 
 /** The single top-ranked job function, or null if nothing scored. */
-export function topJobFunction(answers: QuestionnaireAnswer, graph: QuestionnaireGraph): string | null {
+export function topJobFunction(
+  answers: QuestionnaireAnswer,
+  graph: QuestionnaireGraph,
+): string | null {
   const ranked = score(answers, graph);
   return ranked[0]?.key ?? null;
 }

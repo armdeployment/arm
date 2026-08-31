@@ -38,7 +38,11 @@ export const techProfile: IndustryProfilePreset = {
   personas: [
     { key: "engineer", label: "Engineer", defaultPanels: ["spend", "agents", "audit"] },
     { key: "manager", label: "Manager", defaultPanels: ["spend", "agents", "savings"] },
-    { key: "admin", label: "Admin", defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"] },
+    {
+      key: "admin",
+      label: "Admin",
+      defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"],
+    },
     { key: "infosec", label: "InfoSec", defaultPanels: ["audit", "access", "security"] },
     { key: "marketer", label: "Marketer", defaultPanels: ["spend", "savings"] },
     { key: "sales", label: "Sales", defaultPanels: ["spend"] },
@@ -130,14 +134,78 @@ export const techProfile: IndustryProfilePreset = {
 
   // ── Seed agents (tech-focused) ──────────────────────────────────────────
   seedAgents: [
-    { name: "incident-triage", type: "claude_code", departmentName: "Engineering", taskType: "incident_triage", clearance: "internal", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "hot-issue-resolver", type: "claude_code", departmentName: "Engineering", taskType: "hot_issue_resolution", clearance: "internal", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "code-review-bot", type: "claude_code", departmentName: "Engineering", taskType: "code_review", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
-    { name: "test-gen", type: "copilot", departmentName: "Engineering", taskType: "test_generation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "doc-writer", type: "opencode", departmentName: "Product", taskType: "documentation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "ux-optimizer", type: "opencode", departmentName: "Product", taskType: "ux_optimization", clearance: "internal", tier: "background", preferredModel: "minicpm5-1b" },
-    { name: "data-pipeline-monitor", type: "pi", departmentName: "Engineering", taskType: "pipeline_monitoring", clearance: "internal", tier: "background", preferredModel: "minicpm5-1b" },
-    { name: "upgrade-bot", type: "opencode", departmentName: "Engineering", taskType: "dependency_upgrade", clearance: "internal", tier: "background", preferredModel: "minicpm5-1b" },
+    {
+      name: "incident-triage",
+      type: "claude_code",
+      departmentName: "Engineering",
+      taskType: "incident_triage",
+      clearance: "internal",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "hot-issue-resolver",
+      type: "claude_code",
+      departmentName: "Engineering",
+      taskType: "hot_issue_resolution",
+      clearance: "internal",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "code-review-bot",
+      type: "claude_code",
+      departmentName: "Engineering",
+      taskType: "code_review",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "test-gen",
+      type: "copilot",
+      departmentName: "Engineering",
+      taskType: "test_generation",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "doc-writer",
+      type: "opencode",
+      departmentName: "Product",
+      taskType: "documentation",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "ux-optimizer",
+      type: "opencode",
+      departmentName: "Product",
+      taskType: "ux_optimization",
+      clearance: "internal",
+      tier: "background",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "data-pipeline-monitor",
+      type: "pi",
+      departmentName: "Engineering",
+      taskType: "pipeline_monitoring",
+      clearance: "internal",
+      tier: "background",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "upgrade-bot",
+      type: "opencode",
+      departmentName: "Engineering",
+      taskType: "dependency_upgrade",
+      clearance: "internal",
+      tier: "background",
+      preferredModel: "minicpm5-1b",
+    },
   ],
 
   // ── UI home panels ──────────────────────────────────────────────────────
@@ -154,22 +222,32 @@ export const techProfile: IndustryProfilePreset = {
   // ── Role presets (D8) — simpler flat-org authority ──
   rolePresets: [
     {
-      key: "org_admin", label: "Org Admin",
+      key: "org_admin",
+      label: "Org Admin",
       description: "Full authority: add, rename, reparent, delete any department or team.",
-      scopeType: "org", singleton: true,
-      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+      scopeType: "org",
+      singleton: true,
+      permissions: [
+        "org_node:create",
+        "org_node:rename",
+        "org_node:reparent",
+        "org_node:delete",
+        "*",
+      ],
     },
     {
-      key: "dept_head", label: "Department Head",
+      key: "dept_head",
+      label: "Department Head",
       description: "Rename own department; create + rename teams within own department.",
       scopeType: "department",
-      permissions: ["org_node:create", "org_node:rename"]
+      permissions: ["org_node:create", "org_node:rename"],
     },
     {
-      key: "viewer", label: "Viewer",
+      key: "viewer",
+      label: "Viewer",
       description: "Read-only access to dashboards.",
       scopeType: "department",
-      permissions: []
+      permissions: [],
     },
   ],
 
@@ -178,19 +256,38 @@ export const techProfile: IndustryProfilePreset = {
     {
       departmentName: "Engineering",
       labels: [
-        "code_review", "code_generation", "test_generation", "hot_issue_resolution",
-        "incident_triage", "architecture_design", "devops_automation",
-        "dependency_upgrade", "pipeline_monitoring", "cybersecurity_scan",
+        "code_review",
+        "code_generation",
+        "test_generation",
+        "hot_issue_resolution",
+        "incident_triage",
+        "architecture_design",
+        "devops_automation",
+        "dependency_upgrade",
+        "pipeline_monitoring",
+        "cybersecurity_scan",
       ],
       secondaryTagPresets: ["tool:web_search", "tool:code_search", "model:claude-sonnet"],
     },
     {
       departmentName: "Product",
-      labels: ["documentation", "ux_optimization", "product_spec", "user_research", "roadmap_planning"],
+      labels: [
+        "documentation",
+        "ux_optimization",
+        "product_spec",
+        "user_research",
+        "roadmap_planning",
+      ],
     },
     { departmentName: "Sales", labels: ["outreach_drafting", "crm_update", "lead_research"] },
-    { departmentName: "Customer Success", labels: ["support_reply", "onboarding_guide", "ticket_triage"] },
-    { departmentName: "Marketing", labels: ["content_drafting", "seo_research", "campaign_analysis"] },
+    {
+      departmentName: "Customer Success",
+      labels: ["support_reply", "onboarding_guide", "ticket_triage"],
+    },
+    {
+      departmentName: "Marketing",
+      labels: ["content_drafting", "seo_research", "campaign_analysis"],
+    },
   ],
 
   // ── Work packages (D9) — tech pilot set ──────────────────────────────────
@@ -208,11 +305,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       skills: ["pr-summary", "style-lint", "security-scan"],
       subagentConfigs: ["pr-reviewer"],
-      permissions: [
-        "tool:git.repo:invoke",
-        "tool:code.search:invoke",
-        "tool:ci.status:invoke",
-      ],
+      permissions: ["tool:git.repo:invoke", "tool:code.search:invoke", "tool:ci.status:invoke"],
       modelRouting: {
         allowed_models: ["claude-sonnet", "minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -267,7 +360,8 @@ export const techProfile: IndustryProfilePreset = {
       name: "Frontend Engineer",
       family: "engineering",
       mode: "copilot",
-      description: "Component building, design-token audits, and accessibility checks for frontend engineers.",
+      description:
+        "Component building, design-token audits, and accessibility checks for frontend engineers.",
       tools: [
         { tool: "git.repo", toolVersion: "2.0.0" },
         { tool: "web.search", toolVersion: "1.0.0" },
@@ -275,11 +369,7 @@ export const techProfile: IndustryProfilePreset = {
       ],
       skills: ["component-builder", "design-token-audit", "a11y-checklist"],
       subagentConfigs: [],
-      permissions: [
-        "tool:git.repo:invoke",
-        "tool:web.search:invoke",
-        "tool:figma.design:invoke",
-      ],
+      permissions: ["tool:git.repo:invoke", "tool:web.search:invoke", "tool:figma.design:invoke"],
       modelRouting: {
         allowed_models: ["claude-sonnet", "minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -331,7 +421,8 @@ export const techProfile: IndustryProfilePreset = {
       name: "Executive Assistant",
       family: "executive",
       mode: "copilot",
-      description: "KPI briefings, approvals inbox summaries, and web research for executives. Aggregates-only — never raw content.",
+      description:
+        "KPI briefings, approvals inbox summaries, and web research for executives. Aggregates-only — never raw content.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -364,7 +455,8 @@ export const techProfile: IndustryProfilePreset = {
       name: "Senior Manager",
       family: "leadership",
       mode: "copilot",
-      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
+      description:
+        "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -397,7 +489,8 @@ export const techProfile: IndustryProfilePreset = {
       name: "Project Manager",
       family: "product",
       mode: "copilot",
-      description: "Cross-team status tracking, blocker digests, and stakeholder updates for the engineering product-manager persona.",
+      description:
+        "Cross-team status tracking, blocker digests, and stakeholder updates for the engineering product-manager persona.",
       tools: [
         { tool: "ci.status", toolVersion: "1.3.0" },
         { tool: "dashboards.api", toolVersion: "1.9.0" },
@@ -429,7 +522,8 @@ export const techProfile: IndustryProfilePreset = {
       name: "DevOps Engineer",
       family: "engineering",
       mode: "copilot",
-      description: "CI pipelines, SBOM generation, and shift-left security for platform DevOps engineers.",
+      description:
+        "CI pipelines, SBOM generation, and shift-left security for platform DevOps engineers.",
       tools: [
         { tool: "vcs.gitlab", toolVersion: "2.4.0" },
         { tool: "vcs.azure-devops", toolVersion: "2.0.0" },

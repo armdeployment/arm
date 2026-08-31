@@ -2,9 +2,13 @@ import { describe, it, expect } from "vitest";
 import { checkQuota, checkModelAccess, type AgentContext } from "../src/index.js";
 
 const baseAgent: AgentContext = {
-  subAccountId: "sa_test", agentId: "agt_test", tenantId: "tn_test",
-  priorityTier: "standard", classificationClearance: "internal",
-  quota: { dailyCapUsd: 50, usedTodayUsd: 0 }, allowedModels: ["claude-sonnet-4-20250514", "gpt-4o", "glm-5.2"],
+  subAccountId: "sa_test",
+  agentId: "agt_test",
+  tenantId: "tn_test",
+  priorityTier: "standard",
+  classificationClearance: "internal",
+  quota: { dailyCapUsd: 50, usedTodayUsd: 0 },
+  allowedModels: ["claude-sonnet-4-20250514", "gpt-4o", "glm-5.2"],
 };
 
 describe("checkQuota — priority-aware enforcement", () => {
@@ -13,12 +17,20 @@ describe("checkQuota — priority-aware enforcement", () => {
   });
 
   it("allows critical tier even when quota exhausted", () => {
-    const critical = { ...baseAgent, priorityTier: "critical" as const, quota: { dailyCapUsd: 50, usedTodayUsd: 55 } };
+    const critical = {
+      ...baseAgent,
+      priorityTier: "critical" as const,
+      quota: { dailyCapUsd: 50, usedTodayUsd: 55 },
+    };
     expect(checkQuota(critical, 10).allowed).toBe(true);
   });
 
   it("rejects background tier with quota exhausted", () => {
-    const bg = { ...baseAgent, priorityTier: "background" as const, quota: { dailyCapUsd: 50, usedTodayUsd: 50 } };
+    const bg = {
+      ...baseAgent,
+      priorityTier: "background" as const,
+      quota: { dailyCapUsd: 50, usedTodayUsd: 50 },
+    };
     expect(checkQuota(bg, 5).allowed).toBe(false);
   });
 
@@ -45,5 +57,3 @@ describe("checkModelAccess — DLP gate", () => {
     expect(checkModelAccess(confAgent, "glm-5.2").allowed).toBe(true);
   });
 });
-
-

@@ -9,7 +9,7 @@ supersedes: none
 
 Companion to `2026-08-13-d9-work-packages.md` (the decision). This doc is the build plan.
 
-**Mission:** make ARM the surface where management *governs* AI usage per employee/job function, and every employee — from shop-floor operator to plant manager to executive, none of them coding experts — *uses* a correctly-configured agent (opencode pre-installed with MCPs, skills, sub-agents, permissions) within minutes of starting.
+**Mission:** make ARM the surface where management _governs_ AI usage per employee/job function, and every employee — from shop-floor operator to plant manager to executive, none of them coding experts — _uses_ a correctly-configured agent (opencode pre-installed with MCPs, skills, sub-agents, permissions) within minutes of starting.
 
 Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/research/oem-work-package-design.md` (what each role does daily + what to bundle), `docs/research/token-cost-optimization.md` (where the money goes + the moat).
 
@@ -17,10 +17,10 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ## 1. Two pillars, one unit
 
-| Pillar | Audience | Promise | Delivered by |
-|---|---|---|---|
-| **Govern** | Executives, scope admins, IT, InfoSec | See and control every AI usage: who, what model, what tools, what data, what it cost, per work product | Per-package budgets + approvals + deny-override + `$/work-product` dashboards + audit |
-| **Enable** | Every employee (low/mid/high management, operators, specialists) | Start using an agent for *their* job in < 5 minutes, zero config files, zero decisions to make | `arm setup` + role Work Packages + starter templates + chat-first UX |
+| Pillar     | Audience                                                         | Promise                                                                                                | Delivered by                                                                          |
+| ---------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **Govern** | Executives, scope admins, IT, InfoSec                            | See and control every AI usage: who, what model, what tools, what data, what it cost, per work product | Per-package budgets + approvals + deny-override + `$/work-product` dashboards + audit |
+| **Enable** | Every employee (low/mid/high management, operators, specialists) | Start using an agent for _their_ job in < 5 minutes, zero config files, zero decisions to make         | `arm setup` + role Work Packages + starter templates + chat-first UX                  |
 
 **The unit that joins them: the Work Package** (D9). Management publishes and budgets packages; employees install packages. Neither side sees the other's complexity.
 
@@ -28,13 +28,13 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ## 2. Personas & their required experience
 
-| Persona | Technical level | First-run experience (target) | Daily experience |
-|---|---|---|---|
-| Shop-floor operator / technician | Near-zero | Scan QR → app opens with role package → speak/type "bearing temperature spiked, what do I do?" → guided fix + CMMS work order logged | Voice/scan-first, checklists, fault-code lookups, tiny deterministic tools |
-| Office specialist (planner, buyer, quality analyst) | Low | `arm setup` → pick role → chat opens with starter cards: "Triaged 14 MRP exceptions", "Draft 8D for defect #4821" | Chat-first, template gallery, budget meter visible in chat |
-| Mid manager (supervisor, plant manager) | Low | Same install → dashboards view: team usage, approvals inbox, shift-report generator | Approval one-tap, KPI briefings, auto-generated reports |
-| Executive / higher management | Very low | Web dashboard only — no local install needed | KPI cockpit, cost-per-work-product benchmarks, monthly exec digest |
-| Power user / engineer | High | Same install → power mode unlocks config, custom MCPs, sub-agent editing | Full agent capabilities with guardrails still enforced |
+| Persona                                             | Technical level | First-run experience (target)                                                                                                        | Daily experience                                                           |
+| --------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Shop-floor operator / technician                    | Near-zero       | Scan QR → app opens with role package → speak/type "bearing temperature spiked, what do I do?" → guided fix + CMMS work order logged | Voice/scan-first, checklists, fault-code lookups, tiny deterministic tools |
+| Office specialist (planner, buyer, quality analyst) | Low             | `arm setup` → pick role → chat opens with starter cards: "Triaged 14 MRP exceptions", "Draft 8D for defect #4821"                    | Chat-first, template gallery, budget meter visible in chat                 |
+| Mid manager (supervisor, plant manager)             | Low             | Same install → dashboards view: team usage, approvals inbox, shift-report generator                                                  | Approval one-tap, KPI briefings, auto-generated reports                    |
+| Executive / higher management                       | Very low        | Web dashboard only — no local install needed                                                                                         | KPI cockpit, cost-per-work-product benchmarks, monthly exec digest         |
+| Power user / engineer                               | High            | Same install → power mode unlocks config, custom MCPs, sub-agent editing                                                             | Full agent capabilities with guardrails still enforced                     |
 
 **Design principle:** every persona starts in "beginner mode". Advanced surfaces (config, policy authoring) are progressive-disclosure, never required. The existing `deferred-shell panel` UX concept (CONCEPTS.md) is the home for advanced settings.
 
@@ -42,7 +42,7 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ## 3. Ease-of-use design principles (the "very very very easy" contract)
 
-1. **Zero decisions:** **updated by D10/D11** (`docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`) — the *client* still asks zero questions; the questionnaire that resolves "which role" moved to the web, *before* the download (`apps/onboarding`, 6-9 multiple-choice questions, no free text — A5). What the employee runs (`arm setup`, or a double-clicked `.armsetup` file) presents a signed setup token, never a role picker. Everything else is still fetched and written automatically.
+1. **Zero decisions:** **updated by D10/D11** (`docs/solutions/2026-08-21-d11-questionnaire-provisioning.md`) — the _client_ still asks zero questions; the questionnaire that resolves "which role" moved to the web, _before_ the download (`apps/onboarding`, 6-9 multiple-choice questions, no free text — A5). What the employee runs (`arm setup`, or a double-clicked `.armsetup` file) presents a signed setup token, never a role picker. Everything else is still fetched and written automatically.
 2. **Zero config files:** config is generated server-side from the package manifest and signed; the employee never sees YAML/JSON. Power users can export for editing.
 3. **Chat-first, templates-first:** every package ships 5–10 starter prompts as tappable cards ("Draft an 8D for a seal leak", "Summarize today's andon stops"). The first successful task is one tap away.
 4. **Inline governance, not lectures:** the budget meter, approval prompts, and deny explanations appear inside the chat surface. Policy is experienced, not read.
@@ -54,23 +54,23 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 ## 4. Architecture: what changes, component by component
 
-| Component | Change |
-|---|---|
-| `packages/proto` | New zod contracts: `tool`, `tool_version`, `work_package`, `work_package_version`, `package_assignment`; `token_usage_event` additive fields (`package_id`, `steps`, `tool_calls`, `cache_read_tokens`, `semantic_cache_hit`) |
-| `packages/db` | New Drizzle tables per D9 §Consequences; `budget` gains `package_id`/`work_type` reservation dimensions; `permission_grant` gains `tool:*` verbs (D8 extension) |
-| `packages/profiles` | New `WorkPackageSeed` in the D6 profile bundle; Manufacturing + Tech presets ship 10 pilot packages (from research); pure-data rule preserved (JSON-serializable, never gate capabilities) |
-| `packages/catalog` (new) | Tool Registry + Work Package service: CRUD, versioning, integrity hashes, publish/approve workflow, package→config rendering (the signed config generator) |
-| `packages/client-core` (new) | Shared installer/provisioner engine used by Desktop + CLI: SSO, runtime ensure, package apply, connections wizard, config integrity checks, self-update |
-| ~~`apps/desktop`~~ | **Superseded by A7 (D10/D11) — no Desktop GUI.** Replaced by `apps/onboarding` (web questionnaire + setup-token issuance) and signed platform installers wrapping the `arm` CLI (`packaging/`) — same "no terminal for the common path" bar via double-clicking a downloaded `.armsetup` file. |
-| Control plane (new service surface) | Connection catalog (tool → auth method → versioned guide content → required scopes), vendor OAuth app registrations (Jira/GitHub/Google), guide content service, MDM manifest endpoint |
-| `packages/policy` | `resolveToolAccess` (tool:invoke with tiered delegation + deny-override), package-aware `resolveLLMModel` (per-package allowlists + auto-downgrade) |
-| `packages/classifier` | `tool_calls` already flow through stage 1; add package-id as a structural feature (labels get sharper for free) |
-| `apps/cli` | `arm setup` (SSO → role → install/configure/verify), `arm package list/request`, power-mode `arm package export` |
-| `apps/data-plane/plugin-ingest` | opencode first-class: package config writer (MCP servers, skills, sub-agents, permissions), metered round-trip verification; manifest gains `packages` section |
-| `apps/data-plane/proxy` + `open-gateway` | Tool-gate (invariant-1/D2 classification check per tool endpoint), per-package quota store, cache-read token accounting |
-| `apps/control-plane/web` | New IA sections: **Catalog** (packages + tools, app-store UX), **Assignments** (org tree × package matrix), **Governance** (budgets, approvals, cost-per-work-product, savings ledger, plain-language policy editor), **My Toolkit** (employee home) |
-| `scripts/guardrails` | 4 new guards per D9 (§package-integrity, package-least-privilege, tool-endpoint-scope, package-drift) — mutation-proofed per §14.2 |
-| `apps/simulation` | Demo fixture: pilot packages + cost-per-work-product stories for the dashboard |
+| Component                                | Change                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/proto`                         | New zod contracts: `tool`, `tool_version`, `work_package`, `work_package_version`, `package_assignment`; `token_usage_event` additive fields (`package_id`, `steps`, `tool_calls`, `cache_read_tokens`, `semantic_cache_hit`)                                                                  |
+| `packages/db`                            | New Drizzle tables per D9 §Consequences; `budget` gains `package_id`/`work_type` reservation dimensions; `permission_grant` gains `tool:*` verbs (D8 extension)                                                                                                                                |
+| `packages/profiles`                      | New `WorkPackageSeed` in the D6 profile bundle; Manufacturing + Tech presets ship 10 pilot packages (from research); pure-data rule preserved (JSON-serializable, never gate capabilities)                                                                                                     |
+| `packages/catalog` (new)                 | Tool Registry + Work Package service: CRUD, versioning, integrity hashes, publish/approve workflow, package→config rendering (the signed config generator)                                                                                                                                     |
+| `packages/client-core` (new)             | Shared installer/provisioner engine used by Desktop + CLI: SSO, runtime ensure, package apply, connections wizard, config integrity checks, self-update                                                                                                                                        |
+| ~~`apps/desktop`~~                       | **Superseded by A7 (D10/D11) — no Desktop GUI.** Replaced by `apps/onboarding` (web questionnaire + setup-token issuance) and signed platform installers wrapping the `arm` CLI (`packaging/`) — same "no terminal for the common path" bar via double-clicking a downloaded `.armsetup` file. |
+| Control plane (new service surface)      | Connection catalog (tool → auth method → versioned guide content → required scopes), vendor OAuth app registrations (Jira/GitHub/Google), guide content service, MDM manifest endpoint                                                                                                         |
+| `packages/policy`                        | `resolveToolAccess` (tool:invoke with tiered delegation + deny-override), package-aware `resolveLLMModel` (per-package allowlists + auto-downgrade)                                                                                                                                            |
+| `packages/classifier`                    | `tool_calls` already flow through stage 1; add package-id as a structural feature (labels get sharper for free)                                                                                                                                                                                |
+| `apps/cli`                               | `arm setup` (SSO → role → install/configure/verify), `arm package list/request`, power-mode `arm package export`                                                                                                                                                                               |
+| `apps/data-plane/plugin-ingest`          | opencode first-class: package config writer (MCP servers, skills, sub-agents, permissions), metered round-trip verification; manifest gains `packages` section                                                                                                                                 |
+| `apps/data-plane/proxy` + `open-gateway` | Tool-gate (invariant-1/D2 classification check per tool endpoint), per-package quota store, cache-read token accounting                                                                                                                                                                        |
+| `apps/control-plane/web`                 | New IA sections: **Catalog** (packages + tools, app-store UX), **Assignments** (org tree × package matrix), **Governance** (budgets, approvals, cost-per-work-product, savings ledger, plain-language policy editor), **My Toolkit** (employee home)                                           |
+| `scripts/guardrails`                     | 4 new guards per D9 (§package-integrity, package-least-privilege, tool-endpoint-scope, package-drift) — mutation-proofed per §14.2                                                                                                                                                             |
+| `apps/simulation`                        | Demo fixture: pilot packages + cost-per-work-product stories for the dashboard                                                                                                                                                                                                                 |
 
 **Boundary discipline:** `packages/catalog` sits between `db`/`profiles` and `trpc` (same layer as `billing`/`policy`). Data-plane apps import only `proto`/`config` — the tool gate reads package policy via the existing policy-cache pull (D5), never from the catalog directly.
 
@@ -85,12 +85,12 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 
 **One signed generic client binary, one engine (`packages/client-core`), no per-employee build:**
 
-| Artifact | Audience | Role |
-|---|---|---|
+| Artifact                                                                | Audience                                                          | Role                                                                                                                                     |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | **`arm` CLI / SEA binary** (`arm`/`arm.exe`, `packaging/build-sea.mjs`) | Every employee, via a signed platform installer (MSI/pkg/deb/rpm) | No terminal needed for the common path: double-click a downloaded `.armsetup` file, or run `arm setup` and type a 6-char activation code |
-| **Web questionnaire** (`apps/onboarding`, port 3300) | Every employee, before the download | Resolves job function → recommended package → issues the signed setup token (replaces the "role picker" below) |
-| **`arm` CLI, advanced/CI path** (`arm setup --role <key>`) | Power users, CI, automated-agent fleets | Same engine, direct role-key provisioning (D9 Phase 1.6 behaviour, unchanged) |
-| **MDM packages** (Intune MSI, Jamf pkg, winget, homebrew) | IT org-wide rollout | Silent install of the SAME signed binary; per-user customization still travels via setup token, never a per-deployment build |
+| **Web questionnaire** (`apps/onboarding`, port 3300)                    | Every employee, before the download                               | Resolves job function → recommended package → issues the signed setup token (replaces the "role picker" below)                           |
+| **`arm` CLI, advanced/CI path** (`arm setup --role <key>`)              | Power users, CI, automated-agent fleets                           | Same engine, direct role-key provisioning (D9 Phase 1.6 behaviour, unchanged)                                                            |
+| **MDM packages** (Intune MSI, Jamf pkg, winget, homebrew)               | IT org-wide rollout                                               | Silent install of the SAME signed binary; per-user customization still travels via setup token, never a per-deployment build             |
 
 ### 5.1 First-run experience (≤ 5 minutes, zero config)
 
@@ -100,7 +100,7 @@ Research inputs: `docs/research/oem-job-taxonomy.md` (who exists), `docs/researc
 4. **Runtime ensure** — opencode auto-detected, installed if missing (version-pinned)
 5. **Package apply** — components installed by verified digest (manifest v2), MCP servers/skills/sub-agents/permissions/starter prompts all from the signed, redeemed manifest; config integrity re-checked at every agent start (tamper detection)
 6. **Connections** — the credential wizard for package tools that need third-party auth (below)
-7. **Verify** — metered round-trip → *"Online. Dept budget remaining: $X. Tools connected: M/N. Starter tasks ready."*
+7. **Verify** — metered round-trip → _"Online. Dept budget remaining: $X. Tools connected: M/N. Starter tasks ready."_
 
 ### 5.2 The connections wizard — "how do I get a Jira/GitHub/AWS/BigQuery token?"
 
@@ -109,9 +109,10 @@ Every package ships a **connections manifest**: tool → auth method → guide c
 - **Tier A — OAuth/SSO, one click** (Jira/Atlassian, GitHub, Google Workspace + GCP/BigQuery, Microsoft 365/SharePoint, AWS IAM Identity Center): "Connect" → browser authorize → ARM data-plane connector mints a **short-lived, least-scope token** via the existing mint/proxy/sync strategies (invariant 4). No copy-paste, ever.
 - **Tier B — PAT / service-account flows** (Jira PAT, GitHub PAT, GCP service-account keys, legacy systems): the wizard renders **server-pushed, versioned step-by-step guides** — exact vendor-console clicks, scope presets pre-filled per package, paste-back field with validation. Guides are content served from the control plane and updated without client releases (vendor UIs change; our guides must not be frozen in the installer).
 
-**Setup-guides requirement, met:** guides are not a PDF — they are live, versioned content embedded in the wizard, and installing the package *is* installing the guides for that package.
+**Setup-guides requirement, met:** guides are not a PDF — they are live, versioned content embedded in the wizard, and installing the package _is_ installing the guides for that package.
 
 **Security principles (non-negotiable):**
+
 - Secrets **never** land in agent config files: config references OS-keychain entries or tenant-vault broker endpoints (invariant 5: ARM-issued OIDC where federated; sealed tenant vault where not).
 - Short-lived everywhere (invariant 4) + rotation nudges in the **credential health center** (expiry, drift, per-package "connections needed" checklist).
 - Skip-later is allowed: the package installs fully; the unconnected tool shows as "not connected" until the wizard is completed. Re-enter anytime from the tray/desktop status.
@@ -126,18 +127,18 @@ Every package ships a **connections manifest**: tool → auth method → guide c
 
 ## 6. Pilot package set (seeded from research)
 
-| Package | Mode | Target persona | Signature tools (MCP) | Skills/templates | Routing & budget shape |
-|---|---|---|---|---|---|
-| `quality_engineer` | copilot | PQE | SPC/CMM connector, MES defect feed, ticketing | 8D generator, control-plan editor, PPAP checklist, IATF clause library | Frontier for 8D root-cause; small model for form fill; Medium cap |
-| `sqe_supplier_quality` | copilot | SQE | Supplier portal, PPAP inbox, SCAR tracker | VDA 6.3 audit kit, 8D/SCAR templates, chargeback calculator | High cap (doc-heavy) |
-| `plc_programmer` | copilot | Controls eng | OPC UA diagnostics, code repo, IO table | Ladder/ST codegen patterns, AOI library, alarm templates, diff/merge tooling | Frontier for codegen; loop caps; open-model fallback |
-| `maintenance_technician` | copilot | Maintenance tech | CMMS, fault-code KB, spares catalog | Fault→fix playbooks, SOP checklists, escalation trees | Low cap, cheap model, mobile-first — the flagship fault loop |
-| `material_planner` | automated (assist) | Material planner | MRP/ERP, supplier EDI | Exception-triage cards, ECN impact alerts, EOL calculators | Small-model batch, High volume / Low per-call |
-| `production_supervisor` | copilot | Shift supervisor | MES/andon feed, CMMS | Shift-report generator, handover templates, staffing models | Low-Medium cap, cheap-first routing |
-| `warranty_analyst` | copilot | Warranty analyst | Warranty data warehouse, claims API | Pareto/early-warning analytics, chargeback bundles, reserve memos | Medium-High cap (evidentiary docs) |
-| `data_analyst_plant` | copilot | Plant data analyst | Historian (PI), lakehouse, BI | SPC/downtime notebooks, OEE calculators, dashboard builders | Medium cap; query-minimization bundling |
-| `office_worker_general` | copilot | Every office employee (volume default) | SharePoint, email, chat, web search | Meeting-notes→actions, doc summarization, mail triage | Low cap per seat, cheapest viable model — scales to thousands |
-| `exec_assistant` | copilot | Executives/managers | Dashboard APIs, approvals inbox, CRM | KPI briefing generator, exec digest, approval summaries | Low cap; aggregates-only guardrail enforced |
+| Package                  | Mode               | Target persona                         | Signature tools (MCP)                         | Skills/templates                                                             | Routing & budget shape                                            |
+| ------------------------ | ------------------ | -------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `quality_engineer`       | copilot            | PQE                                    | SPC/CMM connector, MES defect feed, ticketing | 8D generator, control-plan editor, PPAP checklist, IATF clause library       | Frontier for 8D root-cause; small model for form fill; Medium cap |
+| `sqe_supplier_quality`   | copilot            | SQE                                    | Supplier portal, PPAP inbox, SCAR tracker     | VDA 6.3 audit kit, 8D/SCAR templates, chargeback calculator                  | High cap (doc-heavy)                                              |
+| `plc_programmer`         | copilot            | Controls eng                           | OPC UA diagnostics, code repo, IO table       | Ladder/ST codegen patterns, AOI library, alarm templates, diff/merge tooling | Frontier for codegen; loop caps; open-model fallback              |
+| `maintenance_technician` | copilot            | Maintenance tech                       | CMMS, fault-code KB, spares catalog           | Fault→fix playbooks, SOP checklists, escalation trees                        | Low cap, cheap model, mobile-first — the flagship fault loop      |
+| `material_planner`       | automated (assist) | Material planner                       | MRP/ERP, supplier EDI                         | Exception-triage cards, ECN impact alerts, EOL calculators                   | Small-model batch, High volume / Low per-call                     |
+| `production_supervisor`  | copilot            | Shift supervisor                       | MES/andon feed, CMMS                          | Shift-report generator, handover templates, staffing models                  | Low-Medium cap, cheap-first routing                               |
+| `warranty_analyst`       | copilot            | Warranty analyst                       | Warranty data warehouse, claims API           | Pareto/early-warning analytics, chargeback bundles, reserve memos            | Medium-High cap (evidentiary docs)                                |
+| `data_analyst_plant`     | copilot            | Plant data analyst                     | Historian (PI), lakehouse, BI                 | SPC/downtime notebooks, OEE calculators, dashboard builders                  | Medium cap; query-minimization bundling                           |
+| `office_worker_general`  | copilot            | Every office employee (volume default) | SharePoint, email, chat, web search           | Meeting-notes→actions, doc summarization, mail triage                        | Low cap per seat, cheapest viable model — scales to thousands     |
+| `exec_assistant`         | copilot            | Executives/managers                    | Dashboard APIs, approvals inbox, CRM          | KPI briefing generator, exec digest, approval summaries                      | Low cap; aggregates-only guardrail enforced                       |
 
 `office_worker_general` and `exec_assistant` matter disproportionately: they are how non-technical low/mid/high management experience the platform, and they must feel effortless.
 
@@ -211,30 +212,30 @@ Slip policy mirrors spec §9: if 1.6's installer or 1.7's fine-tune pilot slips,
 
 ### Success criteria (Phase 1.y additions)
 
-| Metric | Target |
-|---|---|
-| Time-to-first-metered-call (non-technical employee) | < 5 min, no config files touched |
-| Package coverage of metered traffic | ≥ 80% of calls carry `package_version_id` |
-| Governance coverage | 100% of tool invocations authorized; denies audited < 1 min |
-| Cost steering | ≥ 1 package family ≥ 50% below naive frontier baseline (savings ledger proof) |
-| Management engagement | ≥ 1 exec decision made from `$/work-product` dashboard per pilot tenant/month |
-| Friction funnel | ≥ 70% of employees who start `arm setup` complete the metered round-trip unassisted |
+| Metric                                              | Target                                                                              |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Time-to-first-metered-call (non-technical employee) | < 5 min, no config files touched                                                    |
+| Package coverage of metered traffic                 | ≥ 80% of calls carry `package_version_id`                                           |
+| Governance coverage                                 | 100% of tool invocations authorized; denies audited < 1 min                         |
+| Cost steering                                       | ≥ 1 package family ≥ 50% below naive frontier baseline (savings ledger proof)       |
+| Management engagement                               | ≥ 1 exec decision made from `$/work-product` dashboard per pilot tenant/month       |
+| Friction funnel                                     | ≥ 70% of employees who start `arm setup` complete the metered round-trip unassisted |
 
 ---
 
 ## 8. Risks & mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Vendor OAuth app review delays (Jira/GitHub/Google approvals) | Phase 1.6 slip | Start app-registration requests at 1.5 kickoff; Tier B PAT wizard works without vendor approval |
-| Code-signing/notarization + SmartScreen/Gatekeeper reputation | Install blocks undermine "very easy" | EV cert + notarization from first beta; MDM path bypasses SmartScreen prompts |
-| Desktop shell mispicked (Electron vs Tauri) | Rework in 1.6 | Decide at 1.6 kickoff: Tauri (small footprint, Rust toolchain) vs Electron (TS-only, heavier); both reuse client-core |
-| Config writer drift across agent runtime releases | Broken provisioning = dead trust | Pin opencode min version in package; integrity re-check at agent start; CI matrix against opencode releases |
-| Tool gate adds proxy latency | Blows §5.2 budget | Tool policy resolved from the policy cache (D5 pull) — no catalog round-trip on the hot path |
-| Package preset explosion (20 functions × variants) | Catalog bloat | Role-level packages only (sub-decision 1); family variants capped; custom packages behind admin |
-| Employees bypass packages with bare agents | Governance holes | Bare agents get the minimal default package (no tools) — the platform makes the packaged path the easy path; bypass agents stay visible via `source` + policy |
-| "Cheapest per 8D" quality collapse | Compliance risk | Rework-rate counterweight is a first-class metric; co-meter verifiability (citations, clause-versioned caches) |
-| Fine-tune distribution shift on new product lines | Silent quality drop | Per-task eval harness + drift guardrail before any fine-tuned model is production-routable |
+| Risk                                                          | Impact                               | Mitigation                                                                                                                                                    |
+| ------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vendor OAuth app review delays (Jira/GitHub/Google approvals) | Phase 1.6 slip                       | Start app-registration requests at 1.5 kickoff; Tier B PAT wizard works without vendor approval                                                               |
+| Code-signing/notarization + SmartScreen/Gatekeeper reputation | Install blocks undermine "very easy" | EV cert + notarization from first beta; MDM path bypasses SmartScreen prompts                                                                                 |
+| Desktop shell mispicked (Electron vs Tauri)                   | Rework in 1.6                        | Decide at 1.6 kickoff: Tauri (small footprint, Rust toolchain) vs Electron (TS-only, heavier); both reuse client-core                                         |
+| Config writer drift across agent runtime releases             | Broken provisioning = dead trust     | Pin opencode min version in package; integrity re-check at agent start; CI matrix against opencode releases                                                   |
+| Tool gate adds proxy latency                                  | Blows §5.2 budget                    | Tool policy resolved from the policy cache (D5 pull) — no catalog round-trip on the hot path                                                                  |
+| Package preset explosion (20 functions × variants)            | Catalog bloat                        | Role-level packages only (sub-decision 1); family variants capped; custom packages behind admin                                                               |
+| Employees bypass packages with bare agents                    | Governance holes                     | Bare agents get the minimal default package (no tools) — the platform makes the packaged path the easy path; bypass agents stay visible via `source` + policy |
+| "Cheapest per 8D" quality collapse                            | Compliance risk                      | Rework-rate counterweight is a first-class metric; co-meter verifiability (citations, clause-versioned caches)                                                |
+| Fine-tune distribution shift on new product lines             | Silent quality drop                  | Per-task eval harness + drift guardrail before any fine-tuned model is production-routable                                                                    |
 
 ## 9. Open questions for sign-off
 

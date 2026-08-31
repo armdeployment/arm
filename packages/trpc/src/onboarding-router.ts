@@ -52,7 +52,13 @@ import { z } from "zod";
 import { randomUUID, createHash } from "node:crypto";
 import { SignJWT, jwtVerify, decodeJwt } from "jose";
 import type { ARMContext } from "./index.js";
-import { isDemoMode, registerDemoArray, registerDemoMap, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
+import {
+  isDemoMode,
+  registerDemoArray,
+  registerDemoMap,
+  snapshotAllDemoStores,
+  restoreAllDemoStores,
+} from "./demo-mode.js";
 import {
   questionnaireAnswerSchema,
   setupTokenClaimsSchema,
@@ -124,7 +130,8 @@ const publicProcedure = t.procedure.use(async (opts) => {
 //    from @arm/billing + @arm/auth — this scaffold has no live DB, matching
 //    every other router here) ─────────────────────────────────────────────
 
-const SETUP_TOKEN_SECRET = process.env["ARM_SETUP_TOKEN_SECRET"] ?? "dev-only-setup-token-secret-do-not-use-in-prod";
+const SETUP_TOKEN_SECRET =
+  process.env["ARM_SETUP_TOKEN_SECRET"] ?? "dev-only-setup-token-secret-do-not-use-in-prod";
 const setupTokenSigningKey = new TextEncoder().encode(SETUP_TOKEN_SECRET);
 
 const FIXTURE_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001";
@@ -180,7 +187,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Maintenance Technician",
     family: "Maintenance",
     mode: "copilot",
-    description: "Fault → fix → CMMS loop: fault-code lookup, spares catalog, SOP checklists — mobile-first.",
+    description:
+      "Fault → fix → CMMS loop: fault-code lookup, spares catalog, SOP checklists — mobile-first.",
     approval_required: true,
   },
   {
@@ -190,7 +198,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Office Worker (General)",
     family: "General Office",
     mode: "copilot",
-    description: "The volume default: chat, docs, SharePoint, email triage, meeting notes → actions.",
+    description:
+      "The volume default: chat, docs, SharePoint, email triage, meeting notes → actions.",
     // A6: high-volume, low-risk default package — no approver in the loop.
     approval_required: false,
   },
@@ -201,7 +210,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Executive Assistant",
     family: "Executive",
     mode: "copilot",
-    description: "KPI briefings, exec digests, approvals-inbox summaries — aggregates-only guardrail enforced.",
+    description:
+      "KPI briefings, exec digests, approvals-inbox summaries — aggregates-only guardrail enforced.",
     approval_required: true,
   },
   {
@@ -211,7 +221,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Material Planner",
     family: "Supply Chain",
     mode: "automated",
-    description: "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs.",
+    description:
+      "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs.",
     // A6: unattended batch role — auto-approved, reviewed after the fact via /adoption.
     approval_required: false,
   },
@@ -238,7 +249,9 @@ const PACKAGE_VERSION_FIXTURES: WorkPackageVersion[] = workPackageVersionSchema
   .array()
   .parse(packageVersionFixtures);
 
-function packageForVersionId(versionId: string): { pkg: WorkPackage; v1: WorkPackageVersion } | null {
+function packageForVersionId(
+  versionId: string,
+): { pkg: WorkPackage; v1: WorkPackageVersion } | null {
   const v1 = PACKAGE_VERSION_FIXTURES.find((v) => v.id === versionId);
   if (!v1) return null;
   const pkg = PACKAGE_FIXTURES.find((p) => p.id === v1.package_id);
@@ -278,7 +291,9 @@ function buildV2Version(pkg: WorkPackage, v1: WorkPackageVersion): WorkPackageVe
  *  `getComponent` builds, `@arm/client-core`'s `ResolvedComponent`. Refs
  *  with no matching component/version fixture are skipped (still honest
  *  under §14.2 — this never fabricates a component). */
-function resolveComponents(version: WorkPackageVersion): Array<{ component: unknown; version: unknown }> {
+function resolveComponents(
+  version: WorkPackageVersion,
+): Array<{ component: unknown; version: unknown }> {
   const resolved: Array<{ component: unknown; version: unknown }> = [];
   for (const ref of version.components) {
     const component = componentFixtures.find((c) => c.id === ref.component_id);
@@ -391,7 +406,10 @@ function newActivationCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code: string;
   do {
-    code = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    code = Array.from(
+      { length: 6 },
+      () => alphabet[Math.floor(Math.random() * alphabet.length)],
+    ).join("");
   } while (activationCodeIndex.has(code));
   return code;
 }
@@ -429,7 +447,10 @@ export interface RedemptionResult {
   pending_approval?: boolean;
 }
 
-function redemptionFailure(status: "expired" | "already_used" | "invalid", message: string): RedemptionResult {
+function redemptionFailure(
+  status: "expired" | "already_used" | "invalid",
+  message: string,
+): RedemptionResult {
   return { status, message };
 }
 
@@ -437,17 +458,29 @@ function redemptionFailure(status: "expired" | "already_used" | "invalid", messa
  *  (after JWT verification) and `resolveActivationCode` (after a direct
  *  store lookup by code; there is no raw token to verify there, since only
  *  its hash is ever stored — Invariant 4). */
-function completeRedemption(stored: StoredSetupToken, clientVersion: string | undefined): RedemptionResult {
+function completeRedemption(
+  stored: StoredSetupToken,
+  clientVersion: string | undefined,
+): RedemptionResult {
   if (stored.redeemedAt !== null) {
-    return redemptionFailure("already_used", "this setup link was already used — ask IT for a new one");
+    return redemptionFailure(
+      "already_used",
+      "this setup link was already used — ask IT for a new one",
+    );
   }
   if (Date.now() > stored.expiresAt) {
-    return redemptionFailure("expired", "this setup link has expired — ask your admin for a new one");
+    return redemptionFailure(
+      "expired",
+      "this setup link has expired — ask your admin for a new one",
+    );
   }
 
   const resolved = packageForVersionId(stored.packageVersionIds[0] ?? "");
   if (!resolved) {
-    return redemptionFailure("invalid", "this setup link points at an unknown package — ask IT for a new one");
+    return redemptionFailure(
+      "invalid",
+      "this setup link points at an unknown package — ask IT for a new one",
+    );
   }
 
   stored.redeemedAt = Date.now();
@@ -640,7 +673,8 @@ export const onboardingRouter = t.router({
       let rateLimitKey = "malformed";
       try {
         const unsafeClaims = decodeJwt(token);
-        rateLimitKey = typeof unsafeClaims["tenant_id"] === "string" ? unsafeClaims["tenant_id"] : "malformed";
+        rateLimitKey =
+          typeof unsafeClaims["tenant_id"] === "string" ? unsafeClaims["tenant_id"] : "malformed";
       } catch {
         // fall through with the "malformed" bucket
       }
@@ -650,7 +684,9 @@ export const onboardingRouter = t.router({
 
       let claims: SetupTokenClaims;
       try {
-        const { payload } = await jwtVerify(token, setupTokenSigningKey, { audience: "arm-client" });
+        const { payload } = await jwtVerify(token, setupTokenSigningKey, {
+          audience: "arm-client",
+        });
         claims = setupTokenClaimsSchema.parse(payload);
       } catch {
         return redemptionFailure("invalid", "this setup link is invalid");

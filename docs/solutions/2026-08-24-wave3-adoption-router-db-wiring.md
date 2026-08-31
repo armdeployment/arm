@@ -27,10 +27,10 @@ routers in one pass.
 - `scripts/dev/apply-clickhouse-migrations.mjs` — applies
   `packages/clickhouse/migrations/*.sql` over ClickHouse's HTTP interface,
   splitting on statement-terminating `;` while correctly ignoring one that
-  appears *inside* a `--` comment (`0001_init.sql`'s `work_type` column doc:
+  appears _inside_ a `--` comment (`0001_init.sql`'s `work_type` column doc:
   "enforcement-ready; NULL until resolved" — a naive split breaks on that).
 - `scripts/dev/seed-clickhouse-adoption.mjs` — expands
-  `adoption-router.ts`'s existing `FIXTURE_POPULATION` (a per-user *summary*:
+  `adoption-router.ts`'s existing `FIXTURE_POPULATION` (a per-user _summary_:
   which step they reached, how it ended) into real per-step
   `activation_event` rows, so ClickHouse real mode and fixture mode tell the
   identical story for a given tenant — proven bit-for-bit: funnel counts,

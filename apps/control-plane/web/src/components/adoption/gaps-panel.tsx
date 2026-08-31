@@ -44,7 +44,9 @@ export function GapsPanelView({ status, rows, errorMessage }: GapsPanelViewProps
         <ul className="divide-y" style={{ borderColor: "var(--border)" }} role="list">
           {rows.map((g) => (
             <li key={g.jobFunctionKey} className="flex items-center justify-between py-2">
-              <span className="text-[12px] font-medium" style={{ color: "var(--text-primary)" }}>{g.name}</span>
+              <span className="text-[12px] font-medium" style={{ color: "var(--text-primary)" }}>
+                {g.name}
+              </span>
               <a
                 href={`/library?gap=${encodeURIComponent(g.jobFunctionKey)}`}
                 className="rounded px-2 py-1 text-[11px] font-semibold"
@@ -66,7 +68,8 @@ export function GapsPanel() {
 
   if (gaps.isLoading || jobFunctions.isLoading) return <GapsPanelView status="loading" />;
   if (gaps.isError) return <GapsPanelView status="error" errorMessage={gaps.error?.message} />;
-  if (jobFunctions.isError) return <GapsPanelView status="error" errorMessage={jobFunctions.error?.message} />;
+  if (jobFunctions.isError)
+    return <GapsPanelView status="error" errorMessage={jobFunctions.error?.message} />;
 
   const nameByKey = new Map(jobFunctions.data!.jobFunctions.map((jf) => [jf.key, jf.name]));
   const rows: GapRow[] = gaps.data!.gaps.map((g) => ({

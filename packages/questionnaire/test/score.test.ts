@@ -29,14 +29,19 @@ describe("score — manufacturing graph", () => {
       role_cluster: "plc", // weight 3
       code_plc: "yes", // weight 2 -> plc_programmer
     };
-    const partialScore = score(partial, manufacturingV1).find((r) => r.key === "plc_programmer")!.weight;
+    const partialScore = score(partial, manufacturingV1).find(
+      (r) => r.key === "plc_programmer",
+    )!.weight;
     const fullScore = score(full, manufacturingV1).find((r) => r.key === "plc_programmer")!.weight;
     expect(fullScore).toBeGreaterThan(partialScore);
     expect(fullScore).toBe(5);
   });
 
   it("ignores answers referencing unknown nodes or option values", () => {
-    const answers = { not_a_real_node: "x", role_cluster: "not_a_real_option" } as QuestionnaireAnswer;
+    const answers = {
+      not_a_real_node: "x",
+      role_cluster: "not_a_real_option",
+    } as QuestionnaireAnswer;
     expect(score(answers, manufacturingV1)).toEqual([]);
   });
 
@@ -60,7 +65,18 @@ describe("score — manufacturing graph", () => {
 
 describe("score determinism — answer order never affects the result (property test)", () => {
   const answerEntry = fc.oneof(
-    fc.record({ nodeId: fc.constant("role_cluster"), value: fc.constantFrom("maintenance", "quality", "plc", "planning", "office", "exec_support", "none_of_these") }),
+    fc.record({
+      nodeId: fc.constant("role_cluster"),
+      value: fc.constantFrom(
+        "maintenance",
+        "quality",
+        "plc",
+        "planning",
+        "office",
+        "exec_support",
+        "none_of_these",
+      ),
+    }),
     fc.record({
       nodeId: fc.constant("weekly_tasks"),
       value: fc.uniqueArray(
@@ -80,7 +96,9 @@ describe("score determinism — answer order never affects the result (property 
     }),
     fc.record({
       nodeId: fc.constant("systems"),
-      value: fc.uniqueArray(fc.constantFrom("jira", "sap", "cmms", "sharepoint", "tia_portal", "studio5000")),
+      value: fc.uniqueArray(
+        fc.constantFrom("jira", "sap", "cmms", "sharepoint", "tia_portal", "studio5000"),
+      ),
     }),
     fc.record({ nodeId: fc.constant("code_plc"), value: fc.constantFrom("yes", "no") }),
   );

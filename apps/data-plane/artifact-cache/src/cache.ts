@@ -20,7 +20,8 @@ export class LocalArtifactCache {
   private readonly store = new Map<string, CachedBlob>();
 
   constructor(maxBytes: number) {
-    if (maxBytes <= 0) throw new Error(`LocalArtifactCache: maxBytes must be positive, got ${maxBytes}`);
+    if (maxBytes <= 0)
+      throw new Error(`LocalArtifactCache: maxBytes must be positive, got ${maxBytes}`);
     this.maxBytes = maxBytes;
   }
 

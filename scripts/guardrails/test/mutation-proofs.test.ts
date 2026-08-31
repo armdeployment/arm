@@ -14,10 +14,8 @@ import { checkBoundaries } from "../src/checks/boundaries.js";
 import { checkSafeRender } from "../src/checks/safe-render.js";
 import { checkCISync, parseTableWorkflows } from "../src/checks/ci-sync.js";
 import { checkNoProfileBranching } from "../src/checks/no-profile-branching.js";
-import {
-  checkTaxonomyScope,
-  type TaxonomyRow,
-} from "../src/checks/taxonomy-scope.js";
+import { checkTaxonomyScope, type TaxonomyRow } from "../src/checks/taxonomy-scope.js";
+import { includesChain, countChain } from "../src/source-match.js";
 import {
   checkWorkTypeUnknown,
   UNKNOWN_THRESHOLD_PCT,
@@ -44,7 +42,12 @@ import { checkBlobResidency } from "../src/checks/blob-residency.js";
 import { checkQuestionnaireDeterminism } from "../src/checks/questionnaire-determinism.js";
 import { checkNoContentInActivation } from "../src/checks/no-content-in-activation.js";
 import { checkDemoModeReadonly } from "../src/checks/demo-mode-readonly.js";
-import { INIT_SQL, assertTenantMonthPartitioning, ADOPTION_SQL, assertAdoptionPartitioning } from "@arm/clickhouse";
+import {
+  INIT_SQL,
+  assertTenantMonthPartitioning,
+  ADOPTION_SQL,
+  assertAdoptionPartitioning,
+} from "@arm/clickhouse";
 
 describe("mutation proof: tenant-isolation (§11.6)", () => {
   const clean = [
@@ -128,7 +131,7 @@ describe("mutation proof: no-secret-dumps (§12)", () => {
 
 describe("mutation proof: boundaries (§14.3)", () => {
   const clean = [
-    { path: "packages/proto/src/index.ts", content: 'export const x = 1;' },
+    { path: "packages/proto/src/index.ts", content: "export const x = 1;" },
     { path: "packages/config/src/index.ts", content: 'import {} from "@arm/proto";' }, // layer 1 -> 0 ok
     { path: "apps/data-plane/proxy/src/index.ts", content: 'import {} from "@arm/proto";' }, // dataplane -> proto ok
   ];
@@ -167,7 +170,10 @@ describe("mutation proof: boundaries (§14.3)", () => {
   it("FAILS when a data-plane app imports @arm/catalog (control-plane only)", () => {
     const broken = [
       ...clean,
-      { path: "apps/data-plane/plugin-ingest/src/index.ts", content: 'import {} from "@arm/catalog";' }, // mutation
+      {
+        path: "apps/data-plane/plugin-ingest/src/index.ts",
+        content: 'import {} from "@arm/catalog";',
+      }, // mutation
     ];
     const r = checkBoundaries(broken);
     expect(r.status).toBe("fail");
@@ -178,7 +184,10 @@ describe("mutation proof: boundaries (§14.3)", () => {
   it("PASSES when plugin-ingest imports @arm/client-core (shared layer 1)", () => {
     const files = [
       ...clean,
-      { path: "apps/data-plane/plugin-ingest/src/index.ts", content: 'import {} from "@arm/client-core";' },
+      {
+        path: "apps/data-plane/plugin-ingest/src/index.ts",
+        content: 'import {} from "@arm/client-core";',
+      },
     ];
     expect(checkBoundaries(files).status).toBe("pass");
   });
@@ -265,7 +274,10 @@ describe("mutation proof: boundaries (§14.3)", () => {
   it("FAILS when a data-plane app imports @arm/questionnaire (control-plane only, D10)", () => {
     const broken = [
       ...clean,
-      { path: "apps/data-plane/proxy/src/index.ts", content: 'import {} from "@arm/questionnaire";' }, // mutation
+      {
+        path: "apps/data-plane/proxy/src/index.ts",
+        content: 'import {} from "@arm/questionnaire";',
+      }, // mutation
     ];
     const r = checkBoundaries(broken);
     expect(r.status).toBe("fail");
@@ -325,7 +337,7 @@ describe("mutation proof: safe-render (§14.1 LLM trust boundary)", () => {
   it("FAILS when dangerouslySetInnerHTML appears", () => {
     const broken = [
       ...clean,
-      { path: "evil.tsx", content: '<div dangerouslySetInnerHTML={{__html: agent.name}} />' }, // mutation
+      { path: "evil.tsx", content: "<div dangerouslySetInnerHTML={{__html: agent.name}} />" }, // mutation
     ];
     const r = checkSafeRender(broken);
     expect(r.status).toBe("fail");
@@ -339,7 +351,7 @@ describe("mutation proof: safe-render (§14.1 LLM trust boundary)", () => {
     ];
     const r = checkSafeRender(broken);
     expect(r.status).toBe("fail");
- expect(r.detail).toContain("eval()");
+    expect(r.detail).toContain("eval()");
   });
 
   it("PASSES on safe React/Tailwind source", () => {
@@ -383,11 +395,20 @@ describe("mutation proof: ci-sync (§14.3)", () => {
 
 describe("mutation proof: no-profile-branching (D6)", () => {
   const clean = [
-    { path: "packages/policy/src/index.ts", content: "export function checkPolicy() { return true; }" },
-    { path: "apps/data-plane/proxy/src/index.ts", content: "export function proxy() { return null; }" },
+    {
+      path: "packages/policy/src/index.ts",
+      content: "export function checkPolicy() { return true; }",
+    },
+    {
+      path: "apps/data-plane/proxy/src/index.ts",
+      content: "export function proxy() { return null; }",
+    },
     { path: "apps/simulation/src/proxy.ts", content: "export function handle() { return null; }" },
     // Allowed path — should never trigger
-    { path: "packages/profiles/src/index.ts", content: "export const manufacturingProfile = getProfile('manufacturing');" },
+    {
+      path: "packages/profiles/src/index.ts",
+      content: "export const manufacturingProfile = getProfile('manufacturing');",
+    },
   ];
 
   it("FAILS when a policy file branches on industryProfile", () => {
@@ -431,9 +452,18 @@ describe("mutation proof: no-profile-branching (D6)", () => {
 
   it("does NOT flag allowed paths (profiles package, db-init, control-plane web)", () => {
     const allowed = [
-      { path: "packages/profiles/src/index.ts", content: "export function getProfile(id) { return manufacturingProfile; }" },
-      { path: "apps/simulation/src/db-init.ts", content: "const profile = getProfile('manufacturing');" },
-      { path: "apps/control-plane/web/src/app/page.tsx", content: "const profileId = tenant.industryProfile;" },
+      {
+        path: "packages/profiles/src/index.ts",
+        content: "export function getProfile(id) { return manufacturingProfile; }",
+      },
+      {
+        path: "apps/simulation/src/db-init.ts",
+        content: "const profile = getProfile('manufacturing');",
+      },
+      {
+        path: "apps/control-plane/web/src/app/page.tsx",
+        content: "const profileId = tenant.industryProfile;",
+      },
     ];
     const r = checkNoProfileBranching(allowed);
     expect(r.status).toBe("pass");
@@ -452,8 +482,18 @@ describe("mutation proof: no-profile-branching (D6)", () => {
 
 describe("mutation proof: taxonomy-scope (D7)", () => {
   const clean: TaxonomyRow[] = [
-    { tenantId: "tn1", scopeType: "department", scopeId: "dept_eng", labels: ["code_review", "test_gen"] },
-    { tenantId: "tn1", scopeType: "department", scopeId: "dept_mfg", labels: ["cnc_toolpath", "defect_analysis"] },
+    {
+      tenantId: "tn1",
+      scopeType: "department",
+      scopeId: "dept_eng",
+      labels: ["code_review", "test_gen"],
+    },
+    {
+      tenantId: "tn1",
+      scopeType: "department",
+      scopeId: "dept_mfg",
+      labels: ["cnc_toolpath", "defect_analysis"],
+    },
   ];
 
   it("FAILS when a WorkTypeTaxonomy row misses tenant_id", () => {
@@ -1022,7 +1062,10 @@ describe("mutation proof: blob-residency (D10, Invariant 1)", () => {
 describe("mutation proof: questionnaire-determinism (D10)", () => {
   it("FAILS when the mapping module calls Math.random()", () => {
     const r = checkQuestionnaireDeterminism([
-      { path: "packages/questionnaire/src/recommend.ts", content: "export const x = Math.random();" }, // mutation
+      {
+        path: "packages/questionnaire/src/recommend.ts",
+        content: "export const x = Math.random();",
+      }, // mutation
     ]);
     expect(r.status).toBe("fail");
     expect(r.detail).toContain("Math.random(");
@@ -1030,7 +1073,10 @@ describe("mutation proof: questionnaire-determinism (D10)", () => {
 
   it("FAILS when the mapping module calls fetch()", () => {
     const r = checkQuestionnaireDeterminism([
-      { path: "packages/questionnaire/src/recommend.ts", content: "export const x = fetch('/api');" }, // mutation
+      {
+        path: "packages/questionnaire/src/recommend.ts",
+        content: "export const x = fetch('/api');",
+      }, // mutation
     ]);
     expect(r.status).toBe("fail");
     expect(r.detail).toContain("fetch(");
@@ -1105,7 +1151,8 @@ describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism
     const r = checkDemoModeReadonly([
       {
         path: "packages/trpc/src/example-router.ts",
-        content: 'export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });', // mutation
+        content:
+          "export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });", // mutation
       },
     ]);
     expect(r.status).toBe("fail");
@@ -1118,7 +1165,7 @@ describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism
         path: "packages/trpc/src/example-router.ts",
         content:
           'import { isDemoMode } from "@arm/some-other-package";\n' + // mutation: wrong import source
-          'export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });',
+          "export const exampleRouter = t.router({ doThing: t.procedure.mutation(async () => ({ ok: true })) });",
       },
     ]);
     expect(r.status).toBe("fail");
@@ -1130,8 +1177,8 @@ describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism
         path: "packages/trpc/src/example-router.ts",
         content:
           'import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";\n' +
-          'const tenantProcedure = t.procedure.use(async (opts) => { if (!isDemoMode()) return opts.next(); });\n' +
-          'export const exampleRouter = t.router({ doThing: tenantProcedure.mutation(async () => ({ ok: true })) });',
+          "const tenantProcedure = t.procedure.use(async (opts) => { if (!isDemoMode()) return opts.next(); });\n" +
+          "export const exampleRouter = t.router({ doThing: tenantProcedure.mutation(async () => ({ ok: true })) });",
       },
     ]);
     expect(r.status).toBe("pass");
@@ -1142,7 +1189,8 @@ describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism
     const r = checkDemoModeReadonly([
       {
         path: "packages/trpc/src/query-only-router.ts",
-        content: 'export const readonlyRouter = t.router({ list: t.procedure.query(async () => ([])) });',
+        content:
+          "export const readonlyRouter = t.router({ list: t.procedure.query(async () => ([])) });",
       },
     ]);
     expect(r.status).toBe("pass");
@@ -1163,9 +1211,50 @@ describe("mutation proof: demo-mode-readonly (D10, guide 04's ARM_DEMO mechanism
     const files = readdirSync(dir)
       .filter((entry) => extname(entry) === ".ts" && entry !== "demo-mode.ts")
       .filter((entry) => !statSync(join(dir, entry)).isDirectory())
-      .map((entry) => ({ path: `packages/trpc/src/${entry}`, content: readFileSync(join(dir, entry), "utf8") }));
+      .map((entry) => ({
+        path: `packages/trpc/src/${entry}`,
+        content: readFileSync(join(dir, entry), "utf8"),
+      }));
     const r = checkDemoModeReadonly(files);
     expect(r.status).toBe("pass");
     expect(r.scanned).toBeGreaterThan(0);
+  });
+});
+
+describe("source-match — schema needles survive formatting, not mutation", () => {
+  // The three schema-reading guards (taxonomy-scope, package-integrity,
+  // tool-endpoint-scope) look for a literal Drizzle call chain. Prettier wraps
+  // any chain that outgrows the print width, which once turned a correct
+  // schema into a red guard. Relaxing the match must not also let a genuinely
+  // missing `.notNull()` through — that is what these prove.
+  const WRAPPED = `
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
+`;
+  const INLINE = `  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),`;
+  const MUTATED = `
+  tenantId: uuid("tenant_id")
+    .references(() => tenantTable.id),
+`;
+
+  it("MATCHES the same chain whether the formatter wrapped it or not", () => {
+    expect(includesChain(WRAPPED, 'uuid("tenant_id").notNull()')).toBe(true);
+    expect(includesChain(INLINE, 'uuid("tenant_id").notNull()')).toBe(true);
+  });
+
+  it("STILL FAILS when .notNull() is actually removed (the mutation)", () => {
+    expect(includesChain(MUTATED, 'uuid("tenant_id").notNull()')).toBe(false);
+  });
+
+  it("does NOT let a comment describing the column satisfy the guard", () => {
+    // Collapsing *all* whitespace would flatten this prose into the needle.
+    const prose = `/** tenant_id is uuid ( "tenant_id" ) . notNull ( ) — scoped per tenant. */`;
+    expect(includesChain(prose, 'uuid("tenant_id").notNull()')).toBe(false);
+  });
+
+  it("counts a wrapped chain once per occurrence, like the unwrapped form", () => {
+    expect(countChain(WRAPPED + INLINE, 'uuid("tenant_id").notNull()')).toBe(2);
+    expect(countChain(MUTATED, 'uuid("tenant_id").notNull()')).toBe(0);
   });
 });

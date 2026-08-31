@@ -55,10 +55,18 @@ const TASKS = {
 };
 
 const COLORS = {
-  reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m",
-  cyan: "\x1b[36m", green: "\x1b[32m", yellow: "\x1b[33m",
-  red: "\x1b[31m", blue: "\x1b[34m", magenta: "\x1b[35m",
-  white: "\x1b[37m", bg_blue: "\x1b[44m", bg_red: "\x1b[41m",
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  cyan: "\x1b[36m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  red: "\x1b[31m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  white: "\x1b[37m",
+  bg_blue: "\x1b[44m",
+  bg_red: "\x1b[41m",
 };
 
 function log(icon, msg) {
@@ -83,7 +91,9 @@ async function main() {
   console.log(`  Task:        ${TASK_TYPE.replace(/_/g, " ")}`);
   console.log(`  Model:       ${MODEL}`);
   console.log(`  ARM Proxy:   ${ARM_PROXY}`);
-  console.log(`  Network:     ${NO_VPN ? COLORS.red + "EXTERNAL (no VPN)" + COLORS.reset : COLORS.green + "armtest-internal" + COLORS.reset}`);
+  console.log(
+    `  Network:     ${NO_VPN ? COLORS.red + "EXTERNAL (no VPN)" + COLORS.reset : COLORS.green + "armtest-internal" + COLORS.reset}`,
+  );
   console.log("=".repeat(60) + "\n");
 
   // ── DNS Resolution Check ──
@@ -95,7 +105,11 @@ async function main() {
     log("🔒", "This workstation is on armtest-external network (outside corporate firewall)");
     log("📡", "VPN connection required to access armtest.com domain resources");
     console.log("");
-    log("💡", "To connect: docker network connect armtest-internal " + (process.env.HOSTNAME || "this-container"));
+    log(
+      "💡",
+      "To connect: docker network connect armtest-internal " +
+        (process.env.HOSTNAME || "this-container"),
+    );
     console.log("\n  Waiting for VPN connection...\n");
 
     // Wait for VPN (network connection) — up to 5 minutes
@@ -106,7 +120,10 @@ async function main() {
         const res = await fetch(`${ARM_PROXY}/health`, { signal: AbortSignal.timeout(1000) });
         if (res.ok) {
           connected = true;
-          log("✅", `${COLORS.green}VPN connected!${COLORS.reset} arm.armtest.com is now reachable`);
+          log(
+            "✅",
+            `${COLORS.green}VPN connected!${COLORS.reset} arm.armtest.com is now reachable`,
+          );
           break;
         }
       } catch {
@@ -175,14 +192,17 @@ async function main() {
     const prompt = prompts[(callNum - 1) % prompts.length];
     const t0 = Date.now();
 
-    log("⬆️", `${COLORS.blue}[${DEPARTMENT}]${COLORS.reset} Sending prompt to ${MODEL} via arm.armtest.com`);
+    log(
+      "⬆️",
+      `${COLORS.blue}[${DEPARTMENT}]${COLORS.reset} Sending prompt to ${MODEL} via arm.armtest.com`,
+    );
 
     try {
       const res = await fetch(`${ARM_PROXY}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
           model: MODEL,
@@ -200,8 +220,13 @@ async function main() {
         const tokens = data.usage?.total_tokens || 0;
         const cost = res.headers.get("X-ARM-Cost-CloudCents") || "0";
         const savings = res.headers.get("X-ARM-Savings-Cents") || "0";
-        const preview = (data.choices?.[0]?.message?.content || "").slice(0, 50).replace(/\n/g, " ");
-        log("✅", `${COLORS.green}${tokens} tokens${COLORS.reset} in ${latency}ms · cloud $${(parseInt(cost)/100).toFixed(4)} · saved $${(parseInt(savings)/100).toFixed(4)}`);
+        const preview = (data.choices?.[0]?.message?.content || "")
+          .slice(0, 50)
+          .replace(/\n/g, " ");
+        log(
+          "✅",
+          `${COLORS.green}${tokens} tokens${COLORS.reset} in ${latency}ms · cloud $${(parseInt(cost) / 100).toFixed(4)} · saved $${(parseInt(savings) / 100).toFixed(4)}`,
+        );
         if (preview) log("💬", `${COLORS.dim}"${preview}..."${COLORS.reset}`);
       } else {
         const errMsg = data.error?.message || `HTTP ${res.status}`;
@@ -226,6 +251,8 @@ async function main() {
   makeCall();
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
-main().catch(e => console.error("Fatal:", e));
+main().catch((e) => console.error("Fatal:", e));

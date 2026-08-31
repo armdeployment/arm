@@ -53,6 +53,8 @@ describe("link integrity", () => {
     // exception the guide allows for self-contained pages. This test pins
     // the allowlist to exactly those two hosts so a new external host can't
     // sneak onto the allowlist unnoticed.
-    expect(externalLinkAllowlist.sort()).toEqual(["fonts.googleapis.com", "fonts.gstatic.com"].sort());
+    expect(externalLinkAllowlist.sort()).toEqual(
+      ["fonts.googleapis.com", "fonts.gstatic.com"].sort(),
+    );
   });
 });

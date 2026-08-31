@@ -3,8 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { StallsPanelView, type StallRow } from "../../src/components/adoption/stalls-panel";
 
 const ROWS: StallRow[] = [
-  { step: "installed", errorCode: "mdm_push_failed", label: "MDM push failed on corporate device", count: 30, share: 45.2 },
-  { step: "connections_completed", errorCode: "jira_auth_failed", label: "Failed connecting Jira", count: 9, share: 13.6 },
+  {
+    step: "installed",
+    errorCode: "mdm_push_failed",
+    label: "MDM push failed on corporate device",
+    count: 30,
+    share: 45.2,
+  },
+  {
+    step: "connections_completed",
+    errorCode: "jira_auth_failed",
+    label: "Failed connecting Jira",
+    count: 9,
+    share: 13.6,
+  },
 ];
 
 describe("StallsPanelView", () => {

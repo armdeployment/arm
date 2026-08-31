@@ -88,7 +88,11 @@ export function classifyPainPoints(text: string): PainPointTag[] {
   for (const rule of RULES) {
     const matched = rule.keywords.filter((keyword) => normalized.includes(keyword));
     if (matched.length > 0) {
-      results.push({ tag: rule.tag, jobFunctionHint: rule.jobFunctionHint, matchedKeywords: matched });
+      results.push({
+        tag: rule.tag,
+        jobFunctionHint: rule.jobFunctionHint,
+        matchedKeywords: matched,
+      });
     }
   }
   return results;

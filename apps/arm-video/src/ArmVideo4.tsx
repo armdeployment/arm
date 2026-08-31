@@ -28,14 +28,20 @@ export const ArmVideo4: React.FC = () => {
         presentation={slide({ direction: "from-left" })}
         timing={linearTiming({ durationInFrames: T })}
       />
-      <TransitionSeries.Sequence durationInFrames={7 * FPS} name="Questionnaire">
+      <TransitionSeries.Sequence
+        durationInFrames={7 * FPS}
+        name="Questionnaire"
+      >
         <SceneV4Questionnaire />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition
         presentation={slide({ direction: "from-left" })}
         timing={linearTiming({ durationInFrames: T })}
       />
-      <TransitionSeries.Sequence durationInFrames={6 * FPS} name="Recommendation">
+      <TransitionSeries.Sequence
+        durationInFrames={6 * FPS}
+        name="Recommendation"
+      >
         <SceneV4Recommendation />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition

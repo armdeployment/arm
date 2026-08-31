@@ -15,12 +15,18 @@ describe("nextQuestion — manufacturing graph traversal", () => {
   });
 
   it("branches to the unmatched terminal on none_of_these", () => {
-    const next = nextQuestion(manufacturingV1, { location: "plant_a", role_cluster: "none_of_these" });
+    const next = nextQuestion(manufacturingV1, {
+      location: "plant_a",
+      role_cluster: "none_of_these",
+    });
     expect(next?.id).toBe("unmatched");
   });
 
   it("branches to weekly_tasks on a normal role_cluster answer", () => {
-    const next = nextQuestion(manufacturingV1, { location: "plant_a", role_cluster: "maintenance" });
+    const next = nextQuestion(manufacturingV1, {
+      location: "plant_a",
+      role_cluster: "maintenance",
+    });
     expect(next?.id).toBe("weekly_tasks");
   });
 
@@ -73,7 +79,9 @@ describe("nextQuestion — manufacturing graph traversal", () => {
           kind: "single",
           prompt: "p",
           help: "",
-          options: [{ value: "x", label: "X", signals: { job_functions: [], components: [], weight: 1 } }],
+          options: [
+            { value: "x", label: "X", signals: { job_functions: [], components: [], weight: 1 } },
+          ],
           next: [{ when: null, goto: "b" }],
         },
         {
@@ -81,7 +89,9 @@ describe("nextQuestion — manufacturing graph traversal", () => {
           kind: "single",
           prompt: "p",
           help: "",
-          options: [{ value: "x", label: "X", signals: { job_functions: [], components: [], weight: 1 } }],
+          options: [
+            { value: "x", label: "X", signals: { job_functions: [], components: [], weight: 1 } },
+          ],
           next: [{ when: null, goto: "a" }],
         },
       ],

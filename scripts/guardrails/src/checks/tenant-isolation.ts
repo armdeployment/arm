@@ -32,9 +32,7 @@ export interface TableShape {
 
 /** Pure function form — used by mutation proofs (§14.2). */
 export function checkTenantIsolation(tables: TableShape[]): CheckResult {
-  const violators = tables.filter(
-    (t) => !GLOBAL_TABLES.has(t.name) && !t.hasTenantId,
-  );
+  const violators = tables.filter((t) => !GLOBAL_TABLES.has(t.name) && !t.hasTenantId);
   if (violators.length > 0) {
     return {
       id: "tenant-isolation",

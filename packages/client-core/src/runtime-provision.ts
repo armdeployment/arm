@@ -77,7 +77,10 @@ export async function detectRuntime(
   const execFileFn = opts.execFileFn ?? defaultExecFile;
   const platform = opts.platform ?? process.platform;
 
-  const bundledPath = join(bundledRuntimeBinDir(opts.agentHome, kind), bundledBinaryName(kind, platform));
+  const bundledPath = join(
+    bundledRuntimeBinDir(opts.agentHome, kind),
+    bundledBinaryName(kind, platform),
+  );
   const bundled = await probeCommand(bundledPath, execFileFn);
   if (bundled.present) return bundled;
 
@@ -87,7 +90,10 @@ export async function detectRuntime(
 async function probeCommand(command: string, execFileFn: ExecFileFn): Promise<RuntimeProbe> {
   try {
     const { stdout } = await execFileFn(command, ["--version"]);
-    const version = stdout.trim().replace(/^Python\s+/i, "").replace(/^v/, "");
+    const version = stdout
+      .trim()
+      .replace(/^Python\s+/i, "")
+      .replace(/^v/, "");
     return { present: true, path: command, version };
   } catch {
     return { present: false };
@@ -129,15 +135,21 @@ function nodeTarget(platform: NodeJS.Platform, arch: string): ProvisionTarget {
     checksumManifestUrl: `https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt`,
     archiveFileName: fileName,
     archiveKind: ext === "zip" ? "zip" : "tar.gz",
-    binaryRelPath: platform === "win32"
-      ? `node-v${NODE_VERSION}-${plat}-${nodeArch}/node.exe`
-      : `node-v${NODE_VERSION}-${plat}-${nodeArch}/bin/node`,
+    binaryRelPath:
+      platform === "win32"
+        ? `node-v${NODE_VERSION}-${plat}-${nodeArch}/node.exe`
+        : `node-v${NODE_VERSION}-${plat}-${nodeArch}/bin/node`,
   };
 }
 
 function pythonTarget(platform: NodeJS.Platform, arch: string): ProvisionTarget {
   const pyArch = arch === "arm64" ? "aarch64" : "x86_64";
-  const plat = platform === "darwin" ? "apple-darwin" : platform === "win32" ? "pc-windows-msvc-shared" : "unknown-linux-gnu";
+  const plat =
+    platform === "darwin"
+      ? "apple-darwin"
+      : platform === "win32"
+        ? "pc-windows-msvc-shared"
+        : "unknown-linux-gnu";
   const fileName = `cpython-${PYTHON_VERSION}+${PYTHON_BUILD_STANDALONE_TAG}-${pyArch}-${plat}-install_only.tar.gz`;
   return {
     archiveUrl: `https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_BUILD_STANDALONE_TAG}/${fileName}`,
@@ -148,7 +160,11 @@ function pythonTarget(platform: NodeJS.Platform, arch: string): ProvisionTarget 
   };
 }
 
-export function resolveProvisionTarget(kind: RuntimeKind, platform: NodeJS.Platform, arch: string): ProvisionTarget {
+export function resolveProvisionTarget(
+  kind: RuntimeKind,
+  platform: NodeJS.Platform,
+  arch: string,
+): ProvisionTarget {
   return kind === "node" ? nodeTarget(platform, arch) : pythonTarget(platform, arch);
 }
 

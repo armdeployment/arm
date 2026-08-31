@@ -96,7 +96,7 @@ export const GUIDE_LIBRARY: Record<string, ConnectionGuide> = {
     guideId: "gitlab-pat",
     title: "GitLab — Personal Access Token (PAT)",
     steps: [
-      "Open your GitLab and sign in, then click your avatar (top right) and choose \"Edit profile\".",
+      'Open your GitLab and sign in, then click your avatar (top right) and choose "Edit profile".',
       'In the left menu, click "Access Tokens".',
       'Under "Add new token", give it a name like "ARM agent".',
       'Tick the scopes "api" and "read_repository" — nothing else.',
@@ -120,7 +120,7 @@ export const GUIDE_LIBRARY: Record<string, ConnectionGuide> = {
     guideId: "confluence-oauth",
     title: "Confluence / Atlassian — OAuth App Consent",
     steps: [
-      "Ask your Confluence admin to approve the ARM app in Atlassian Administration (admin.atlassian.com → Products → Confluence → \"Connected apps\").",
+      'Ask your Confluence admin to approve the ARM app in Atlassian Administration (admin.atlassian.com → Products → Confluence → "Connected apps").',
       "The admin grants ARM read access to the spaces your role needs — nothing wider.",
       'In the ARM connections wizard, click "Connect" next to Confluence.',
       'Sign in with your Atlassian account on the consent screen and click "Accept".',
@@ -321,7 +321,9 @@ export function getConnectionGuide(entry: ConnectionsManifestEntry): ConnectionG
       return generic;
     }
   }
-  throw new Error(`unknown connection guide "${entry.guideId}" for component "${entry.componentName}"`);
+  throw new Error(
+    `unknown connection guide "${entry.guideId}" for component "${entry.componentName}"`,
+  );
 }
 
 /** Render a guide's steps as a numbered, printable list. */

@@ -46,7 +46,7 @@ These are enforced as **executable guardrails** (spec §14.1), not prose. Never 
 
 ## Architecture Rules
 
-### Dependency Direction *(target, updated D10 — docs/guides/00-shared-contracts.md §7)*
+### Dependency Direction _(target, updated D10 — docs/guides/00-shared-contracts.md §7)_
 
 ```
 packages/proto → packages/config → packages/{db,clickhouse,policy,billing,auth,profiles}
@@ -87,12 +87,12 @@ pnpm --filter @arm/db db:generate   # regenerate Drizzle migrations
 
 ## CI Checks
 
-| Workflow | Trigger | What it checks |
-|---|---|---|
-| `typecheck.yml` | PR + push to main | `tsc --noEmit` across workspaces |
-| `guardrails.yml` | PR + push to main | Invariants-as-code (spec §14.1) |
-| `contract-check.yml` | PR (schema changes) | Generated types match committed output |
-| `security-audit.yml` | PR + daily cron | Dependency advisories; baselined entries carry justification |
+| Workflow             | Trigger             | What it checks                                               |
+| -------------------- | ------------------- | ------------------------------------------------------------ |
+| `typecheck.yml`      | PR + push to main   | `tsc --noEmit` across workspaces                             |
+| `guardrails.yml`     | PR + push to main   | Invariants-as-code (spec §14.1)                              |
+| `contract-check.yml` | PR (schema changes) | Generated types match committed output                       |
+| `security-audit.yml` | PR + daily cron     | Dependency advisories; baselined entries carry justification |
 
 This table is kept in sync with `.github/workflows/*` by a CI check once workflows exist.
 

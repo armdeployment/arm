@@ -21,7 +21,9 @@ test.describe("ARM dashboard — org-root (CEO view)", () => {
     await expect(page.getByRole("link", { name: /Supply Chain department/ })).toBeVisible();
 
     // Engineering card shows rolled-up spend — scope to the drill-down card link
-    await expect(page.getByRole("link", { name: /Engineering department/ }).getByText("$1,800")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Engineering department/ }).getByText("$1,800"),
+    ).toBeVisible();
 
     // Spend tree visualizations (treemap + indented tree)
   });
@@ -45,7 +47,9 @@ test.describe("ARM dashboard — drill-down", () => {
 
     // After full-page navigation, tRPC queries need time to resolve.
     // Use longer timeouts for data-dependent assertions.
-    await expect(page.getByRole("heading", { name: "Manufacturing" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Manufacturing" })).toBeVisible({
+      timeout: 15_000,
+    });
 
     await expect(page.getByRole("link", { name: "Acme Manufacturing" })).toBeVisible();
 
@@ -53,7 +57,9 @@ test.describe("ARM dashboard — drill-down", () => {
     await expect(page.getByText("$3,040").first()).toBeVisible({ timeout: 10_000 });
 
     // Shows child groups (SRE) — use the group card link to avoid ambiguity with treemap/tree-view
-    await expect(page.getByRole("link", { name: /Maintenance group/ })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: /Maintenance group/ })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test("breadcrumb navigates back up to org root", async ({ page }) => {

@@ -86,7 +86,7 @@ NodeNext convention colliding with raw-`.ts`-as-`main` that breaks.
   it imports a converted package fresh after clone, with a cryptic
   `Failed to resolve entry for package "@arm/..."`. The postinstall hook is
   scoped to `./packages/*` only (never `apps/*`) so it can't turn `pnpm
-  install` into a slow `next build`.
+install` into a slow `next build`.
 - `dist/` was already gitignored; nothing new to ignore.
 
 ## Consequences

@@ -53,7 +53,9 @@ export const manufacturingProfile: IndustryProfilePreset = {
         tags: { regulatory: "ITAR", shift_pattern: "3x12" },
         children: [
           {
-            type: "department", name: "Production", budgetMonthlyCents: 4500_00,
+            type: "department",
+            name: "Production",
+            budgetMonthlyCents: 4500_00,
             children: [
               { type: "line", name: "Line A — CNC Machining", budgetMonthlyCents: 2500_00 },
               { type: "line", name: "Line B — Assembly", budgetMonthlyCents: 2000_00 },
@@ -72,7 +74,9 @@ export const manufacturingProfile: IndustryProfilePreset = {
         tags: { regulatory: "EAR", shift_pattern: "3x8" },
         children: [
           {
-            type: "department", name: "Production", budgetMonthlyCents: 3500_00,
+            type: "department",
+            name: "Production",
+            budgetMonthlyCents: 3500_00,
             children: [
               { type: "line", name: "Line 1 — Precision Machining", budgetMonthlyCents: 2000_00 },
               { type: "line", name: "Line 2 — Testing", budgetMonthlyCents: 1500_00 },
@@ -109,21 +113,53 @@ export const manufacturingProfile: IndustryProfilePreset = {
 
   // ── Personas ────────────────────────────────────────────────────────────
   personas: [
-    { key: "plant_manager", label: "Plant Manager", defaultPanels: ["spend", "line_uptime", "maintenance_backlog", "quality_holds"] },
-    { key: "shift_lead", label: "Shift Lead", defaultPanels: ["spend", "shift_handover", "line_uptime"] },
-    { key: "maintenance_planner", label: "Maintenance Planner", defaultPanels: ["maintenance_backlog", "spend"] },
-    { key: "qc_engineer", label: "QC / Process Engineer", defaultPanels: ["quality_holds", "spend", "audit"] },
+    {
+      key: "plant_manager",
+      label: "Plant Manager",
+      defaultPanels: ["spend", "line_uptime", "maintenance_backlog", "quality_holds"],
+    },
+    {
+      key: "shift_lead",
+      label: "Shift Lead",
+      defaultPanels: ["spend", "shift_handover", "line_uptime"],
+    },
+    {
+      key: "maintenance_planner",
+      label: "Maintenance Planner",
+      defaultPanels: ["maintenance_backlog", "spend"],
+    },
+    {
+      key: "qc_engineer",
+      label: "QC / Process Engineer",
+      defaultPanels: ["quality_holds", "spend", "audit"],
+    },
     { key: "supply_chain", label: "Supply Chain", defaultPanels: ["spend", "demand_forecast"] },
     { key: "ot_security", label: "OT-Security", defaultPanels: ["audit", "access", "security"] },
-    { key: "admin", label: "Admin", defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"] },
+    {
+      key: "admin",
+      label: "Admin",
+      defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"],
+    },
   ],
 
   // ── Resource types (cloud + OT) ─────────────────────────────────────────
   resourceTypes: {
     enabled: [
-      "s3", "gcs", "db", "sharepoint", "onedrive", "files", "internal",
+      "s3",
+      "gcs",
+      "db",
+      "sharepoint",
+      "onedrive",
+      "files",
+      "internal",
       // OT (operational technology) — capabilities any tenant can enable
-      "mes", "erp", "scada", "historian", "plm", "cmms", "iot",
+      "mes",
+      "erp",
+      "scada",
+      "historian",
+      "plm",
+      "cmms",
+      "iot",
     ],
   },
 
@@ -224,8 +260,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
   // ── Model routing (edge/on-prem GPU first for data residency) ───────────
   modelRouting: {
     strategy: "edge-onprep-first",
-    description:
-      "Edge / on-prem GPU first (data residency); geo-restricted for ITAR/EAR content.",
+    description: "Edge / on-prem GPU first (data residency); geo-restricted for ITAR/EAR content.",
   },
 
   // ── Connectivity (air-gapped plants) ────────────────────────────────────
@@ -237,27 +272,106 @@ export const manufacturingProfile: IndustryProfilePreset = {
   // ── Stakeholder routing (shift duty roster) ─────────────────────────────
   stakeholderRouting: {
     mode: "shift-duty-roster",
-    description:
-      "Single human of-record + shift duty roster for alerts / JIT approvals.",
+    description: "Single human of-record + shift duty roster for alerts / JIT approvals.",
   },
 
   // ── Seed agents (manufacturing-focused) ─────────────────────────────────
   seedAgents: [
     // Engineering — heavy LLM users, internal clearance
-    { name: "CodeReview-Bot", type: "claude_code", departmentName: "Engineering", taskType: "code_review", clearance: "internal", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "DocGen-Agent", type: "opencode", departmentName: "Engineering", taskType: "documentation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "ArchDesign-Agent", type: "pi", departmentName: "Engineering", taskType: "architecture_design", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
+    {
+      name: "CodeReview-Bot",
+      type: "claude_code",
+      departmentName: "Engineering",
+      taskType: "code_review",
+      clearance: "internal",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "DocGen-Agent",
+      type: "opencode",
+      departmentName: "Engineering",
+      taskType: "documentation",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "ArchDesign-Agent",
+      type: "pi",
+      departmentName: "Engineering",
+      taskType: "architecture_design",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
     // Plant Detroit — Production (confidential clearance, self-hosted only)
-    { name: "ToolPath-Optimizer", type: "opencode", departmentName: "Production", taskType: "cnc_toolpath_optimization", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "QualityAnalysis-Agent", type: "claude_code", departmentName: "Quality Control", taskType: "defect_analysis", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
+    {
+      name: "ToolPath-Optimizer",
+      type: "opencode",
+      departmentName: "Production",
+      taskType: "cnc_toolpath_optimization",
+      clearance: "confidential",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "QualityAnalysis-Agent",
+      type: "claude_code",
+      departmentName: "Quality Control",
+      taskType: "defect_analysis",
+      clearance: "confidential",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
     // Quality Control / Maintenance — mixed clearance
-    { name: "TestGen-Agent", type: "copilot", departmentName: "Quality Control", taskType: "test_generation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "SecurityScan-Agent", type: "claude_code", departmentName: "Maintenance", taskType: "security_scan", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
+    {
+      name: "TestGen-Agent",
+      type: "copilot",
+      departmentName: "Quality Control",
+      taskType: "test_generation",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "SecurityScan-Agent",
+      type: "claude_code",
+      departmentName: "Maintenance",
+      taskType: "security_scan",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
     // Supply Chain — internal, cost-sensitive
-    { name: "DemandForecast-Agent", type: "opencode", departmentName: "Supply Chain", taskType: "demand_forecasting", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "LogisticsOpt-Agent", type: "copilot", departmentName: "Supply Chain", taskType: "route_optimization", clearance: "internal", tier: "background", preferredModel: "minicpm5-1b" },
+    {
+      name: "DemandForecast-Agent",
+      type: "opencode",
+      departmentName: "Supply Chain",
+      taskType: "demand_forecasting",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "LogisticsOpt-Agent",
+      type: "copilot",
+      departmentName: "Supply Chain",
+      taskType: "route_optimization",
+      clearance: "internal",
+      tier: "background",
+      preferredModel: "minicpm5-1b",
+    },
     // R&D — internal, experimental
-    { name: "ResearchAssist-Agent", type: "pi", departmentName: "Research & Development", taskType: "research_synthesis", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
+    {
+      name: "ResearchAssist-Agent",
+      type: "pi",
+      departmentName: "Research & Development",
+      taskType: "research_synthesis",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
   ],
 
   // ── UI home panels (manufacturing-specific + standard) ──────────────────
@@ -279,28 +393,42 @@ export const manufacturingProfile: IndustryProfilePreset = {
   // ── Role presets (D8) — who can restructure the org tree ──
   rolePresets: [
     {
-      key: "org_admin", label: "Org Admin",
-      description: "Full org-tree authority: create, rename, reparent, delete any node. Typically the Tenant admin / VP-Operations.",
-      scopeType: "org", singleton: true,
-      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+      key: "org_admin",
+      label: "Org Admin",
+      description:
+        "Full org-tree authority: create, rename, reparent, delete any node. Typically the Tenant admin / VP-Operations.",
+      scopeType: "org",
+      singleton: true,
+      permissions: [
+        "org_node:create",
+        "org_node:rename",
+        "org_node:reparent",
+        "org_node:delete",
+        "*",
+      ],
     },
     {
-      key: "plant_manager", label: "Plant Manager",
-      description: "Rename own plant; create + rename lines/teams within own plant. Cannot re-parent or delete.",
+      key: "plant_manager",
+      label: "Plant Manager",
+      description:
+        "Rename own plant; create + rename lines/teams within own plant. Cannot re-parent or delete.",
       scopeType: "plant",
-      permissions: ["org_node:create", "org_node:rename"]
+      permissions: ["org_node:create", "org_node:rename"],
     },
     {
-      key: "dept_head", label: "Department Head",
-      description: "Rename own department; view-only elsewhere. Adept for VP/Director escalated to dept-head scope.",
+      key: "dept_head",
+      label: "Department Head",
+      description:
+        "Rename own department; view-only elsewhere. Adept for VP/Director escalated to dept-head scope.",
       scopeType: "department",
-      permissions: ["org_node:rename"]
+      permissions: ["org_node:rename"],
     },
     {
-      key: "viewer", label: "Viewer",
+      key: "viewer",
+      label: "Viewer",
       description: "Read-only access to dashboards. No org-tree edits.",
       scopeType: "department",
-      permissions: []
+      permissions: [],
     },
   ],
 
@@ -309,27 +437,49 @@ export const manufacturingProfile: IndustryProfilePreset = {
     {
       departmentName: "Engineering",
       labels: [
-        "code_review", "code_generation", "test_generation", "architecture_design",
-        "hot_issue_resolution", "devops_automation", "dependency_upgrade",
+        "code_review",
+        "code_generation",
+        "test_generation",
+        "architecture_design",
+        "hot_issue_resolution",
+        "devops_automation",
+        "dependency_upgrade",
         "documentation",
       ],
     },
     {
       departmentName: "Production",
       labels: [
-        "cnc_toolpath_optimization", "defect_analysis", "process_recipe_optimization",
-        "predictive_maintenance", "line_balance_analysis", "spc_analysis",
-        "cad_geometry_review", "quality_inspection",
+        "cnc_toolpath_optimization",
+        "defect_analysis",
+        "process_recipe_optimization",
+        "predictive_maintenance",
+        "line_balance_analysis",
+        "spc_analysis",
+        "cad_geometry_review",
+        "quality_inspection",
       ],
       secondaryTagPresets: ["resource:mes", "resource:scada", "resource:plm"],
     },
     {
       departmentName: "Quality Control",
-      labels: ["test_generation", "defect_analysis", "cybersecurity_scan", "compliance_review", "spc_analysis"],
+      labels: [
+        "test_generation",
+        "defect_analysis",
+        "cybersecurity_scan",
+        "compliance_review",
+        "spc_analysis",
+      ],
     },
     {
       departmentName: "Procurement & Supply Chain",
-      labels: ["demand_forecasting", "route_optimization", "inventory_replenishment", "supplier_evaluation", "logistics_planning"],
+      labels: [
+        "demand_forecasting",
+        "route_optimization",
+        "inventory_replenishment",
+        "supplier_evaluation",
+        "logistics_planning",
+      ],
     },
     {
       departmentName: "Research & Development",
@@ -337,7 +487,12 @@ export const manufacturingProfile: IndustryProfilePreset = {
     },
     {
       departmentName: "Maintenance",
-      labels: ["cybersecurity_scan", "predictive_maintenance", "compliance_review", "hot_issue_resolution"],
+      labels: [
+        "cybersecurity_scan",
+        "predictive_maintenance",
+        "compliance_review",
+        "hot_issue_resolution",
+      ],
     },
   ],
 
@@ -350,7 +505,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Quality Engineer",
       family: "quality",
       mode: "copilot",
-      description: "SPC/CMM analysis, defect triage, and 8D/control-plan/PPAP documentation for plant quality engineers.",
+      description:
+        "SPC/CMM analysis, defect triage, and 8D/control-plan/PPAP documentation for plant quality engineers.",
       tools: [
         { tool: "spc.cmm-connector", toolVersion: "2.1.0" },
         { tool: "mes.defect-feed", toolVersion: "1.4.0" },
@@ -384,7 +540,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Supplier Quality Engineer",
       family: "quality",
       mode: "copilot",
-      description: "Supplier PPAP tracking, VDA 6.3 audits, SCAR/8D follow-ups, and chargeback calculation.",
+      description:
+        "Supplier PPAP tracking, VDA 6.3 audits, SCAR/8D follow-ups, and chargeback calculation.",
       tools: [
         { tool: "supplier.portal", toolVersion: "1.2.0" },
         { tool: "ppap.inbox", toolVersion: "1.0.0" },
@@ -417,7 +574,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "PLC Programmer",
       family: "controls_engineering",
       mode: "copilot",
-      description: "Ladder/ST code generation, OPC UA diagnostics, IO table review, and alarm templates for controls engineers.",
+      description:
+        "Ladder/ST code generation, OPC UA diagnostics, IO table review, and alarm templates for controls engineers.",
       tools: [
         { tool: "opcua.diagnostics", toolVersion: "1.8.0" },
         { tool: "code.repo", toolVersion: "2.0.0" },
@@ -451,7 +609,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Maintenance Technician",
       family: "maintenance",
       mode: "copilot",
-      description: "Fault-to-fix playbooks, CMMS work orders, spares lookup, and escalation trees. Automated-capable for routine fault loops.",
+      description:
+        "Fault-to-fix playbooks, CMMS work orders, spares lookup, and escalation trees. Automated-capable for routine fault loops.",
       tools: [
         { tool: "cmms.sap-pm", toolVersion: "2.3.0" },
         { tool: "fault.kb", toolVersion: "1.5.0" },
@@ -485,18 +644,15 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Material Planner",
       family: "supply_chain",
       mode: "automated",
-      description: "MRP exception triage, ECN impact alerts, and end-of-life stock calculation. Runs unattended on small-model batch routing.",
+      description:
+        "MRP exception triage, ECN impact alerts, and end-of-life stock calculation. Runs unattended on small-model batch routing.",
       tools: [
         { tool: "mrp.erp", toolVersion: "2.2.0" },
         { tool: "supplier.edi", toolVersion: "1.3.0" },
       ],
       skills: ["exception-triage", "ecn-impact", "eol-calc"],
       subagentConfigs: [],
-      permissions: [
-        "tool:mrp.erp:invoke",
-        "tool:supplier.edi:invoke",
-        "resource:erp:read",
-      ],
+      permissions: ["tool:mrp.erp:invoke", "tool:supplier.edi:invoke", "resource:erp:read"],
       modelRouting: {
         allowed_models: ["minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -516,18 +672,15 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Production Supervisor",
       family: "production",
       mode: "copilot",
-      description: "Andon monitoring, shift-report generation, handover templates, and staffing models for shift supervisors.",
+      description:
+        "Andon monitoring, shift-report generation, handover templates, and staffing models for shift supervisors.",
       tools: [
         { tool: "mes.andon", toolVersion: "1.6.0" },
         { tool: "cmms.sap-pm", toolVersion: "2.3.0" },
       ],
       skills: ["shift-report", "handover", "staffing-model"],
       subagentConfigs: [],
-      permissions: [
-        "tool:mes.andon:invoke",
-        "tool:cmms.sap-pm:invoke",
-        "resource:mes:read",
-      ],
+      permissions: ["tool:mes.andon:invoke", "tool:cmms.sap-pm:invoke", "resource:mes:read"],
       modelRouting: {
         allowed_models: ["minicpm5-1b", "claude-sonnet"],
         auto_downgrade_to: "minicpm5-1b",
@@ -547,17 +700,15 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Warranty Analyst",
       family: "warranty",
       mode: "copilot",
-      description: "Warranty claim analytics, Pareto early-warning, chargeback bundles, and reserve memos for the warranty team.",
+      description:
+        "Warranty claim analytics, Pareto early-warning, chargeback bundles, and reserve memos for the warranty team.",
       tools: [
         { tool: "warranty.dwh", toolVersion: "1.1.0" },
         { tool: "claims.api", toolVersion: "1.0.0" },
       ],
       skills: ["pareto-early-warning", "chargeback-bundle", "reserve-memo"],
       subagentConfigs: [],
-      permissions: [
-        "tool:warranty.dwh:invoke",
-        "tool:claims.api:invoke",
-      ],
+      permissions: ["tool:warranty.dwh:invoke", "tool:claims.api:invoke"],
       modelRouting: {
         allowed_models: ["claude-sonnet", "minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -577,7 +728,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Plant Data Analyst",
       family: "data",
       mode: "copilot",
-      description: "Historian (PI) queries, lakehouse SQL, SPC/downtime notebooks, OEE calculation, and dashboard building for plant analysts.",
+      description:
+        "Historian (PI) queries, lakehouse SQL, SPC/downtime notebooks, OEE calculation, and dashboard building for plant analysts.",
       tools: [
         { tool: "historian.pi", toolVersion: "2.4.0" },
         { tool: "lakehouse.sql", toolVersion: "1.2.0" },
@@ -610,7 +762,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Office Worker (General)",
       family: "office",
       mode: "copilot",
-      description: "SharePoint documents, email, and web search for every office employee — the volume default on the cheapest viable routing.",
+      description:
+        "SharePoint documents, email, and web search for every office employee — the volume default on the cheapest viable routing.",
       tools: [
         { tool: "sharepoint.docs", toolVersion: "1.5.0" },
         { tool: "email.outlook", toolVersion: "1.0.0" },
@@ -644,7 +797,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Executive Assistant",
       family: "executive",
       mode: "copilot",
-      description: "KPI briefings, approvals inbox summaries, and CRM-driven exec digests. Aggregates-only — never raw content.",
+      description:
+        "KPI briefings, approvals inbox summaries, and CRM-driven exec digests. Aggregates-only — never raw content.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -677,7 +831,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Senior Manager",
       family: "leadership",
       mode: "copilot",
-      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for plant/department leads — the decision-maker persona, not a hands-on tool user.",
+      description:
+        "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for plant/department leads — the decision-maker persona, not a hands-on tool user.",
       tools: [
         { tool: "bi.dashboards", toolVersion: "1.4.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -710,7 +865,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Design Release Engineer (PD-DRE)",
       family: "product_engineering",
       mode: "copilot",
-      description: "PLM change tracking, PPAP status, and release-readiness digests for the engineer who owns a component's design release — the engineering product-manager persona.",
+      description:
+        "PLM change tracking, PPAP status, and release-readiness digests for the engineer who owns a component's design release — the engineering product-manager persona.",
       tools: [
         { tool: "plm.teamcenter", toolVersion: "1.8.0" },
         { tool: "plm.windchill", toolVersion: "1.6.0" },
@@ -745,7 +901,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "CAE Analyst",
       family: "simulation",
       mode: "copilot",
-      description: "Pre-processing, solver runs, and post-reporting for crash/NVH/aero simulation, plus test correlation.",
+      description:
+        "Pre-processing, solver runs, and post-reporting for crash/NVH/aero simulation, plus test correlation.",
       tools: [
         { tool: "sim.ansa", toolVersion: "1.2.0" },
         { tool: "sim.gt-suite", toolVersion: "1.1.0" },
@@ -779,7 +936,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Embedded Software Engineer",
       family: "embedded_software",
       mode: "copilot",
-      description: "AUTOSAR model development, MISRA fixes, and MIL/SIL testing for embedded software engineers.",
+      description:
+        "AUTOSAR model development, MISRA fixes, and MIL/SIL testing for embedded software engineers.",
       tools: [
         { tool: "mdl.matlab-simulink", toolVersion: "2.1.0" },
         { tool: "autosar.tresos", toolVersion: "1.2.0" },
@@ -813,7 +971,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Systems Engineer",
       family: "systems_engineering",
       mode: "copilot",
-      description: "Requirements flowdown, traceability matrices, and FMEA guidance for systems engineers.",
+      description:
+        "Requirements flowdown, traceability matrices, and FMEA guidance for systems engineers.",
       tools: [
         { tool: "rm.jama", toolVersion: "1.3.0" },
         { tool: "rm.polarion", toolVersion: "1.2.0" },
@@ -847,7 +1006,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Calibration Engineer",
       family: "calibration",
       mode: "copilot",
-      description: "Dataset releases, drive-cycle analysis, and DoE for powertrain calibration engineers.",
+      description:
+        "Dataset releases, drive-cycle analysis, and DoE for powertrain calibration engineers.",
       tools: [
         { tool: "cal.inca", toolVersion: "1.6.0" },
         { tool: "test.dspace", toolVersion: "1.2.0" },
@@ -879,17 +1039,15 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "HILS Engineer",
       family: "validation",
       mode: "copilot",
-      description: "Fault injection, HIL automation, and bus analysis for hardware-in-the-loop test engineers.",
+      description:
+        "Fault injection, HIL automation, and bus analysis for hardware-in-the-loop test engineers.",
       tools: [
         { tool: "test.dspace", toolVersion: "1.2.0" },
         { tool: "test.canoe", toolVersion: "1.9.0" },
       ],
       skills: ["fault-injection", "hil-automation", "bus-analysis"],
       subagentConfigs: [],
-      permissions: [
-        "tool:test.dspace:invoke",
-        "tool:test.canoe:invoke",
-      ],
+      permissions: ["tool:test.dspace:invoke", "tool:test.canoe:invoke"],
       modelRouting: {
         allowed_models: ["claude-sonnet", "minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -948,10 +1106,7 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       skills: ["ecn-workflow", "bom-reconcile", "part-numbering"],
       subagentConfigs: [],
-      permissions: [
-        "tool:plm.teamcenter:invoke",
-        "tool:plm.windchill:invoke",
-      ],
+      permissions: ["tool:plm.teamcenter:invoke", "tool:plm.windchill:invoke"],
       modelRouting: {
         allowed_models: ["claude-sonnet", "minicpm5-1b"],
         auto_downgrade_to: "minicpm5-1b",
@@ -971,7 +1126,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "Manufacturing Simulation Engineer",
       family: "manufacturing_engineering",
       mode: "copilot",
-      description: "Robot OLFP validation, virtual commissioning, and line-balance analysis for manufacturing simulation engineers.",
+      description:
+        "Robot OLFP validation, virtual commissioning, and line-balance analysis for manufacturing simulation engineers.",
       tools: [
         { tool: "mfg.tecnomatix", toolVersion: "1.7.0" },
         { tool: "mfg.delmia", toolVersion: "1.5.0" },
@@ -996,7 +1152,10 @@ export const manufacturingProfile: IndustryProfilePreset = {
       ],
       templateRefs: ["tpl.robot-olfp", "tpl.virtual-commissioning", "tpl.line-balance"],
       minAgentVersion: "1.0.0",
-      jobFunctions: ["factory_simulation_engineer", "throughput_discrete_event_simulation_engineer"],
+      jobFunctions: [
+        "factory_simulation_engineer",
+        "throughput_discrete_event_simulation_engineer",
+      ],
     },
     {
       roleKey: "ee_architect",
@@ -1035,7 +1194,8 @@ export const manufacturingProfile: IndustryProfilePreset = {
       name: "QMS / APQP Coordinator",
       family: "quality_systems",
       mode: "copilot",
-      description: "FMEA-to-control-plan linkage, PPAP/PSW packages, and SPC capability studies for the quality systems team.",
+      description:
+        "FMEA-to-control-plan linkage, PPAP/PSW packages, and SPC capability studies for the quality systems team.",
       tools: [
         { tool: "qms.aqua-pro", toolVersion: "1.2.0" },
         { tool: "qms.net-inspect", toolVersion: "1.1.0" },

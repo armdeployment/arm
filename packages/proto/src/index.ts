@@ -208,7 +208,12 @@ export const jobFunctionSchema = z.object({
 });
 export type JobFunction = z.infer<typeof jobFunctionSchema>;
 
-export const discoverySourceKindSchema = z.enum(["mcp_registry", "git", "http_index", "marketplace"]);
+export const discoverySourceKindSchema = z.enum([
+  "mcp_registry",
+  "git",
+  "http_index",
+  "marketplace",
+]);
 export type DiscoverySourceKind = z.infer<typeof discoverySourceKindSchema>;
 
 export const discoverySourceSchema = z.object({

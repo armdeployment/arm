@@ -8,11 +8,16 @@
 const Module = require("node:module");
 const path = require("node:path");
 
-const localTypescript = require.resolve("typescript", { paths: [path.join(__dirname, "node_modules")] });
+const localTypescript = require.resolve("typescript", {
+  paths: [path.join(__dirname, "node_modules")],
+});
 
 const originalResolve = Module._resolveFilename;
 Module._resolveFilename = function (request, parent, ...rest) {
-  if (request === "typescript" && parent?.filename?.includes("esbuild-loader")) {
+  if (
+    request === "typescript" &&
+    parent?.filename?.includes("esbuild-loader")
+  ) {
     return localTypescript;
   }
   return originalResolve.call(this, request, parent, ...rest);

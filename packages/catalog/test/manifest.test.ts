@@ -15,7 +15,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { canonicalManifest, validatePackageVersion, type ComponentVersionLookup } from "../src/index.js";
+import {
+  canonicalManifest,
+  validatePackageVersion,
+  type ComponentVersionLookup,
+} from "../src/index.js";
 
 const COMPONENT_ID = "11111111-1111-4111-8111-111111111111";
 const PACKAGE_ID = "22222222-2222-4222-8222-222222222222";
@@ -55,7 +59,9 @@ describe("validatePackageVersion", () => {
 
   it("rejects a ref to an unknown component_version", () => {
     const r = validatePackageVersion(
-      validInput({ components: [{ component_id: COMPONENT_ID, version: "9.9.9", kind: "mcp", scopes: [] }] }),
+      validInput({
+        components: [{ component_id: COMPONENT_ID, version: "9.9.9", kind: "mcp", scopes: [] }],
+      }),
       componentVersionsById,
       JOB_FUNCTIONS,
     );
@@ -65,7 +71,9 @@ describe("validatePackageVersion", () => {
 
   it("rejects a ref pinning a non-approved component_version", () => {
     const r = validatePackageVersion(
-      validInput({ components: [{ component_id: COMPONENT_ID, version: "1.1.0", kind: "mcp", scopes: [] }] }),
+      validInput({
+        components: [{ component_id: COMPONENT_ID, version: "1.1.0", kind: "mcp", scopes: [] }],
+      }),
       componentVersionsById,
       JOB_FUNCTIONS,
     );
@@ -75,7 +83,9 @@ describe("validatePackageVersion", () => {
 
   it("rejects a ref pinning a yanked component_version", () => {
     const r = validatePackageVersion(
-      validInput({ components: [{ component_id: COMPONENT_ID, version: "2.0.0", kind: "mcp", scopes: [] }] }),
+      validInput({
+        components: [{ component_id: COMPONENT_ID, version: "2.0.0", kind: "mcp", scopes: [] }],
+      }),
       componentVersionsById,
       JOB_FUNCTIONS,
     );
@@ -84,13 +94,21 @@ describe("validatePackageVersion", () => {
   });
 
   it("rejects packages that ship zero components", () => {
-    const r = validatePackageVersion(validInput({ components: [] }), componentVersionsById, JOB_FUNCTIONS);
+    const r = validatePackageVersion(
+      validInput({ components: [] }),
+      componentVersionsById,
+      JOB_FUNCTIONS,
+    );
     expect(r.ok).toBe(false);
     expect(r.errors.join("\n")).toMatch(/ships nothing usable/);
   });
 
   it("rejects an unknown job_functions key", () => {
-    const r = validatePackageVersion(validInput({ job_functions: ["not_a_real_job_function"] }), componentVersionsById, JOB_FUNCTIONS);
+    const r = validatePackageVersion(
+      validInput({ job_functions: ["not_a_real_job_function"] }),
+      componentVersionsById,
+      JOB_FUNCTIONS,
+    );
     expect(r.ok).toBe(false);
     expect(r.errors.some((e) => e.includes("unknown job function"))).toBe(true);
   });
@@ -105,7 +123,9 @@ describe("validatePackageVersion", () => {
 describe("canonicalManifest", () => {
   it("normalizes camelCase component refs to the wire shape", () => {
     const m = canonicalManifest({
-      components: [{ componentId: COMPONENT_ID, version: "1.0.0", kind: "mcp", scopes: ["invoke"] }],
+      components: [
+        { componentId: COMPONENT_ID, version: "1.0.0", kind: "mcp", scopes: ["invoke"] },
+      ],
       permissions: [],
       modelRouting: {},
       budgetTemplate: {},
@@ -134,7 +154,12 @@ describe("canonicalManifest", () => {
       minAgentVersion: "0.0.0",
       jobFunctions: [],
     });
-    expect(m.components[0]).toEqual({ component_id: COMPONENT_ID, version: "1.1.0", kind: "skill", scopes: [] });
+    expect(m.components[0]).toEqual({
+      component_id: COMPONENT_ID,
+      version: "1.1.0",
+      kind: "skill",
+      scopes: [],
+    });
   });
 
   it("defaults missing fields to their empty forms", () => {

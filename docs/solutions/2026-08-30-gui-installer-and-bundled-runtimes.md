@@ -28,7 +28,7 @@ downloads a real, official, portable build when neither is present:
 The checksum is never hardcoded. `provisionRuntime` fetches the vendor's own
 published checksum manifest (`SHASUMS256.txt` for Node, the per-asset
 `.sha256` for python-build-standalone) at provision time and verifies the
-download against *that* — a stale or invented digest checked into source is
+download against _that_ — a stale or invented digest checked into source is
 worse than none (AGENTS.md's "never fabricate a credential" extends to
 integrity hashes). A mismatch throws `DIGEST_MISMATCH` and nothing is
 installed.

@@ -14,7 +14,13 @@ export function VideoBlock({
       {/* No autoplay, no sound-on-load (guide 04 §6). preload="none" keeps
           this off the critical path for Lighthouse — nothing downloads
           until the viewer presses play. */}
-      <video controls preload="none" poster={poster} className="block w-full" style={{ background: "var(--bg-dark)" }}>
+      <video
+        controls
+        preload="none"
+        poster={poster}
+        className="block w-full"
+        style={{ background: "var(--bg-dark)" }}
+      >
         <source src={src} type="video/mp4" />
         Your browser does not support embedded video. {summary}
       </video>

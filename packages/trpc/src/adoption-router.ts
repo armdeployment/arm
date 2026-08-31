@@ -92,8 +92,15 @@ export function isFixtureMode(): boolean {
 //    drill-down works exactly like the other routers") ─────────────────────
 
 const SCOPE_TYPES = [
-  "org", "organization", "hq", "plant",
-  "department", "group", "line", "cell", "team",
+  "org",
+  "organization",
+  "hq",
+  "plant",
+  "department",
+  "group",
+  "line",
+  "cell",
+  "team",
 ] as const;
 
 const scopeInput = z
@@ -188,62 +195,97 @@ interface JobFunctionFixture {
 
 const JOB_FUNCTIONS: readonly JobFunctionFixture[] = [
   {
-    key: "quality_engineer", name: "Quality Engineer",
-    departmentId: "dept_qa", departmentName: "Quality Assurance",
-    packageRoleKey: "quality_engineer", packageName: "Quality Engineer",
+    key: "quality_engineer",
+    name: "Quality Engineer",
+    departmentId: "dept_qa",
+    departmentName: "Quality Assurance",
+    packageRoleKey: "quality_engineer",
+    packageName: "Quality Engineer",
     headcount: 42,
-    conversionRates: [0.95, 0.90, 0.92, 0.97, 0.94, 0.93, 0.96, 0.93, 0.64, 0.94, 0.73],
-    stallStepIndex: 8, stallErrorCode: "jira_auth_failed", stallLabel: "Failed connecting Jira",
+    conversionRates: [0.95, 0.9, 0.92, 0.97, 0.94, 0.93, 0.96, 0.93, 0.64, 0.94, 0.73],
+    stallStepIndex: 8,
+    stallErrorCode: "jira_auth_failed",
+    stallLabel: "Failed connecting Jira",
   },
   {
-    key: "plc_programmer", name: "PLC Programmer",
-    departmentId: "dept_eng", departmentName: "Engineering",
-    packageRoleKey: "plc_programmer", packageName: "PLC Programmer",
+    key: "plc_programmer",
+    name: "PLC Programmer",
+    departmentId: "dept_eng",
+    departmentName: "Engineering",
+    packageRoleKey: "plc_programmer",
+    packageName: "PLC Programmer",
     headcount: 18,
-    conversionRates: [0.94, 0.88, 0.93, 0.98, 0.93, 0.91, 0.93, 0.92, 0.88, 0.90, 0.75],
-    stallStepIndex: 5, stallErrorCode: "tia_portal_license_missing", stallLabel: "Missing TIA Portal license",
+    conversionRates: [0.94, 0.88, 0.93, 0.98, 0.93, 0.91, 0.93, 0.92, 0.88, 0.9, 0.75],
+    stallStepIndex: 5,
+    stallErrorCode: "tia_portal_license_missing",
+    stallLabel: "Missing TIA Portal license",
   },
   {
-    key: "maintenance_technician", name: "Maintenance Technician",
-    departmentId: "dept_mfg", departmentName: "Manufacturing",
-    packageRoleKey: "maintenance_technician", packageName: "Maintenance Technician",
+    key: "maintenance_technician",
+    name: "Maintenance Technician",
+    departmentId: "dept_mfg",
+    departmentName: "Manufacturing",
+    packageRoleKey: "maintenance_technician",
+    packageName: "Maintenance Technician",
     headcount: 65,
-    conversionRates: [0.89, 0.76, 0.91, 0.96, 0.89, 0.87, 0.94, 0.92, 0.91, 0.85, 0.70],
-    stallStepIndex: 1, stallErrorCode: "questionnaire_abandoned_mobile", stallLabel: "Abandoned questionnaire on mobile",
+    conversionRates: [0.89, 0.76, 0.91, 0.96, 0.89, 0.87, 0.94, 0.92, 0.91, 0.85, 0.7],
+    stallStepIndex: 1,
+    stallErrorCode: "questionnaire_abandoned_mobile",
+    stallLabel: "Abandoned questionnaire on mobile",
   },
   {
-    key: "office_worker_general", name: "Office Worker (General)",
-    departmentId: "dept_fin", departmentName: "Finance",
-    packageRoleKey: "office_worker_general", packageName: "Office Worker (General)",
+    key: "office_worker_general",
+    name: "Office Worker (General)",
+    departmentId: "dept_fin",
+    departmentName: "Finance",
+    packageRoleKey: "office_worker_general",
+    packageName: "Office Worker (General)",
     headcount: 210,
-    conversionRates: [0.93, 0.92, 0.94, 0.97, 0.91, 0.80, 0.93, 0.96, 0.93, 0.92, 0.76],
-    stallStepIndex: 5, stallErrorCode: "mdm_push_failed", stallLabel: "MDM push failed on corporate device",
+    conversionRates: [0.93, 0.92, 0.94, 0.97, 0.91, 0.8, 0.93, 0.96, 0.93, 0.92, 0.76],
+    stallStepIndex: 5,
+    stallErrorCode: "mdm_push_failed",
+    stallLabel: "MDM push failed on corporate device",
   },
   {
-    key: "exec_assistant", name: "Executive Assistant",
-    departmentId: "dept_sales", departmentName: "Sales & Marketing",
-    packageRoleKey: "exec_assistant", packageName: "Executive Assistant",
+    key: "exec_assistant",
+    name: "Executive Assistant",
+    departmentId: "dept_sales",
+    departmentName: "Sales & Marketing",
+    packageRoleKey: "exec_assistant",
+    packageName: "Executive Assistant",
     headcount: 9,
     conversionRates: [0.99, 0.96, 0.97, 0.98, 0.97, 0.95, 0.98, 0.96, 0.93, 0.96, 0.85],
-    stallStepIndex: 8, stallErrorCode: "outlook_scope_denied", stallLabel: "Denied Outlook mailbox scope",
+    stallStepIndex: 8,
+    stallErrorCode: "outlook_scope_denied",
+    stallLabel: "Denied Outlook mailbox scope",
   },
   {
-    key: "material_planner", name: "Material Planner",
-    departmentId: "dept_sc", departmentName: "Supply Chain",
-    packageRoleKey: "material_planner", packageName: "Material Planner",
+    key: "material_planner",
+    name: "Material Planner",
+    departmentId: "dept_sc",
+    departmentName: "Supply Chain",
+    packageRoleKey: "material_planner",
+    packageName: "Material Planner",
     headcount: 24,
-    conversionRates: [0.92, 0.87, 0.91, 0.96, 0.87, 0.85, 0.90, 0.79, 0.55, 0.87, 0.72],
-    stallStepIndex: 8, stallErrorCode: "erp_connector_timeout", stallLabel: "Timed out connecting MRP/ERP",
+    conversionRates: [0.92, 0.87, 0.91, 0.96, 0.87, 0.85, 0.9, 0.79, 0.55, 0.87, 0.72],
+    stallStepIndex: 8,
+    stallErrorCode: "erp_connector_timeout",
+    stallLabel: "Timed out connecting MRP/ERP",
   },
   {
     // Deliberate coverage gap (guide 02 §2 "Gaps" panel, §4 "/library gaps"):
     // real headcount, NO published Work Package targets it yet.
-    key: "process_engineer", name: "Process Engineer",
-    departmentId: "dept_rd", departmentName: "Research & Development",
-    packageRoleKey: null, packageName: null,
+    key: "process_engineer",
+    name: "Process Engineer",
+    departmentId: "dept_rd",
+    departmentName: "Research & Development",
+    packageRoleKey: null,
+    packageName: null,
     headcount: 15,
     conversionRates: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    stallStepIndex: 0, stallErrorCode: "no_package_available", stallLabel: "No Work Package published for this role",
+    stallStepIndex: 0,
+    stallErrorCode: "no_package_available",
+    stallLabel: "No Work Package published for this role",
   },
 ];
 
@@ -285,9 +327,14 @@ function buildFixturePopulation(): ActivationUser[] {
       if (jf.packageRoleKey === null) {
         // Coverage gap: nobody in an unpackaged job function gets invited at all.
         users.push({
-          userRef, jobFunctionKey: jf.key, departmentId: jf.departmentId,
-          reachedStepIndex: -1, outcome: "abandoned", errorCode: "no_package_available",
-          finalTs: NOW_MS, timeToValueMs: null,
+          userRef,
+          jobFunctionKey: jf.key,
+          departmentId: jf.departmentId,
+          reachedStepIndex: -1,
+          outcome: "abandoned",
+          errorCode: "no_package_available",
+          finalTs: NOW_MS,
+          timeToValueMs: null,
         });
         continue;
       }
@@ -308,7 +355,7 @@ function buildFixturePopulation(): ActivationUser[] {
         }
         reached = s;
         // Step duration: 30s–20min, long-tail via squared random.
-        const stepMs = (30_000 + rand() * rand() * 18 * 60_000);
+        const stepMs = 30_000 + rand() * rand() * 18 * 60_000;
         elapsedMs += stepMs;
         stepDurations.push(elapsedMs);
       }
@@ -323,7 +370,16 @@ function buildFixturePopulation(): ActivationUser[] {
       const dayOffset = Math.floor(rand() * WINDOW_DAYS * (reached < 3 ? 1 : 0.6));
       const finalTs = NOW_MS - dayOffset * 86_400_000 - Math.floor(rand() * 86_400_000);
 
-      users.push({ userRef, jobFunctionKey: jf.key, departmentId: jf.departmentId, reachedStepIndex: reached, outcome, errorCode, finalTs, timeToValueMs });
+      users.push({
+        userRef,
+        jobFunctionKey: jf.key,
+        departmentId: jf.departmentId,
+        reachedStepIndex: reached,
+        outcome,
+        errorCode,
+        finalTs,
+        timeToValueMs,
+      });
     }
   }
   return users;
@@ -337,7 +393,8 @@ export const FIXTURE_POPULATION: readonly ActivationUser[] = buildFixturePopulat
 
 function jobFunctionsInScope(scope: ScopeRef): readonly JobFunctionFixture[] {
   if (!scope || scope.type === "org" || scope.type === "organization") return JOB_FUNCTIONS;
-  if (scope.type === "department") return JOB_FUNCTIONS.filter((jf) => jf.departmentId === scope.id);
+  if (scope.type === "department")
+    return JOB_FUNCTIONS.filter((jf) => jf.departmentId === scope.id);
   // Finer scope types (group/team/plant/line/cell/hq) aren't modeled at
   // department-level fixture granularity — fall through to org-wide so the
   // UI never renders a hard error for a valid-but-unmodeled scope. Real
@@ -388,7 +445,8 @@ function clickHouseRequestTarget(rawUrl: string): { url: string; headers: Record
   const parsed = new URL(rawUrl);
   const headers: Record<string, string> = {};
   if (parsed.username || parsed.password) {
-    headers["Authorization"] = `Basic ${Buffer.from(`${parsed.username}:${parsed.password}`).toString("base64")}`;
+    headers["Authorization"] =
+      `Basic ${Buffer.from(`${parsed.username}:${parsed.password}`).toString("base64")}`;
     parsed.username = "";
     parsed.password = "";
   }
@@ -421,7 +479,10 @@ async function queryClickHouseJSON<T>(sql: string): Promise<T[]> {
   }
   const text = await res.text();
   if (!text.trim()) return [];
-  return text.trim().split("\n").map((line) => JSON.parse(line) as T);
+  return text
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as T);
 }
 
 /** `tenant_id` is trusted from ctx (already resolved through tenantProcedure
@@ -438,7 +499,9 @@ function scopeToOrgNodeFilter(scope: ScopeRef): string {
 function dateRangeFilter(filter: AdoptionFilter): string {
   const from = filter.dateFrom ? ` AND ts >= ${sqlLiteral(filter.dateFrom)}` : "";
   const to = filter.dateTo ? ` AND ts <= ${sqlLiteral(filter.dateTo)}` : "";
-  const jf = filter.jobFunctionKey ? ` AND job_function_key = ${sqlLiteral(filter.jobFunctionKey)}` : "";
+  const jf = filter.jobFunctionKey
+    ? ` AND job_function_key = ${sqlLiteral(filter.jobFunctionKey)}`
+    : "";
   return from + to + jf;
 }
 
@@ -448,7 +511,8 @@ export function buildFunnelSQL(tenantId: string, filter: AdoptionFilter): string
   return (
     `SELECT step, uniqExact(user_ref) AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND outcome = 'ok'` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` GROUP BY step`
   );
 }
@@ -457,7 +521,8 @@ export function buildStallsSQL(tenantId: string, filter: AdoptionFilter): string
   return (
     `SELECT step, error_code, count() AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND outcome != 'ok' AND error_code != ''` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` GROUP BY step, error_code ORDER BY c DESC`
   );
 }
@@ -469,7 +534,8 @@ export function buildTimeToValueSQL(tenantId: string, filter: AdoptionFilter): s
     `minIf(ts, step = 'questionnaire_started') AS q_start, ` +
     `minIf(ts, step = 'first_metered_call') AS first_call ` +
     `FROM activation_event WHERE tenant_id = ${sqlLiteral(tenantId)}` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` GROUP BY user_ref HAVING q_start != toDateTime64(0, 3) AND first_call != toDateTime64(0, 3)`
   );
 }
@@ -478,7 +544,8 @@ export function buildActiveUsersSQL(tenantId: string, filter: AdoptionFilter): s
   return (
     `SELECT uniqExact(user_ref) AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'weekly_active' AND outcome = 'ok'` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter)
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter)
   );
 }
 
@@ -488,7 +555,8 @@ export function buildActivatedSeatsSQL(tenantId: string, filter: AdoptionFilter)
   return (
     `SELECT uniqExact(user_ref) AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'first_metered_call' AND outcome = 'ok'` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter)
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter)
   );
 }
 
@@ -497,7 +565,8 @@ export function buildWeeklyActiveTrendSQL(tenantId: string, filter: AdoptionFilt
   return (
     `SELECT toStartOfWeek(ts, 1) AS week_ending, uniqExact(user_ref) AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'weekly_active' AND outcome = 'ok'` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` GROUP BY week_ending ORDER BY week_ending ASC LIMIT 8`
   );
 }
@@ -508,16 +577,22 @@ export function buildCoverageSQL(tenantId: string, filter: AdoptionFilter): stri
   return (
     `SELECT job_function_key, uniqExact(user_ref) AS c FROM activation_event ` +
     `WHERE tenant_id = ${sqlLiteral(tenantId)} AND step = 'weekly_active' AND outcome = 'ok'` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` GROUP BY job_function_key`
   );
 }
 
-export function buildRecentActivationsSQL(tenantId: string, filter: AdoptionFilter, limit: number): string {
+export function buildRecentActivationsSQL(
+  tenantId: string,
+  filter: AdoptionFilter,
+  limit: number,
+): string {
   return (
     `SELECT ts, org_node_id, user_ref, job_function_key, step, outcome, error_code ` +
     `FROM activation_event WHERE tenant_id = ${sqlLiteral(tenantId)}` +
-    scopeToOrgNodeFilter(filter.scope) + dateRangeFilter(filter) +
+    scopeToOrgNodeFilter(filter.scope) +
+    dateRangeFilter(filter) +
     ` ORDER BY ts DESC LIMIT ${limit}`
   );
 }
@@ -541,8 +616,17 @@ export const adoptionRouter = t.router({
         buildFunnelSQL(opts.ctx.tenantId!, opts.input),
       );
       const byStep = new Map(rows.map((r) => [r.step, Number(r.c)]));
-      const steps = ACTIVATION_STEPS.map((step) => ({ step, count: byStep.get(step) ?? 0, label: STEP_LABELS[step] }));
-      return { tenantId: opts.ctx.tenantId!, steps: withConversion(steps), filters: opts.input, meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
+      const steps = ACTIVATION_STEPS.map((step) => ({
+        step,
+        count: byStep.get(step) ?? 0,
+        label: STEP_LABELS[step],
+      }));
+      return {
+        tenantId: opts.ctx.tenantId!,
+        steps: withConversion(steps),
+        filters: opts.input,
+        meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 },
+      };
     }
     const users = filterUsers(opts.input);
     const counts = ACTIVATION_STEPS.map((step, i) => ({
@@ -550,7 +634,12 @@ export const adoptionRouter = t.router({
       label: STEP_LABELS[step],
       count: users.filter((u) => u.reachedStepIndex >= i).length,
     }));
-    return { tenantId: opts.ctx.tenantId!, steps: withConversion(counts), filters: opts.input, meta: meta() };
+    return {
+      tenantId: opts.ctx.tenantId!,
+      steps: withConversion(counts),
+      filters: opts.input,
+      meta: meta(),
+    };
   }),
 
   /** Where users stall — step × error_code, plain-language labels (guide 02
@@ -562,16 +651,29 @@ export const adoptionRouter = t.router({
       );
       const total = rows.reduce((n, r) => n + Number(r.c), 0) || 1;
       const stallRows = rows.map((r) => ({
-        step: r.step, errorCode: r.error_code, label: STALL_LABEL_BY_ERROR_CODE.get(r.error_code) ?? r.error_code, count: Number(r.c),
+        step: r.step,
+        errorCode: r.error_code,
+        label: STALL_LABEL_BY_ERROR_CODE.get(r.error_code) ?? r.error_code,
+        count: Number(r.c),
         share: Math.round((Number(r.c) / total) * 1000) / 10,
       }));
-      return { tenantId: opts.ctx.tenantId!, rows: stallRows, meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
+      return {
+        tenantId: opts.ctx.tenantId!,
+        rows: stallRows,
+        meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 },
+      };
     }
     const users = filterUsers(opts.input);
-    const byKey = new Map<string, { step: ActivationStepName; errorCode: string; label: string; count: number }>();
+    const byKey = new Map<
+      string,
+      { step: ActivationStepName; errorCode: string; label: string; count: number }
+    >();
     for (const u of users) {
       if (u.outcome !== "error" || !u.errorCode) continue;
-      const step = u.reachedStepIndex >= 0 ? ACTIVATION_STEPS[u.reachedStepIndex + 1] ?? ACTIVATION_STEPS[u.reachedStepIndex]! : ACTIVATION_STEPS[0];
+      const step =
+        u.reachedStepIndex >= 0
+          ? (ACTIVATION_STEPS[u.reachedStepIndex + 1] ?? ACTIVATION_STEPS[u.reachedStepIndex]!)
+          : ACTIVATION_STEPS[0];
       const jf = JOB_FUNCTIONS.find((j) => j.key === u.jobFunctionKey);
       const label = jf?.stallLabel ?? u.errorCode;
       const key = `${step}:${u.errorCode}`;
@@ -593,13 +695,19 @@ export const adoptionRouter = t.router({
   timeToValue: tenantProcedure.input(adoptionFilterInput).query(async (opts) => {
     const bucketEdgesMin = [5, 10, 15, 30, 60] as const;
     if (!isFixtureMode()) {
-      const rows = await queryClickHouseJSON<{ user_ref: string; q_start: string; first_call: string }>(
-        buildTimeToValueSQL(opts.ctx.tenantId!, opts.input),
-      );
+      const rows = await queryClickHouseJSON<{
+        user_ref: string;
+        q_start: string;
+        first_call: string;
+      }>(buildTimeToValueSQL(opts.ctx.tenantId!, opts.input));
       const samplesMs = rows
         .map((r) => Date.parse(r.first_call) - Date.parse(r.q_start))
         .filter((ms) => Number.isFinite(ms) && ms >= 0);
-      return buildTimeToValueResponse(opts.ctx.tenantId!, samplesMs, bucketEdgesMin, { source: "clickhouse", sampleData: false, ledgerFreshnessMs: 0 });
+      return buildTimeToValueResponse(opts.ctx.tenantId!, samplesMs, bucketEdgesMin, {
+        source: "clickhouse",
+        sampleData: false,
+        ledgerFreshnessMs: 0,
+      });
     }
     const users = filterUsers(opts.input);
     const samplesMs = users.map((u) => u.timeToValueMs).filter((v): v is number => v != null);
@@ -624,25 +732,35 @@ export const adoptionRouter = t.router({
       activatedSeatsByJobFunction = new Map(
         jfs.map((jf) => [
           jf.key,
-          FIXTURE_POPULATION.filter((u) => u.jobFunctionKey === jf.key && u.reachedStepIndex >= activeIdx).length,
+          FIXTURE_POPULATION.filter(
+            (u) => u.jobFunctionKey === jf.key && u.reachedStepIndex >= activeIdx,
+          ).length,
         ]),
       );
     }
 
-    const rows = jfs.map((jf) => {
-      const activatedSeats = activatedSeatsByJobFunction.get(jf.key) ?? 0;
-      return {
-        jobFunctionKey: jf.key,
-        name: jf.name,
-        departmentName: jf.departmentName,
-        headcountWeight: jf.headcount,
-        packages: jf.packageRoleKey ? [jf.packageName!] : [],
-        activatedSeats,
-        eligibleSeats: jf.headcount,
-        uncoveredWeight: jf.headcount - activatedSeats,
-      };
-    }).sort((a, b) => b.uncoveredWeight - a.uncoveredWeight);
-    return { tenantId: opts.ctx.tenantId!, rows, meta: isFixtureMode() ? meta() : { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 } };
+    const rows = jfs
+      .map((jf) => {
+        const activatedSeats = activatedSeatsByJobFunction.get(jf.key) ?? 0;
+        return {
+          jobFunctionKey: jf.key,
+          name: jf.name,
+          departmentName: jf.departmentName,
+          headcountWeight: jf.headcount,
+          packages: jf.packageRoleKey ? [jf.packageName!] : [],
+          activatedSeats,
+          eligibleSeats: jf.headcount,
+          uncoveredWeight: jf.headcount - activatedSeats,
+        };
+      })
+      .sort((a, b) => b.uncoveredWeight - a.uncoveredWeight);
+    return {
+      tenantId: opts.ctx.tenantId!,
+      rows,
+      meta: isFixtureMode()
+        ? meta()
+        : { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 },
+    };
   }),
 
   /** Weekly-active count — A1's primary metric (adoption at scale). */
@@ -652,14 +770,19 @@ export const adoptionRouter = t.router({
       const [weeklyActiveRows, activatedRows, trendRows] = await Promise.all([
         queryClickHouseJSON<{ c: string }>(buildActiveUsersSQL(opts.ctx.tenantId!, opts.input)),
         queryClickHouseJSON<{ c: string }>(buildActivatedSeatsSQL(opts.ctx.tenantId!, opts.input)),
-        queryClickHouseJSON<{ week_ending: string; c: string }>(buildWeeklyActiveTrendSQL(opts.ctx.tenantId!, opts.input)),
+        queryClickHouseJSON<{ week_ending: string; c: string }>(
+          buildWeeklyActiveTrendSQL(opts.ctx.tenantId!, opts.input),
+        ),
       ]);
       const weeklyActive = Number(weeklyActiveRows[0]?.c ?? 0);
       const activatedSeats = Number(activatedRows[0]?.c ?? 0);
       const eligibleSeats = jobFunctionsInScope(opts.input.scope)
         .filter((jf) => !opts.input.jobFunctionKey || jf.key === opts.input.jobFunctionKey)
         .reduce((sum, jf) => sum + jf.headcount, 0);
-      const trend = trendRows.map((r) => ({ weekEnding: r.week_ending.slice(0, 10), weeklyActive: Number(r.c) }));
+      const trend = trendRows.map((r) => ({
+        weekEnding: r.week_ending.slice(0, 10),
+        weeklyActive: Number(r.c),
+      }));
       return {
         tenantId: opts.ctx.tenantId!,
         weeklyActive,
@@ -671,34 +794,69 @@ export const adoptionRouter = t.router({
     }
     const users = filterUsers(opts.input);
     const weeklyActive = users.filter((u) => u.reachedStepIndex >= activeIdx).length;
-    const eligibleSeats = users.filter((u) => u.reachedStepIndex >= 0 || u.errorCode !== "no_package_available").length;
-    const activatedSeats = users.filter((u) => u.reachedStepIndex >= ACTIVATION_STEPS.indexOf("first_metered_call")).length;
+    const eligibleSeats = users.filter(
+      (u) => u.reachedStepIndex >= 0 || u.errorCode !== "no_package_available",
+    ).length;
+    const activatedSeats = users.filter(
+      (u) => u.reachedStepIndex >= ACTIVATION_STEPS.indexOf("first_metered_call"),
+    ).length;
     // 8-week ramp trend ending at the current weeklyActive count — models
     // campaign momentum, not a fabricated metric: it's derived proportionally
     // from the same fixture population, monotonic per guide 02's "adoption at
     // scale" thesis (A1).
-    const ramp = [0.20, 0.35, 0.50, 0.64, 0.77, 0.87, 0.94, 1.0];
+    const ramp = [0.2, 0.35, 0.5, 0.64, 0.77, 0.87, 0.94, 1.0];
     const trend = ramp.map((frac, i) => {
       const weeksAgo = ramp.length - 1 - i;
       const d = new Date(NOW_MS - weeksAgo * 7 * 86_400_000);
-      return { weekEnding: d.toISOString().slice(0, 10), weeklyActive: Math.round(weeklyActive * frac) };
+      return {
+        weekEnding: d.toISOString().slice(0, 10),
+        weeklyActive: Math.round(weeklyActive * frac),
+      };
     });
-    return { tenantId: opts.ctx.tenantId!, weeklyActive, activatedSeats, eligibleSeats, trend, meta: meta() };
+    return {
+      tenantId: opts.ctx.tenantId!,
+      weeklyActive,
+      activatedSeats,
+      eligibleSeats,
+      trend,
+      meta: meta(),
+    };
   }),
 
   /** Recent activation events for the live activity feed — pseudonymous
    *  `user_ref`, NEVER an email (Invariant 1 / A5 neighbor rule). */
   recentActivations: tenantProcedure
-    .input(adoptionFilterInput.and(z.object({ limit: z.number().int().min(1).max(200).default(20), cursor: z.number().int().min(0).default(0) })))
+    .input(
+      adoptionFilterInput.and(
+        z.object({
+          limit: z.number().int().min(1).max(200).default(20),
+          cursor: z.number().int().min(0).default(0),
+        }),
+      ),
+    )
     .query(async (opts) => {
       const { limit, cursor } = opts.input;
       if (!isFixtureMode()) {
-        const rows = await queryClickHouseJSON<{ ts: string; org_node_id: string; user_ref: string; job_function_key: string; step: string; outcome: string; error_code: string }>(
-          buildRecentActivationsSQL(opts.ctx.tenantId!, opts.input, limit),
-        );
+        const rows = await queryClickHouseJSON<{
+          ts: string;
+          org_node_id: string;
+          user_ref: string;
+          job_function_key: string;
+          step: string;
+          outcome: string;
+          error_code: string;
+        }>(buildRecentActivationsSQL(opts.ctx.tenantId!, opts.input, limit));
         return {
           tenantId: opts.ctx.tenantId!,
-          activations: rows.map((r) => ({ ts: r.ts, orgNodeId: r.org_node_id, userRef: r.user_ref, jobFunctionKey: r.job_function_key, step: r.step, outcome: r.outcome, errorCode: r.error_code })),
+          activations: rows.map((r) => ({
+            ts: r.ts,
+            orgNodeId: r.org_node_id,
+            userRef: r.user_ref,
+            jobFunctionKey: r.job_function_key,
+            step: r.step,
+            outcome: r.outcome,
+            errorCode: r.error_code,
+          })),
           nextCursor: null as number | null,
           meta: { source: "clickhouse" as const, sampleData: false, ledgerFreshnessMs: 0 },
         };
@@ -729,7 +887,12 @@ function withConversion(
 ): { step: ActivationStepName; label: string; count: number; conversionFromPrev: number | null }[] {
   return steps.map((s, i) => ({
     ...s,
-    conversionFromPrev: i === 0 ? null : steps[i - 1]!.count > 0 ? Math.round((s.count / steps[i - 1]!.count) * 1000) / 10 : 0,
+    conversionFromPrev:
+      i === 0
+        ? null
+        : steps[i - 1]!.count > 0
+          ? Math.round((s.count / steps[i - 1]!.count) * 1000) / 10
+          : 0,
   }));
 }
 
@@ -744,7 +907,10 @@ function buildTimeToValueResponse(
     const prevEdge = i === 0 ? 0 : bucketEdgesMin[i - 1]!;
     return { ltMinutes: edge, count: samplesMin.filter((m) => m > prevEdge && m <= edge).length };
   });
-  buckets.push({ ltMinutes: Infinity, count: samplesMin.filter((m) => m > bucketEdgesMin[bucketEdgesMin.length - 1]!).length });
+  buckets.push({
+    ltMinutes: Infinity,
+    count: samplesMin.filter((m) => m > bucketEdgesMin[bucketEdgesMin.length - 1]!).length,
+  });
   return {
     tenantId,
     buckets,

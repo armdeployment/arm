@@ -26,7 +26,14 @@ import { trpc } from "../../lib/trpc/client";
 
 export default function SpendPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense
+      fallback={
+        <div
+          className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+          style={{ borderColor: "var(--border)" }}
+        />
+      }
+    >
       <SpendPageContent />
     </Suspense>
   );
@@ -40,17 +47,29 @@ function SpendPageContent() {
   const active = trpc.adoption.activeUsers.useQuery({ scope });
 
   const s = summary.data;
-  const totalClosed = byModel.data?.models.filter((m) => m.kind === "closed").reduce((n, m) => n + m.spend, 0) ?? 0;
-  const totalSelfHosted = byModel.data?.models.filter((m) => m.kind === "self_hosted").reduce((n, m) => n + m.spend, 0) ?? 0;
-  const costPerActiveSeat = s && active.data && active.data.weeklyActive > 0 ? s.totalMonthlySpend / active.data.weeklyActive : null;
+  const totalClosed =
+    byModel.data?.models.filter((m) => m.kind === "closed").reduce((n, m) => n + m.spend, 0) ?? 0;
+  const totalSelfHosted =
+    byModel.data?.models.filter((m) => m.kind === "self_hosted").reduce((n, m) => n + m.spend, 0) ??
+    0;
+  const costPerActiveSeat =
+    s && active.data && active.data.weeklyActive > 0
+      ? s.totalMonthlySpend / active.data.weeklyActive
+      : null;
 
   return (
     <div className="space-y-6">
       <div>
         <ScopeBreadcrumb scope={scope} />
-        <h1 className="mt-2 text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Spend Analysis</h1>
+        <h1
+          className="mt-2 text-2xl font-bold tracking-tight"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Spend Analysis
+        </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-          Cost per active seat &amp; cost per work product — secondary to adoption (A1); model-mix breakdown is reported, not campaigned for
+          Cost per active seat &amp; cost per work product — secondary to adoption (A1); model-mix
+          breakdown is reported, not campaigned for
         </p>
       </div>
 
@@ -60,13 +79,21 @@ function SpendPageContent() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="inst-card p-5">
               <h2 className="label-meta mb-1">Cost per Active Seat</h2>
-              <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>total monthly spend ÷ weekly-active seats (adoption.activeUsers)</p>
+              <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                total monthly spend ÷ weekly-active seats (adoption.activeUsers)
+              </p>
               <div className="text-[32px] font-semibold tabular" style={{ color: "var(--navy)" }}>
                 {costPerActiveSeat != null ? `$${costPerActiveSeat.toFixed(0)}` : "—"}
-                <span className="ml-1 text-[14px] font-normal" style={{ color: "var(--text-muted)" }}>/mo</span>
+                <span
+                  className="ml-1 text-[14px] font-normal"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  /mo
+                </span>
               </div>
               <div className="mt-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                ${s.totalMonthlySpend.toLocaleString()}/mo ÷ {active.data?.weeklyActive ?? "—"} weekly-active seats
+                ${s.totalMonthlySpend.toLocaleString()}/mo ÷ {active.data?.weeklyActive ?? "—"}{" "}
+                weekly-active seats
               </div>
             </div>
 
@@ -75,16 +102,27 @@ function SpendPageContent() {
                 <h2 className="label-meta">Cost per Work Product</h2>
                 <SampleDataBadge />
               </div>
-              <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>full detail on /governance</p>
+              <p className="mb-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                full detail on /governance
+              </p>
               <div className="space-y-2">
                 {SAMPLE_COST_PER_WORK_PRODUCT.map((c) => (
                   <div key={c.id} className="flex items-center justify-between text-[12px]">
                     <span style={{ color: "var(--text-secondary)" }}>{c.workProduct}</span>
-                    <span className="tabular font-semibold" style={{ color: "var(--text-primary)" }}>${c.effectiveUsd}</span>
+                    <span
+                      className="tabular font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      ${c.effectiveUsd}
+                    </span>
                   </div>
                 ))}
               </div>
-              <a href="/governance" className="mt-3 inline-block text-[11px] font-medium" style={{ color: "var(--navy)" }}>
+              <a
+                href="/governance"
+                className="mt-3 inline-block text-[11px] font-medium"
+                style={{ color: "var(--navy)" }}
+              >
                 View governance detail →
               </a>
             </div>
@@ -92,15 +130,36 @@ function SpendPageContent() {
 
           {/* Summary stats */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total Monthly" value={`$${s.totalMonthlySpend.toLocaleString()}`} sub={`Budget: $${s.budgetCap.toLocaleString()} · ${s.agentCount} agents`} />
-            <StatCard label="Budget Used" value={`${s.budgetUtilPct}%`} sub={s.budgetUtilPct > 80 ? "Over threshold" : "Healthy"} tone={s.budgetUtilPct > 80 ? "danger" : "success"} />
-            <StatCard label="Closed Models" value={`$${totalClosed.toLocaleString()}`} sub="Anthropic + OpenAI" tone="warning" />
-            <StatCard label="Self-Hosted" value={`$${totalSelfHosted.toLocaleString()}`} sub="GLM + DeepSeek · lower cost" tone="success" />
+            <StatCard
+              label="Total Monthly"
+              value={`$${s.totalMonthlySpend.toLocaleString()}`}
+              sub={`Budget: $${s.budgetCap.toLocaleString()} · ${s.agentCount} agents`}
+            />
+            <StatCard
+              label="Budget Used"
+              value={`${s.budgetUtilPct}%`}
+              sub={s.budgetUtilPct > 80 ? "Over threshold" : "Healthy"}
+              tone={s.budgetUtilPct > 80 ? "danger" : "success"}
+            />
+            <StatCard
+              label="Closed Models"
+              value={`$${totalClosed.toLocaleString()}`}
+              sub="Anthropic + OpenAI"
+              tone="warning"
+            />
+            <StatCard
+              label="Self-Hosted"
+              value={`$${totalSelfHosted.toLocaleString()}`}
+              sub="GLM + DeepSeek · lower cost"
+              tone="success"
+            />
           </div>
 
           {/* Trend + model breakdown — SECONDARY (guide 02 §1: reported, not campaigned for) */}
           <div>
-            <h2 className="label-meta mb-3">Model Mix — Secondary (on-prem is tracked, not targeted)</h2>
+            <h2 className="label-meta mb-3">
+              Model Mix — Secondary (on-prem is tracked, not targeted)
+            </h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {trend.data && <SpendTrendChart data={trend.data.points} />}
               {byModel.data && <ModelSpendChart data={byModel.data.models} />}
@@ -117,7 +176,10 @@ function SpendPageContent() {
           <HostingCost />
         </>
       ) : (
-        <div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+        <div
+          className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+          style={{ borderColor: "var(--border)" }}
+        />
       )}
     </div>
   );

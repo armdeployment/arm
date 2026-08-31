@@ -8,7 +8,13 @@ import {
   resolveAgentHome,
   DEFAULT_OPENCODE_HOME,
 } from "../src/opencode.js";
-import { makeManifest, makeResolvedComponent, makeComponent, makeComponentVersion, TENANT_ID } from "./helpers.js";
+import {
+  makeManifest,
+  makeResolvedComponent,
+  makeComponent,
+  makeComponentVersion,
+  TENANT_ID,
+} from "./helpers.js";
 
 describe("resolveAgentHome", () => {
   it("expands the bare '~' default to the real home directory — never a literal '~' passed to fs calls", () => {
@@ -95,7 +101,12 @@ describe("renderOpencodeConfig", () => {
 describe("componentToMcpEntry — kind routing", () => {
   it("renders a cli component as a stdio entry using the command from config_schema", () => {
     const resolved = makeResolvedComponent({
-      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+      component: makeComponent({
+        name: "opc-diag",
+        kind: "cli",
+        endpoint: "unused",
+        auth_strategy: "pat",
+      }),
       version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
     });
     expect(componentToMcpEntry(resolved)).toEqual({
@@ -107,7 +118,12 @@ describe("componentToMcpEntry — kind routing", () => {
 
   it("falls back to the component name as command when config_schema has no command", () => {
     const resolved = makeResolvedComponent({
-      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+      component: makeComponent({
+        name: "opc-diag",
+        kind: "cli",
+        endpoint: "unused",
+        auth_strategy: "pat",
+      }),
       version: makeComponentVersion({ config_schema: {} }),
     });
     expect(componentToMcpEntry(resolved)).toEqual({
@@ -119,7 +135,12 @@ describe("componentToMcpEntry — kind routing", () => {
 
   it("omits the env block for cli components with auth_strategy none", () => {
     const resolved = makeResolvedComponent({
-      component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "none" }),
+      component: makeComponent({
+        name: "opc-diag",
+        kind: "cli",
+        endpoint: "unused",
+        auth_strategy: "none",
+      }),
       version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
     });
     const entry = componentToMcpEntry(resolved);
@@ -159,7 +180,12 @@ describe("componentToMcpEntry — kind routing", () => {
     const manifest = makeManifest({
       components: [
         makeResolvedComponent({
-          component: makeComponent({ name: "opc-diag", kind: "cli", endpoint: "unused", auth_strategy: "pat" }),
+          component: makeComponent({
+            name: "opc-diag",
+            kind: "cli",
+            endpoint: "unused",
+            auth_strategy: "pat",
+          }),
           version: makeComponentVersion({ config_schema: { command: "opc-diag --serve" } }),
         }),
       ],

@@ -8,8 +8,10 @@ export const securityHero = {
 export const invariants: InvariantRow[] = [
   {
     n: 1,
-    statement: "Prompt bodies and resource content never leave the tenant VPC. The control plane is metadata and audit only.",
-    guardrail: "no-content-egress — event schemas carry no content fields; data-plane egress allowlist lint",
+    statement:
+      "Prompt bodies and resource content never leave the tenant VPC. The control plane is metadata and audit only.",
+    guardrail:
+      "no-content-egress — event schemas carry no content fields; data-plane egress allowlist lint",
   },
   {
     n: 2,
@@ -19,32 +21,39 @@ export const invariants: InvariantRow[] = [
   {
     n: 3,
     statement: "Higher-level deny always wins in access resolution.",
-    guardrail: "Property-based tests on the policy resolver — randomized scope trees with deny injection",
+    guardrail:
+      "Property-based tests on the policy resolver — randomized scope trees with deny injection",
   },
   {
     n: 4,
     statement: "Short-lived credentials everywhere a credential is minted.",
-    guardrail: "Delegate-key TTL enforcement; setup tokens stored as a hash, 15-minute TTL, single use",
+    guardrail:
+      "Delegate-key TTL enforcement; setup tokens stored as a hash, 15-minute TTL, single use",
   },
   {
     n: 5,
-    statement: "Hybrid identity story: ARM-issued OIDC where federated, a sealed tenant vault where not.",
+    statement:
+      "Hybrid identity story: ARM-issued OIDC where federated, a sealed tenant vault where not.",
     guardrail: "OIDC issuer + RBAC test suite (packages/auth)",
   },
   {
     n: 6,
-    statement: "ClickHouse partitioned by (tenant_id, toYYYYMM(ts)) from day one — non-negotiable at multi-tenant scale.",
+    statement:
+      "ClickHouse partitioned by (tenant_id, toYYYYMM(ts)) from day one — non-negotiable at multi-tenant scale.",
     guardrail: "Runtime partition assertion on every event table",
   },
   {
     n: 7,
-    statement: "Every agent has exactly one accountable human stakeholder — no anonymous automation.",
+    statement:
+      "Every agent has exactly one accountable human stakeholder — no anonymous automation.",
     guardrail: "stakeholder_user_id NOT NULL at the schema level + API validation test",
   },
   {
     n: 8,
-    statement: "Priority is policy, not self-declared — elevated tiers require scope-admin approval.",
-    guardrail: "Tier-assignment audit trail; enforcement ladder (downgrade → throttle → queue) tested uniformly",
+    statement:
+      "Priority is policy, not self-declared — elevated tiers require scope-admin approval.",
+    guardrail:
+      "Tier-assignment audit trail; enforcement ladder (downgrade → throttle → queue) tested uniformly",
   },
 ];
 
@@ -57,8 +66,16 @@ export const deploymentModels = {
   title: "SaaS or self-hosted — one codebase",
   body: "The multi-tenant schema serves both. Self-hosted is the degenerate single-tenant case, not a fork, so there's no separate code path to fall behind.",
   rows: [
-    { label: "SaaS (default)", detail: "ARM-operated control plane, multi-tenant. Data plane still runs in your VPC. Target: small/mid companies." },
-    { label: "Self-hosted enterprise", detail: "Customer-operated control plane, single tenant. Your own provider keys, pass-through, never touch ARM's infrastructure. Target: large or regulated enterprises." },
+    {
+      label: "SaaS (default)",
+      detail:
+        "ARM-operated control plane, multi-tenant. Data plane still runs in your VPC. Target: small/mid companies.",
+    },
+    {
+      label: "Self-hosted enterprise",
+      detail:
+        "Customer-operated control plane, single tenant. Your own provider keys, pass-through, never touch ARM's infrastructure. Target: large or regulated enterprises.",
+    },
   ],
 };
 

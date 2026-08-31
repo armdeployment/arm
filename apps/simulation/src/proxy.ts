@@ -33,28 +33,38 @@ async function ensurePg(): Promise<void> {
 // Helper that runs a query using a pooled client.
 async function pgQuery(text: string, params?: any[]) {
   const c = await pgPool.connect();
-  try { return await c.query(text, params); }
-  finally { c.release(); }
+  try {
+    return await c.query(text, params);
+  } finally {
+    c.release();
+  }
 }
 
-function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)); }
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
 
 // ── ClickHouse Helpers ─────────────────────────────────────────────────────
 
-async function chInsert(table: string, values: Record<string, string | number | string[]>): Promise<void> {
+async function chInsert(
+  table: string,
+  values: Record<string, string | number | string[]>,
+): Promise<void> {
   const cols = Object.keys(values).join(", ");
-  const vals = Object.values(values).map(v => {
-    if (typeof v === "number") return v;
-    if (Array.isArray(v)) {
-      // ClickHouse Array(String) format: ['tag1','tag2']
-      return `[${v.map(t => `'${String(t).replace(/'/g, "\\'")}'`).join(",")}]`;
-    }
-    return `'${String(v).replace(/'/g, "\\'")}'`;
-  }).join(", ");
+  const vals = Object.values(values)
+    .map((v) => {
+      if (typeof v === "number") return v;
+      if (Array.isArray(v)) {
+        // ClickHouse Array(String) format: ['tag1','tag2']
+        return `[${v.map((t) => `'${String(t).replace(/'/g, "\\'")}'`).join(",")}]`;
+      }
+      return `'${String(v).replace(/'/g, "\\'")}'`;
+    })
+    .join(", ");
   await fetch(`${CH_URL}/?query=${encodeURIComponent(`INSERT INTO ${table} (${cols}) VALUES`)}`, {
     method: "POST",
     headers: {
-      "Authorization": "Basic " + Buffer.from(CH_AUTH).toString("base64"),
+      Authorization: "Basic " + Buffer.from(CH_AUTH).toString("base64"),
       "Content-Type": "text/plain",
     },
     body: `(${vals})`,
@@ -82,7 +92,7 @@ async function loadDLPPatterns(): Promise<DLPRule[]> {
   }
   await ensurePg();
   const result = await pgQuery(
-    `SELECT name, pattern, flags, severity FROM dlp_patterns WHERE enabled = TRUE`
+    `SELECT name, pattern, flags, severity FROM dlp_patterns WHERE enabled = TRUE`,
   );
   const rules: DLPRule[] = result.rows.map((r: any) => ({
     name: r.name,
@@ -93,7 +103,9 @@ async function loadDLPPatterns(): Promise<DLPRule[]> {
   return rules;
 }
 
-async function scanDLP(text: string): Promise<{ matched: boolean; pattern?: string; severity?: string }> {
+async function scanDLP(
+  text: string,
+): Promise<{ matched: boolean; pattern?: string; severity?: string }> {
   const rules = await loadDLPPatterns();
   for (const p of rules) {
     if (p.regex.test(text)) return { matched: true, pattern: p.name, severity: p.severity };
@@ -103,15 +115,24 @@ async function scanDLP(text: string): Promise<{ matched: boolean; pattern?: stri
 
 // ── Request Handlers ───────────────────────────────────────────────────────
 
-async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, body: string): Promise<void> {
+async function handleChatCompletion(
+  req: IncomingMessage,
+  res: ServerResponse,
+  body: string,
+): Promise<void> {
   const t0 = Date.now();
   let parsed: any;
-  try { parsed = JSON.parse(body); } catch { return sendJSON(res, 400, { error: "Invalid JSON" }); }
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return sendJSON(res, 400, { error: "Invalid JSON" });
+  }
 
   // 1. AUTH — verify API key
   const authHeader = req.headers.authorization ?? "";
   const apiKey = authHeader.replace(/^Bearer\s+/i, "").trim();
-  if (!apiKey) return sendJSON(res, 401, { error: { message: "Missing API key", type: "auth_error" } });
+  if (!apiKey)
+    return sendJSON(res, 401, { error: { message: "Missing API key", type: "auth_error" } });
 
   await ensurePg();
   const saResult = await pgQuery(
@@ -123,7 +144,7 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
      JOIN agents a ON sa.agent_id = a.id
      JOIN departments d ON a.department_id = d.id
      WHERE sa.api_key = $1`,
-    [apiKey]
+    [apiKey],
   );
 
   if (saResult.rows.length === 0) {
@@ -136,18 +157,27 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
   // Agent suspended?
   if (sa.status === "suspended") {
     await logPolicy(sa.agent_id, "deny", "Agent suspended", "management decision");
-    return sendJSON(res, 403, { error: { message: "Agent suspended by management", type: "policy_error" } });
+    return sendJSON(res, 403, {
+      error: { message: "Agent suspended by management", type: "policy_error" },
+    });
   }
 
   // 2. CLASSIFICATION GATE — confidential/restricted → self-hosted only
   let effectiveModel = parsed.model ?? sa.preferred_model;
-  if (sa.classification_clearance === "confidential" || sa.classification_clearance === "restricted") {
+  if (
+    sa.classification_clearance === "confidential" ||
+    sa.classification_clearance === "restricted"
+  ) {
     // Force self-hosted model — both our Ollama models qualify
     if (!["minicpm5-1b", "qwen3.5"].includes(effectiveModel)) {
       const original = effectiveModel;
       effectiveModel = sa.preferred_model;
-      await logPolicy(sa.agent_id, "downgrade", "Classification gate: cloud model blocked",
-        `${original} → ${effectiveModel} (${sa.classification_clearance} clearance)`);
+      await logPolicy(
+        sa.agent_id,
+        "downgrade",
+        "Classification gate: cloud model blocked",
+        `${original} → ${effectiveModel} (${sa.classification_clearance} clearance)`,
+      );
       parsed.model = effectiveModel;
     }
   }
@@ -156,36 +186,57 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
   const promptText = JSON.stringify(parsed.messages ?? "");
   const dlpResult = await scanDLP(promptText);
   if (dlpResult.matched) {
-    await logPolicy(sa.agent_id, "deny", `DLP: ${dlpResult.pattern}`, `severity=${dlpResult.severity}`);
+    await logPolicy(
+      sa.agent_id,
+      "deny",
+      `DLP: ${dlpResult.pattern}`,
+      `severity=${dlpResult.severity}`,
+    );
     await meterEvent(sa, effectiveModel, "denied", `DLP:${dlpResult.pattern}`, 0, 0, t0);
     return sendJSON(res, 403, {
-      error: { message: `DLP gate blocked: ${dlpResult.pattern} detected in prompt`, type: "dlp_error" }
+      error: {
+        message: `DLP gate blocked: ${dlpResult.pattern} detected in prompt`,
+        type: "dlp_error",
+      },
     });
   }
 
   // 4. BUDGET CHECK — department monthly spend
   const budgetResult = await pgQuery(
     `SELECT budget_monthly_cents, spend_monthly_cents FROM departments WHERE id = $1`,
-    [sa.department_id]
+    [sa.department_id],
   );
   const dept = budgetResult.rows[0];
   const remainingBudget = dept.budget_monthly_cents - dept.spend_monthly_cents;
   if (remainingBudget <= 0) {
-    await logPolicy(sa.agent_id, "deny", "Budget exhausted",
-      `${sa.dept_name} budget: $${(dept.budget_monthly_cents/100).toFixed(0)} spent`);
+    await logPolicy(
+      sa.agent_id,
+      "deny",
+      "Budget exhausted",
+      `${sa.dept_name} budget: $${(dept.budget_monthly_cents / 100).toFixed(0)} spent`,
+    );
     await meterEvent(sa, effectiveModel, "denied", "budget_exhausted", 0, 0, t0);
     return sendJSON(res, 429, {
-      error: { message: `Budget exhausted for ${sa.dept_name}`, type: "budget_error" }
+      error: { message: `Budget exhausted for ${sa.dept_name}`, type: "budget_error" },
     });
   }
 
   // 5. QUOTA CHECK — agent monthly token quota
-  const quotaResult = await chQuery(`SELECT sum(total_tokens) as used FROM arm.llm_events WHERE agent_id = '${sa.agent_id}' AND ts >= toStartOfMonth(now())`);
+  const quotaResult = await chQuery(
+    `SELECT sum(total_tokens) as used FROM arm.llm_events WHERE agent_id = '${sa.agent_id}' AND ts >= toStartOfMonth(now())`,
+  );
   const tokensUsed = quotaResult[0]?.used ?? 0;
   if (Number(tokensUsed) >= Number(sa.monthly_quota_tokens)) {
-    await logPolicy(sa.agent_id, "deny", "Token quota exceeded", `${tokensUsed}/${sa.monthly_quota_tokens}`);
+    await logPolicy(
+      sa.agent_id,
+      "deny",
+      "Token quota exceeded",
+      `${tokensUsed}/${sa.monthly_quota_tokens}`,
+    );
     await meterEvent(sa, effectiveModel, "denied", "quota_exceeded", 0, 0, t0);
-    return sendJSON(res, 429, { error: { message: "Monthly token quota exceeded", type: "quota_error" } });
+    return sendJSON(res, 429, {
+      error: { message: "Monthly token quota exceeded", type: "quota_error" },
+    });
   }
 
   // 6. ROUTE TO OLLAMA (with timeout + retry for cold starts)
@@ -209,60 +260,61 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
           continue;
         }
         await meterEvent(sa, effectiveModel, "error", lastErr, 0, 0, t0);
-        return sendJSON(res, 502, { error: { message: `Upstream error: ${ollamaRes.status}`, detail: errText.slice(0, 200) } });
+        return sendJSON(res, 502, {
+          error: { message: `Upstream error: ${ollamaRes.status}`, detail: errText.slice(0, 200) },
+        });
       }
 
-      const data = await ollamaRes.json() as any;
+      const data = (await ollamaRes.json()) as any;
       const usage = data.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
-    // 7. WORK-TYPE CLASSIFICATION (D7) — zero-LLM cascade, never blocks
-    const workType = await classifyWorkType(sa, effectiveModel, promptText);
+      // 7. WORK-TYPE CLASSIFICATION (D7) — zero-LLM cascade, never blocks
+      const workType = await classifyWorkType(sa, effectiveModel, promptText);
 
-    // Surface the D7 classification live (real tagging shown in proxy logs)
-    console.log(
-      `  🏷  [${sa.dept_name}] ${sa.agent_name} → ${workType.workType} ` +
-      `(stage=${workType.stage}, conf=${workType.confidence ?? "-"})`
-    );
+      // Surface the D7 classification live (real tagging shown in proxy logs)
+      console.log(
+        `  🏷  [${sa.dept_name}] ${sa.agent_name} → ${workType.workType} ` +
+          `(stage=${workType.stage}, conf=${workType.confidence ?? "-"})`,
+      );
 
-    // 8. METER — calculate costs and write to ClickHouse
-    // Self-hosted models: actual_cost = $0, but cloud_equivalent is tracked for savings
-    const modelInfo = await getModelCost(effectiveModel);
-    const cloudCostCents = Math.ceil(
-      (usage.prompt_tokens / 1_000_000) * modelInfo.cloud_input +
-      (usage.completion_tokens / 1_000_000) * modelInfo.cloud_output
-    );
-    const actualCostCents = modelInfo.kind === "self-hosted" ? 0 : cloudCostCents;
+      // 8. METER — calculate costs and write to ClickHouse
+      // Self-hosted models: actual_cost = $0, but cloud_equivalent is tracked for savings
+      const modelInfo = await getModelCost(effectiveModel);
+      const cloudCostCents = Math.ceil(
+        (usage.prompt_tokens / 1_000_000) * modelInfo.cloud_input +
+          (usage.completion_tokens / 1_000_000) * modelInfo.cloud_output,
+      );
+      const actualCostCents = modelInfo.kind === "self-hosted" ? 0 : cloudCostCents;
 
-    await meterEvent(sa, effectiveModel, "success", "", usage.total_tokens, cloudCostCents, t0, {
-      promptTokens: usage.prompt_tokens,
-      completionTokens: usage.completion_tokens,
-      actualCostCents,
-      workType: workType.workType,
-      usageTags: workType.usageTags,
-      classifierStage: workType.stage,
-      classifierConfidence: workType.confidence,
-    });
+      await meterEvent(sa, effectiveModel, "success", "", usage.total_tokens, cloudCostCents, t0, {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        actualCostCents,
+        workType: workType.workType,
+        usageTags: workType.usageTags,
+        classifierStage: workType.stage,
+        classifierConfidence: workType.confidence,
+      });
 
-    // Update department spend in Postgres (track cloud-equivalent cost
-    // so managers see the financial value consumed, even though actual
-    // cost is $0 for self-hosted models)
-    await pgQuery(
-      `UPDATE departments SET spend_monthly_cents = spend_monthly_cents + $1 WHERE id = $2`,
-      [cloudCostCents, sa.department_id]
-    );
+      // Update department spend in Postgres (track cloud-equivalent cost
+      // so managers see the financial value consumed, even though actual
+      // cost is $0 for self-hosted models)
+      await pgQuery(
+        `UPDATE departments SET spend_monthly_cents = spend_monthly_cents + $1 WHERE id = $2`,
+        [cloudCostCents, sa.department_id],
+      );
 
-    // Return the response (with ARM headers)
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "X-ARM-Agent": sa.agent_id,
-      "X-ARM-Model": effectiveModel,
-      "X-ARM-Cost-CloudCents": String(cloudCostCents),
-      "X-ARM-Savings-Cents": String(cloudCostCents - actualCostCents),
-    });
-    res.end(JSON.stringify(data));
+      // Return the response (with ARM headers)
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "X-ARM-Agent": sa.agent_id,
+        "X-ARM-Model": effectiveModel,
+        "X-ARM-Cost-CloudCents": String(cloudCostCents),
+        "X-ARM-Savings-Cents": String(cloudCostCents - actualCostCents),
+      });
+      res.end(JSON.stringify(data));
 
       return; // success — exit retry loop
-
     } catch (err) {
       lastErr = String(err).slice(0, 120);
       if (attempt < maxRetries) {
@@ -277,11 +329,13 @@ async function handleChatCompletion(req: IncomingMessage, res: ServerResponse, b
 
 // ── Metering & Policy Helpers ──────────────────────────────────────────────
 
-async function getModelCost(model: string): Promise<{ cloud_input: number; cloud_output: number; kind: string }> {
+async function getModelCost(
+  model: string,
+): Promise<{ cloud_input: number; cloud_output: number; kind: string }> {
   // Map Ollama model names to their cloud-equivalent costs
   const costs: Record<string, { cloud_input: number; cloud_output: number; kind: string }> = {
-    "minicpm5-1b": { cloud_input: 15, cloud_output: 60, kind: "self-hosted" },    // ~GPT-4o-mini equivalent
-    "qwen3.5": { cloud_input: 70, cloud_output: 210, kind: "self-hosted" },       // ~Claude Haiku equivalent
+    "minicpm5-1b": { cloud_input: 15, cloud_output: 60, kind: "self-hosted" }, // ~GPT-4o-mini equivalent
+    "qwen3.5": { cloud_input: 70, cloud_output: 210, kind: "self-hosted" }, // ~Claude Haiku equivalent
     "gpt-4o": { cloud_input: 250, cloud_output: 1000, kind: "cloud" },
     "claude-sonnet-4": { cloud_input: 300, cloud_output: 1500, kind: "cloud" },
   };
@@ -302,7 +356,7 @@ async function loadTaxonomies(): Promise<Map<string, WorkTypeTaxonomy>> {
   }
   await ensurePg();
   const result = await pgQuery(
-    `SELECT name, labels, classifier_version FROM work_type_taxonomies WHERE tenant_id = 'tn_acme'`
+    `SELECT name, labels, classifier_version FROM work_type_taxonomies WHERE tenant_id = 'tn_acme'`,
   );
   const map = new Map<string, WorkTypeTaxonomy>();
   for (const row of result.rows) {
@@ -327,7 +381,12 @@ async function classifyWorkType(sa: any, modelId: string, promptText: string) {
     const taxonomies = await loadTaxonomies();
     const taxonomy = taxonomies.get(sa.dept_name) ?? taxonomies.values().next().value;
     if (!taxonomy) {
-      return { workType: "unknown", usageTags: [`model:${modelId}`], stage: "unknown" as const, confidence: null };
+      return {
+        workType: "unknown",
+        usageTags: [`model:${modelId}`],
+        stage: "unknown" as const,
+        confidence: null,
+      };
     }
     const features: PromptFeatures = {
       promptText,
@@ -340,18 +399,32 @@ async function classifyWorkType(sa: any, modelId: string, promptText: string) {
     const result = await classifyPrompt(features, taxonomy);
     return result;
   } catch {
-    return { workType: "unknown", usageTags: [`model:${modelId}`], stage: "unknown" as const, confidence: null };
+    return {
+      workType: "unknown",
+      usageTags: [`model:${modelId}`],
+      stage: "unknown" as const,
+      confidence: null,
+    };
   }
 }
 
 async function meterEvent(
-  sa: any, model: string, status: string, denyReason: string,
-  totalTokens: number, cloudCostCents: number, t0: number,
+  sa: any,
+  model: string,
+  status: string,
+  denyReason: string,
+  totalTokens: number,
+  cloudCostCents: number,
+  t0: number,
   extra?: {
-    promptTokens: number; completionTokens: number; actualCostCents: number;
-    workType?: string; usageTags?: string[];
-    classifierStage?: string; classifierConfidence?: number | null;
-  }
+    promptTokens: number;
+    completionTokens: number;
+    actualCostCents: number;
+    workType?: string;
+    usageTags?: string[];
+    classifierStage?: string;
+    classifierConfidence?: number | null;
+  },
 ): Promise<void> {
   const eventId = `evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const actualCost = extra?.actualCostCents ?? 0;
@@ -385,7 +458,12 @@ async function meterEvent(
   });
 }
 
-async function logPolicy(agentId: string, decision: string, reason: string, detail: string): Promise<void> {
+async function logPolicy(
+  agentId: string,
+  decision: string,
+  reason: string,
+  detail: string,
+): Promise<void> {
   await chInsert("arm.policy_events", {
     tenant_id: "tn_acme",
     agent_id: agentId,
@@ -402,12 +480,16 @@ function toChDateTime(d: Date): string {
 
 async function chQuery(sql: string): Promise<any[]> {
   const res = await fetch(`${CH_URL}/?query=${encodeURIComponent(sql)}`, {
-    headers: { "Authorization": "Basic " + Buffer.from(CH_AUTH).toString("base64") },
+    headers: { Authorization: "Basic " + Buffer.from(CH_AUTH).toString("base64") },
   });
   if (!res.ok) return [];
   const text = await res.text();
   // Parse JSONEachRow or JSON
-  try { return JSON.parse(text); } catch { return []; }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return [];
+  }
 }
 
 // ── HTTP Server ────────────────────────────────────────────────────────────
@@ -418,9 +500,9 @@ function sendJSON(res: ServerResponse, code: number, data: unknown): void {
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     let data = "";
-    req.on("data", chunk => data += chunk);
+    req.on("data", (chunk) => (data += chunk));
     req.on("end", () => resolve(data));
   });
 }
@@ -430,7 +512,11 @@ const server = createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
   res.setHeader("Access-Control-Allow-Methods", "*");
-  if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   const url = req.url ?? "";
 
@@ -441,7 +527,14 @@ const server = createServer(async (req, res) => {
       service: "arm-data-plane-proxy",
       version: "2.0.0-simulation",
       upstream: OLLAMA_URL,
-      features: ["auth", "budget_enforcement", "quota", "dlp_scan", "classification_gate", "metering"],
+      features: [
+        "auth",
+        "budget_enforcement",
+        "quota",
+        "dlp_scan",
+        "classification_gate",
+        "metering",
+      ],
     });
     return;
   }
@@ -456,9 +549,11 @@ const server = createServer(async (req, res) => {
   if (url === "/v1/models" && req.method === "GET") {
     try {
       const ollamaRes = await fetch(`${OLLAMA_URL}/v1/models`);
-      const data = await ollamaRes.json() as any;
+      const data = (await ollamaRes.json()) as any;
       sendJSON(res, 200, data);
-    } catch { sendJSON(res, 502, { error: "Cannot reach Ollama" }); }
+    } catch {
+      sendJSON(res, 502, { error: "Cannot reach Ollama" });
+    }
     return;
   }
 

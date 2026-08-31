@@ -10,11 +10,41 @@ import { useState } from "react";
  */
 
 const PREDEFINED_SCENARIOS = [
-  { principal: "cad-assistant (standard)", resource: "s3://engineering/cad-files/", action: "read", expected: "allow", reason: "Matching grant at team level" },
-  { principal: "alloy-analyzer (restricted)", resource: "s3://rnd/alloy-recipes/", action: "read", expected: "deny", reason: "RESTRICTED clearance — no external model routing" },
-  { principal: "line-monitor-a (critical)", resource: "s3://prod-logs/", action: "read", expected: "allow", reason: "Critical tier — reserve access" },
-  { principal: "payroll-validator (confidential)", resource: "db://erp/compensation", action: "write", expected: "deny", reason: "Write denied at department level" },
-  { principal: "invoice-processor (standard)", resource: "db://erp/ap_ar", action: "read", expected: "allow", reason: "Matching grant at scope level" },
+  {
+    principal: "cad-assistant (standard)",
+    resource: "s3://engineering/cad-files/",
+    action: "read",
+    expected: "allow",
+    reason: "Matching grant at team level",
+  },
+  {
+    principal: "alloy-analyzer (restricted)",
+    resource: "s3://rnd/alloy-recipes/",
+    action: "read",
+    expected: "deny",
+    reason: "RESTRICTED clearance — no external model routing",
+  },
+  {
+    principal: "line-monitor-a (critical)",
+    resource: "s3://prod-logs/",
+    action: "read",
+    expected: "allow",
+    reason: "Critical tier — reserve access",
+  },
+  {
+    principal: "payroll-validator (confidential)",
+    resource: "db://erp/compensation",
+    action: "write",
+    expected: "deny",
+    reason: "Write denied at department level",
+  },
+  {
+    principal: "invoice-processor (standard)",
+    resource: "db://erp/ap_ar",
+    action: "read",
+    expected: "allow",
+    reason: "Matching grant at scope level",
+  },
 ];
 
 export function PolicySimulator() {
@@ -23,11 +53,22 @@ export function PolicySimulator() {
   const scenario = PREDEFINED_SCENARIOS[selected]!;
 
   return (
-    <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+    <div
+      className="rounded-lg border"
+      style={{
+        borderColor: "var(--border)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-sm)",
+      }}
+    >
       <div className="border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Policy Simulator (What-If)</h3>
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>Resolve access before granting</span>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Policy Simulator (What-If)
+          </h3>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Resolve access before granting
+          </span>
         </div>
       </div>
 
@@ -54,15 +95,28 @@ export function PolicySimulator() {
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div>
             <span style={{ color: "var(--text-muted)" }}>Principal</span>
-            <div className="mt-0.5 font-semibold" style={{ color: "var(--text-primary)" }}>{scenario.principal}</div>
+            <div className="mt-0.5 font-semibold" style={{ color: "var(--text-primary)" }}>
+              {scenario.principal}
+            </div>
           </div>
           <div>
             <span style={{ color: "var(--text-muted)" }}>Action</span>
-            <div className="mt-0.5 font-semibold font-mono" style={{ color: "var(--text-primary)" }}>{scenario.action} on {scenario.resource}</div>
+            <div
+              className="mt-0.5 font-semibold font-mono"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {scenario.action} on {scenario.resource}
+            </div>
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-3 rounded-md border p-3" style={{ borderColor: scenario.expected === "allow" ? "#bbf7d0" : "#fecaca", backgroundColor: scenario.expected === "allow" ? "#f0fdf4" : "#fef2f2" }}>
+        <div
+          className="mt-3 flex items-center gap-3 rounded-md border p-3"
+          style={{
+            borderColor: scenario.expected === "allow" ? "#bbf7d0" : "#fecaca",
+            backgroundColor: scenario.expected === "allow" ? "#f0fdf4" : "#fef2f2",
+          }}
+        >
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-bold ${scenario.expected === "allow" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}
           >

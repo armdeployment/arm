@@ -22,35 +22,35 @@ host.docker.internal:11434 (Ollama)
 
 ## Employee Workstations
 
-| # | Employee | Department | Agent | Task | Model | Network |
-|---|----------|-----------|-------|------|-------|---------|
-| 1 | Sarah Chen | Engineering | Claude Code | Code Review | minicpm5-1b | Internal |
-| 2 | Mike Rodriguez | Engineering | OpenCode | Documentation | minicpm5-1b | Internal |
-| 3 | Carlos Mendes | Manufacturing | OpenCode | CNC Toolpath | qwen3.5 | Internal |
-| 4 | Jenny Park | QA | Claude Code | Security Scan | qwen3.5 | Internal |
-| 5 | David Kim | Supply Chain | Copilot | Demand Forecast | minicpm5-1b | Internal |
-| 6 | Alex Thompson | R&D | Pi | Research | minicpm5-1b | External → VPN |
+| #   | Employee       | Department    | Agent       | Task            | Model       | Network        |
+| --- | -------------- | ------------- | ----------- | --------------- | ----------- | -------------- |
+| 1   | Sarah Chen     | Engineering   | Claude Code | Code Review     | minicpm5-1b | Internal       |
+| 2   | Mike Rodriguez | Engineering   | OpenCode    | Documentation   | minicpm5-1b | Internal       |
+| 3   | Carlos Mendes  | Manufacturing | OpenCode    | CNC Toolpath    | qwen3.5     | Internal       |
+| 4   | Jenny Park     | QA            | Claude Code | Security Scan   | qwen3.5     | Internal       |
+| 5   | David Kim      | Supply Chain  | Copilot     | Demand Forecast | minicpm5-1b | Internal       |
+| 6   | Alex Thompson  | R&D           | Pi          | Research        | minicpm5-1b | External → VPN |
 
 ## Results
 
 ### LLM Call Metering (from ClickHouse)
 
-| Department | Status | Calls | Tokens | Cloud Cost | Savings |
-|---|---|---|---|---|---|
-| Engineering | success | 10 | 963 | $0.10 | $0.15 |
-| Engineering | error | 1 | - | - | - |
-| Manufacturing | success | 4 | 378 | $0.04 | $0.06 |
-| Quality Assurance | denied | 2 | - | - | - |
-| Quality Assurance | error | 1 | - | - | - |
-| R&D | success | 3 | 245 | $0.03 | $0.04 |
-| Supply Chain | success | 5 | 466 | $0.05 | $0.08 |
-| **TOTAL** | | **25** | **2,027** | **$0.22** | **$0.33** |
+| Department        | Status  | Calls  | Tokens    | Cloud Cost | Savings   |
+| ----------------- | ------- | ------ | --------- | ---------- | --------- |
+| Engineering       | success | 10     | 963       | $0.10      | $0.15     |
+| Engineering       | error   | 1      | -         | -          | -         |
+| Manufacturing     | success | 4      | 378       | $0.04      | $0.06     |
+| Quality Assurance | denied  | 2      | -         | -          | -         |
+| Quality Assurance | error   | 1      | -         | -          | -         |
+| R&D               | success | 3      | 245       | $0.03      | $0.04     |
+| Supply Chain      | success | 5      | 466       | $0.05      | $0.08     |
+| **TOTAL**         |         | **25** | **2,027** | **$0.22**  | **$0.33** |
 
 ### Policy Enforcement
 
-| Decision | Reason | Count |
-|---|---|---|
-| deny | DLP: API Key (sk-ant-) detected in prompt | 2 |
+| Decision | Reason                                    | Count |
+| -------- | ----------------------------------------- | ----- |
+| deny     | DLP: API Key (sk-ant-) detected in prompt | 2     |
 
 ## VPN Demo
 

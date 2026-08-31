@@ -54,12 +54,19 @@ describe("POST /api/events/activation", () => {
   });
 
   it("rejects a non-JSON body", async () => {
-    const res = await POST(new Request("http://localhost/api/events/activation", { method: "POST", body: "not json" }));
+    const res = await POST(
+      new Request("http://localhost/api/events/activation", { method: "POST", body: "not json" }),
+    );
     expect(res.status).toBe(400);
   });
 
   it("accepts every one of the four web-side steps", async () => {
-    const steps = ["questionnaire_started", "questionnaire_completed", "token_issued", "downloaded"];
+    const steps = [
+      "questionnaire_started",
+      "questionnaire_completed",
+      "token_issued",
+      "downloaded",
+    ];
     for (const step of steps) {
       const res = await POST(jsonRequest({ ...VALID_EVENT, step }));
       expect(res.status).toBe(202);

@@ -164,7 +164,11 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family:
-    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    "IBM Plex Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: var(--font-body);

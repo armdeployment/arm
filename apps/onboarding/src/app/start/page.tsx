@@ -99,7 +99,9 @@ export default function StartPage() {
   function toggleMultiOption(value: string) {
     setAnswers((a) => {
       const existing = Array.isArray(a[current!.id]) ? (a[current!.id] as string[]) : [];
-      const next = existing.includes(value) ? existing.filter((v) => v !== value) : [...existing, value];
+      const next = existing.includes(value)
+        ? existing.filter((v) => v !== value)
+        : [...existing, value];
       return { ...a, [current!.id]: next };
     });
   }
@@ -112,20 +114,30 @@ export default function StartPage() {
     <div className="onboarding-shell">
       <div className="onboarding-card">
         <div className="onboarding-progress">
-          <div className="onboarding-progress-fill" style={{ width: `${Math.round(progress(graph!, answers) * 100)}%` }} />
+          <div
+            className="onboarding-progress-fill"
+            style={{ width: `${Math.round(progress(graph!, answers) * 100)}%` }}
+          />
         </div>
         <div className="onboarding-prompt">{current.prompt}</div>
         {current.help ? <div className="onboarding-help">{current.help}</div> : null}
         <div className="onboarding-options">
           {current.options.map((opt) => {
-            const selected = current.kind === "multi" ? selectedMulti.includes(opt.value) : answers[current.id] === opt.value;
+            const selected =
+              current.kind === "multi"
+                ? selectedMulti.includes(opt.value)
+                : answers[current.id] === opt.value;
             return (
               <button
                 key={opt.value}
                 type="button"
                 className="onboarding-option"
                 data-selected={selected}
-                onClick={() => (current.kind === "multi" ? toggleMultiOption(opt.value) : commitAnswer(current.id, opt.value))}
+                onClick={() =>
+                  current.kind === "multi"
+                    ? toggleMultiOption(opt.value)
+                    : commitAnswer(current.id, opt.value)
+                }
               >
                 {opt.label}
               </button>
@@ -133,11 +145,20 @@ export default function StartPage() {
           })}
         </div>
         <div className="onboarding-nav">
-          <button type="button" className="onboarding-button onboarding-button-secondary" onClick={goBack} disabled={history.length === 0}>
+          <button
+            type="button"
+            className="onboarding-button onboarding-button-secondary"
+            onClick={goBack}
+            disabled={history.length === 0}
+          >
             Back
           </button>
           {current.kind === "multi" ? (
-            <button type="button" className="onboarding-button onboarding-button-primary" onClick={continueMulti}>
+            <button
+              type="button"
+              className="onboarding-button onboarding-button-primary"
+              onClick={continueMulti}
+            >
               Continue
             </button>
           ) : null}

@@ -49,7 +49,12 @@ export interface AdoptionRollupJob {
 
 export type WorkerJob = DailyUsagePullJob | ReconciliationJob | DriftAlertJob | AdoptionRollupJob;
 
-export { computeAdoptionRollup, runAdoptionRollupJob, type AdoptionRollupRow, type AdoptionRollupJobResult } from "./adoption-rollup-job.js";
+export {
+  computeAdoptionRollup,
+  runAdoptionRollupJob,
+  type AdoptionRollupRow,
+  type AdoptionRollupJobResult,
+} from "./adoption-rollup-job.js";
 
 // ── Worker runner (stub — lands 1.1 when DB wired) ────────────────────────
 
@@ -67,9 +72,15 @@ export async function processJob(job: WorkerJob): Promise<{ status: string; deta
 
   switch (job.job) {
     case "daily_usage_pull":
-      return { status: "ok", detail: `Pulled usage for ${job.tenantId} (${job.startDate}–${job.endDate}) — fixture data, pending DB wire` };
+      return {
+        status: "ok",
+        detail: `Pulled usage for ${job.tenantId} (${job.startDate}–${job.endDate}) — fixture data, pending DB wire`,
+      };
     case "reconciliation":
-      return { status: "ok", detail: `Reconciled ${job.tenantId} period ${job.periodStart}–${job.periodEnd} — fixture data, pending DB wire` };
+      return {
+        status: "ok",
+        detail: `Reconciled ${job.tenantId} period ${job.periodStart}–${job.periodEnd} — fixture data, pending DB wire`,
+      };
     case "drift_alert":
       return { status: job.status, detail: `Alert sent for ${job.tenantId}: ${job.message}` };
     case "adoption_rollup": {
@@ -89,13 +100,29 @@ export async function handleCronTrigger(cronType: "daily" | "hourly"): Promise<W
   if (cronType === "daily") {
     const today = new Date().toISOString().slice(0, 10);
     // All tenants (in production: SELECT tenant_id FROM tenant WHERE deployment = 'saas')
-    baseJobs.push({ job: "daily_usage_pull", tenantId: "tn_demo", startDate: today, endDate: today });
-    baseJobs.push({ job: "reconciliation", tenantId: "tn_demo", periodStart: today, periodEnd: today });
+    baseJobs.push({
+      job: "daily_usage_pull",
+      tenantId: "tn_demo",
+      startDate: today,
+      endDate: today,
+    });
+    baseJobs.push({
+      job: "reconciliation",
+      tenantId: "tn_demo",
+      periodStart: today,
+      periodEnd: today,
+    });
     baseJobs.push({ job: "adoption_rollup", tenantId: "tn_demo", day: today });
   }
 
   if (cronType === "hourly") {
-    baseJobs.push({ job: "drift_alert", tenantId: "tn_demo", driftPct: 2.0, status: "drift_warning", message: "Sample drift alert" });
+    baseJobs.push({
+      job: "drift_alert",
+      tenantId: "tn_demo",
+      driftPct: 2.0,
+      status: "drift_warning",
+      message: "Sample drift alert",
+    });
   }
 
   return baseJobs;

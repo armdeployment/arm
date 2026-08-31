@@ -25,7 +25,9 @@ let dbClient: Db | null = null;
  *  confusing downstream connection error. */
 export function getDb(): Db {
   if (!config.DATABASE_URL) {
-    throw new Error("DATABASE_URL is not configured (packages/config) — cannot create a Postgres client.");
+    throw new Error(
+      "DATABASE_URL is not configured (packages/config) — cannot create a Postgres client.",
+    );
   }
   if (!dbClient) {
     sqlClient = postgres(config.DATABASE_URL);

@@ -29,12 +29,24 @@ function caller(claims: ARMClaims | null) {
 
 describe("adoption router — tenant middleware (Invariant §11.6)", () => {
   it("REJECTS unauthenticated requests for every procedure", async () => {
-    await expect(caller(null).adoption.funnel({})).rejects.toThrowError(/No authenticated tenant context/);
-    await expect(caller(null).adoption.stalls({})).rejects.toThrowError(/No authenticated tenant context/);
-    await expect(caller(null).adoption.timeToValue({})).rejects.toThrowError(/No authenticated tenant context/);
-    await expect(caller(null).adoption.coverage({})).rejects.toThrowError(/No authenticated tenant context/);
-    await expect(caller(null).adoption.activeUsers({})).rejects.toThrowError(/No authenticated tenant context/);
-    await expect(caller(null).adoption.recentActivations({})).rejects.toThrowError(/No authenticated tenant context/);
+    await expect(caller(null).adoption.funnel({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).adoption.stalls({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).adoption.timeToValue({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).adoption.coverage({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).adoption.activeUsers({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).adoption.recentActivations({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
   });
 });
 
@@ -74,14 +86,21 @@ describe("adoption.funnel", () => {
 
   it("scoping to a department returns a strictly smaller-or-equal funnel than org-wide", async () => {
     const org = await caller(authedClaims).adoption.funnel({ scope: null });
-    const dept = await caller(authedClaims).adoption.funnel({ scope: { type: "department", id: "dept_qa" } });
+    const dept = await caller(authedClaims).adoption.funnel({
+      scope: { type: "department", id: "dept_qa" },
+    });
     expect(dept.steps[0]!.count).toBeLessThanOrEqual(org.steps[0]!.count);
     expect(dept.steps[0]!.count).toBeGreaterThan(0);
   });
 
   it("jobFunctionKey filter narrows further than department scope", async () => {
-    const dept = await caller(authedClaims).adoption.funnel({ scope: { type: "department", id: "dept_qa" } });
-    const jf = await caller(authedClaims).adoption.funnel({ scope: { type: "department", id: "dept_qa" }, jobFunctionKey: "quality_engineer" });
+    const dept = await caller(authedClaims).adoption.funnel({
+      scope: { type: "department", id: "dept_qa" },
+    });
+    const jf = await caller(authedClaims).adoption.funnel({
+      scope: { type: "department", id: "dept_qa" },
+      jobFunctionKey: "quality_engineer",
+    });
     expect(jf.steps[0]!.count).toBeLessThanOrEqual(dept.steps[0]!.count);
   });
 
@@ -177,18 +196,29 @@ describe("adoption.recentActivations", () => {
     const page1 = await caller(authedClaims).adoption.recentActivations({ limit: 5 });
     expect(page1.activations.length).toBe(5);
     for (let i = 1; i < page1.activations.length; i++) {
-      expect(Date.parse(page1.activations[i]!.ts)).toBeLessThanOrEqual(Date.parse(page1.activations[i - 1]!.ts));
+      expect(Date.parse(page1.activations[i]!.ts)).toBeLessThanOrEqual(
+        Date.parse(page1.activations[i - 1]!.ts),
+      );
     }
     expect(page1.nextCursor).toBe(5);
-    const page2 = await caller(authedClaims).adoption.recentActivations({ limit: 5, cursor: page1.nextCursor! });
+    const page2 = await caller(authedClaims).adoption.recentActivations({
+      limit: 5,
+      cursor: page1.nextCursor!,
+    });
     expect(page2.activations[0]!.userRef).not.toBe(page1.activations[0]!.userRef);
   });
 });
 
 describe("cross-tenant isolation (mirrors tenant-middleware.test.ts)", () => {
   it("fixture population is not tenant-partitioned data — every tenant sees the same fixture, but the tenantId in the response always matches the caller's own claims (never a fixture from 'another tenant')", async () => {
-    const t1 = await caller({ sub: "u1", tenant_id: "tn_01", email: "a@acme.com" }).adoption.funnel({});
-    const t2 = await caller({ sub: "u2", tenant_id: "tn_02", email: "b@other.com" }).adoption.funnel({});
+    const t1 = await caller({ sub: "u1", tenant_id: "tn_01", email: "a@acme.com" }).adoption.funnel(
+      {},
+    );
+    const t2 = await caller({
+      sub: "u2",
+      tenant_id: "tn_02",
+      email: "b@other.com",
+    }).adoption.funnel({});
     expect(t1.tenantId).toBe("tn_01");
     expect(t2.tenantId).toBe("tn_02");
   });
@@ -264,7 +294,12 @@ describe("ClickHouse SQL builders — shape (no live DB required)", () => {
   });
 
   it("every builder applies the scope + date-range filters when set", () => {
-    const filter = { scope: { type: "department" as const, id: "dept_qa" }, dateFrom: "2026-01-01", dateTo: "2026-02-01", jobFunctionKey: "quality_engineer" };
+    const filter = {
+      scope: { type: "department" as const, id: "dept_qa" },
+      dateFrom: "2026-01-01",
+      dateTo: "2026-02-01",
+      jobFunctionKey: "quality_engineer",
+    };
     for (const sql of [
       buildFunnelSQL(TENANT, filter),
       buildStallsSQL(TENANT, filter),
@@ -305,7 +340,10 @@ describe.skipIf(!process.env.CLICKHOUSE_URL)("adoption router — live ClickHous
     expect(active.eligibleSeats).toBeGreaterThan(0);
 
     const coverage = await caller(realClaims).adoption.coverage({});
-    const totalActivatedAcrossJobFunctions = coverage.rows.reduce((sum, r) => sum + r.activatedSeats, 0);
+    const totalActivatedAcrossJobFunctions = coverage.rows.reduce(
+      (sum, r) => sum + r.activatedSeats,
+      0,
+    );
     expect(totalActivatedAcrossJobFunctions).toBe(active.weeklyActive);
   });
 
@@ -324,7 +362,9 @@ describe.skipIf(!process.env.CLICKHOUSE_URL)("adoption router — live ClickHous
     expect(r.activations.length).toBe(5);
     expect(r.meta.source).toBe("clickhouse");
     for (let i = 1; i < r.activations.length; i++) {
-      expect(Date.parse(r.activations[i]!.ts)).toBeLessThanOrEqual(Date.parse(r.activations[i - 1]!.ts));
+      expect(Date.parse(r.activations[i]!.ts)).toBeLessThanOrEqual(
+        Date.parse(r.activations[i - 1]!.ts),
+      );
     }
   });
 });

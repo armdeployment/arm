@@ -9,13 +9,13 @@ supersedes: none
 
 ## Decision
 
-**A Work Package is a versioned, role-scoped bundle of everything an employee's agent needs to do their job** — MCP tools, skills, sub-agent configurations, permission grants, model-routing policy, budget template, starter prompts, and document templates — materialized from Industry Profile presets (D6 pattern), copy-on-provisioning (D7 lock), and distributed through an extended `/.well-known/arm-agent` manifest plus a one-command `arm setup` CLI. Tools become first-class entities in a **Tool Registry** with per-tool authorization (`tool:action` verbs, extending D8). Work Packages ship in **two modes**: *automated agent* (scope-owned, runs unattended) and *copilot mode* (employee-adjacent, human-in-the-loop — the default for every human job role). The package is the unit of governance: budgets, approvals, metering, and `cost-per-work-product` telemetry all roll up by package.
+**A Work Package is a versioned, role-scoped bundle of everything an employee's agent needs to do their job** — MCP tools, skills, sub-agent configurations, permission grants, model-routing policy, budget template, starter prompts, and document templates — materialized from Industry Profile presets (D6 pattern), copy-on-provisioning (D7 lock), and distributed through an extended `/.well-known/arm-agent` manifest plus a one-command `arm setup` CLI. Tools become first-class entities in a **Tool Registry** with per-tool authorization (`tool:action` verbs, extending D8). Work Packages ship in **two modes**: _automated agent_ (scope-owned, runs unattended) and _copilot mode_ (employee-adjacent, human-in-the-loop — the default for every human job role). The package is the unit of governance: budgets, approvals, metering, and `cost-per-work-product` telemetry all roll up by package.
 
 The product requirement this serves, verbatim from the requester: **management must be able to govern AI usage across automated and copiloted agents per employee/job function, and every employee — including non-technical lower/middle/upper management — must be able to start using a correctly-configured agent (opencode pre-installed with MCPs, skills, sub-agents, permissions) in minutes, without writing a single config file.**
 
 ## Context
 
-ARM today provisions *agents*, not *roles*. The pieces exist but nothing ties them into an employee-facing unit:
+ARM today provisions _agents_, not _roles_. The pieces exist but nothing ties them into an employee-facing unit:
 
 - **`arm agent init`** (§8.1, `apps/cli`) detects agent type and writes a minimal LLM-routing config — but installs **no tools, no skills, no permissions, no role defaults** (`docs/agent-onboarding-guide.md` is 143 lines of manual config for the bare minimum).
 - **`secondaryTagPresets`** (`tool:*`, `resource:*` strings in profile taxonomies) are seeded but **never read at runtime** — they hint at tool bundles without being one.

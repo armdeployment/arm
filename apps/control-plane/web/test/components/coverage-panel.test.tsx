@@ -3,8 +3,26 @@ import { render, screen } from "@testing-library/react";
 import { CoveragePanelView, type CoverageRow } from "../../src/components/adoption/coverage-panel";
 
 const ROWS: CoverageRow[] = [
-  { jobFunctionKey: "process_engineer", name: "Process Engineer", departmentName: "R&D", headcountWeight: 15, packages: [], activatedSeats: 0, eligibleSeats: 15, uncoveredWeight: 15 },
-  { jobFunctionKey: "quality_engineer", name: "Quality Engineer", departmentName: "Quality Assurance", headcountWeight: 42, packages: ["Quality Engineer"], activatedSeats: 11, eligibleSeats: 42, uncoveredWeight: 31 },
+  {
+    jobFunctionKey: "process_engineer",
+    name: "Process Engineer",
+    departmentName: "R&D",
+    headcountWeight: 15,
+    packages: [],
+    activatedSeats: 0,
+    eligibleSeats: 15,
+    uncoveredWeight: 15,
+  },
+  {
+    jobFunctionKey: "quality_engineer",
+    name: "Quality Engineer",
+    departmentName: "Quality Assurance",
+    headcountWeight: 42,
+    packages: ["Quality Engineer"],
+    activatedSeats: 11,
+    eligibleSeats: 42,
+    uncoveredWeight: 31,
+  },
 ];
 
 describe("CoveragePanelView", () => {

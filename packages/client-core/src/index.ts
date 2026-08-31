@@ -50,17 +50,16 @@ export {
   DEFAULT_OPENCODE_HOME,
   resolveAgentHome,
 } from "./opencode.js";
-export type { RenderOpencodeConfigArgs, RenderedOpencodeConfig, McpRuntimeRequirement } from "./opencode.js";
+export type {
+  RenderOpencodeConfigArgs,
+  RenderedOpencodeConfig,
+  McpRuntimeRequirement,
+} from "./opencode.js";
 
 export { GUIDE_LIBRARY, getConnectionGuide, renderGuideSteps } from "./connections.js";
 export type { ConnectionMethod, ConnectionGuide, ConnectionsManifestEntry } from "./connections.js";
 
-export {
-  runSetup,
-  verifyMeteredRoundTrip,
-  collectConnectionsNeeded,
-  budgetHint,
-} from "./setup.js";
+export { runSetup, verifyMeteredRoundTrip, collectConnectionsNeeded, budgetHint } from "./setup.js";
 export type { SetupArgs, SetupResult } from "./setup.js";
 
 export { resolveFromSetupToken, setupRedemptionResponseSchema } from "./setup-token.js";
@@ -88,7 +87,13 @@ export {
   parseExpectedChecksum,
   bundledRuntimeBinDir,
 } from "./runtime-provision.js";
-export type { RuntimeKind, RuntimeProbe, ProvisionTarget, ProvisionIO, ExecFileFn } from "./runtime-provision.js";
+export type {
+  RuntimeKind,
+  RuntimeProbe,
+  ProvisionTarget,
+  ProvisionIO,
+  ExecFileFn,
+} from "./runtime-provision.js";
 
 export { startInstallWizardServer, openInBrowser, DEFAULT_ARM_PROXY_URL } from "./gui-server.js";
 export type { GuiServerOptions, GuiServerDeps, GuiServerHandle } from "./gui-server.js";

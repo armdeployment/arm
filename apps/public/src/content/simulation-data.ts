@@ -74,5 +74,6 @@ export const fixtureDashboardStats: Stat[] = [
 export const onboardingTarget = {
   label: "First metered call after questionnaire submit",
   value: "< 5 minutes",
-  source: "docs/arm-spec.md §9 — Phase 1 exit gate target, unassisted, not yet measured in production",
+  source:
+    "docs/arm-spec.md §9 — Phase 1 exit gate target, unassisted, not yet measured in production",
 };

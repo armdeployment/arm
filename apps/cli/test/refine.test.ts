@@ -16,18 +16,24 @@ const STUB_FOLDER_SCAN: FolderScanResult = {
   extensionCounts: { ".sldprt": 8 },
   tags: ["cad_heavy"],
 };
-const STUB_TOOLS: DetectedTool[] = [{ id: "teamcenter", label: "Siemens Teamcenter", componentSlug: "plm.teamcenter" }];
+const STUB_TOOLS: DetectedTool[] = [
+  { id: "teamcenter", label: "Siemens Teamcenter", componentSlug: "plm.teamcenter" },
+];
 
 describe("parseRefineArgs", () => {
   it("parses both flags", () => {
-    expect(parseRefineArgs(["--folder", "/home/alice/work", "--pain-points", "too many approvals"])).toEqual({
+    expect(
+      parseRefineArgs(["--folder", "/home/alice/work", "--pain-points", "too many approvals"]),
+    ).toEqual({
       folderPath: "/home/alice/work",
       painPoints: "too many approvals",
     });
   });
 
   it("parses a single flag", () => {
-    expect(parseRefineArgs(["--folder", "/home/alice/work"])).toEqual({ folderPath: "/home/alice/work" });
+    expect(parseRefineArgs(["--folder", "/home/alice/work"])).toEqual({
+      folderPath: "/home/alice/work",
+    });
   });
 
   it("returns an empty object for no flags — signals interactive mode", () => {
@@ -112,7 +118,11 @@ describe("runRefineCommand (interactive — no flags)", () => {
     const classifyPainPointsFn = vi.fn().mockReturnValue(STUB_PAIN_TAGS);
     const scanInstalledToolsFn = vi.fn().mockResolvedValue([]);
 
-    const result = await runRefineCommand([], { promptFn, classifyPainPointsFn, scanInstalledToolsFn });
+    const result = await runRefineCommand([], {
+      promptFn,
+      classifyPainPointsFn,
+      scanInstalledToolsFn,
+    });
 
     expect(classifyPainPointsFn).toHaveBeenCalledWith("budget approvals take forever");
     expect(result.painPointTags).toEqual(STUB_PAIN_TAGS);
@@ -122,7 +132,11 @@ describe("runRefineCommand (interactive — no flags)", () => {
 describe("printRefineSummary", () => {
   it("prints detected signals without throwing", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    printRefineSummary({ painPointTags: STUB_PAIN_TAGS, folderScan: STUB_FOLDER_SCAN, installedTools: STUB_TOOLS });
+    printRefineSummary({
+      painPointTags: STUB_PAIN_TAGS,
+      folderScan: STUB_FOLDER_SCAN,
+      installedTools: STUB_TOOLS,
+    });
     const output = logSpy.mock.calls.map((call) => call[0]).join("\n");
     expect(output).toContain("budget_approval_pain");
     expect(output).toContain("cad_heavy");

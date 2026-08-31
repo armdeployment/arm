@@ -22,13 +22,22 @@ export default function HomePage() {
         </p>
         <h1
           className="m-0 mb-6 font-semibold"
-          style={{ fontSize: "var(--font-display)", maxWidth: "44rem", color: "var(--text-on-dark)" }}
+          style={{
+            fontSize: "var(--font-display)",
+            maxWidth: "44rem",
+            color: "var(--text-on-dark)",
+          }}
         >
           {hero.headline}
         </h1>
         <p
           className="m-0 mb-8"
-          style={{ fontSize: "var(--font-lead)", maxWidth: "42rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.6 }}
+          style={{
+            fontSize: "var(--font-lead)",
+            maxWidth: "42rem",
+            color: "var(--text-on-dark-secondary)",
+            lineHeight: 1.6,
+          }}
         >
           {hero.subhead}
         </p>
@@ -86,7 +95,10 @@ export default function HomePage() {
           {governanceSection.points.map((point) => (
             <div key={point.title} className="inst-card p-5">
               <h3 className="m-0 mb-2 text-base font-semibold">{point.title}</h3>
-              <p className="m-0 text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              <p
+                className="m-0 text-sm"
+                style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}
+              >
                 {point.body}
               </p>
             </div>
@@ -114,13 +126,22 @@ export default function HomePage() {
         <ScrollTable>
           <thead>
             <tr>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
                 Dimension
               </th>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
                 SaaS
               </th>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
                 Self-hosted
               </th>
             </tr>
@@ -128,13 +149,28 @@ export default function HomePage() {
           <tbody>
             {deploymentTable.map((row) => (
               <tr key={row.dimension}>
-                <td className="p-3 text-sm font-medium" style={{ borderBottom: "1px solid var(--border)" }}>
+                <td
+                  className="p-3 text-sm font-medium"
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
                   {row.dimension}
                 </td>
-                <td className="p-3 text-sm" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                <td
+                  className="p-3 text-sm"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   {row.saas}
                 </td>
-                <td className="p-3 text-sm" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                <td
+                  className="p-3 text-sm"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   {row.selfHosted}
                 </td>
               </tr>

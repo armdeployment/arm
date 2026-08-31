@@ -8,7 +8,10 @@ function fakeFs(existingPaths: string[]): PathExistsFn {
 
 describe("scanInstalledTools", () => {
   it("detects a tool whose known path exists on the injected filesystem", async () => {
-    const detected = await scanInstalledTools(fakeFs(["/Applications/Visual Studio Code.app"]), "darwin");
+    const detected = await scanInstalledTools(
+      fakeFs(["/Applications/Visual Studio Code.app"]),
+      "darwin",
+    );
     expect(detected.map((t) => t.id)).toContain("vscode");
   });
 
@@ -18,7 +21,10 @@ describe("scanInstalledTools", () => {
   });
 
   it("maps a detected tool to its catalog component slug", async () => {
-    const detected = await scanInstalledTools(fakeFs(["C:\\Program Files\\Siemens\\Teamcenter"]), "win32");
+    const detected = await scanInstalledTools(
+      fakeFs(["C:\\Program Files\\Siemens\\Teamcenter"]),
+      "win32",
+    );
     const teamcenter = detected.find((t) => t.id === "teamcenter");
     expect(teamcenter?.componentSlug).toBe("plm.teamcenter");
   });
@@ -26,7 +32,10 @@ describe("scanInstalledTools", () => {
   it("only checks paths registered for the given platform", async () => {
     // teamcenter has no darwin path registered — must never match on macOS,
     // even if a coincidentally-matching path exists on the fake filesystem.
-    const detected = await scanInstalledTools(fakeFs(["C:\\Program Files\\Siemens\\Teamcenter"]), "darwin");
+    const detected = await scanInstalledTools(
+      fakeFs(["C:\\Program Files\\Siemens\\Teamcenter"]),
+      "darwin",
+    );
     expect(detected.map((t) => t.id)).not.toContain("teamcenter");
   });
 

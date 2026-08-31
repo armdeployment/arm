@@ -23,7 +23,10 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return Response.json({ status: "invalid", message: "malformed request body" });
   }
-  const token = typeof (body as { token?: unknown })?.token === "string" ? (body as { token: string }).token : "";
+  const token =
+    typeof (body as { token?: unknown })?.token === "string"
+      ? (body as { token: string }).token
+      : "";
   if (!token) {
     return Response.json({ status: "invalid", message: "missing token" });
   }

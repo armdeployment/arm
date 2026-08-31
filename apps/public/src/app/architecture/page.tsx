@@ -17,10 +17,21 @@ export default function ArchitecturePage() {
   return (
     <>
       <Section tone="dark" className="py-14 sm:py-20">
-        <h1 className="m-0 mb-4 font-semibold" style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}>
+        <h1
+          className="m-0 mb-4 font-semibold"
+          style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}
+        >
           {architectureHero.title}
         </h1>
-        <p style={{ fontSize: "var(--font-lead)", maxWidth: "42rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.6 }} className="m-0">
+        <p
+          style={{
+            fontSize: "var(--font-lead)",
+            maxWidth: "42rem",
+            color: "var(--text-on-dark-secondary)",
+            lineHeight: 1.6,
+          }}
+          className="m-0"
+        >
           {architectureHero.body}
         </p>
       </Section>
@@ -47,19 +58,50 @@ export default function ArchitecturePage() {
           <ScrollTable>
             <thead>
               <tr>
-                <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>Boundary</th>
-                <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>What crosses</th>
-                <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>What never crosses</th>
+                <th
+                  className="label-meta p-3 text-left"
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                  Boundary
+                </th>
+                <th
+                  className="label-meta p-3 text-left"
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                  What crosses
+                </th>
+                <th
+                  className="label-meta p-3 text-left"
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                  What never crosses
+                </th>
               </tr>
             </thead>
             <tbody>
               {boundaryTable.map((row) => (
                 <tr key={row.boundary}>
-                  <td className="p-3 text-sm font-medium" style={{ borderBottom: "1px solid var(--border)" }}>{row.boundary}</td>
-                  <td className="p-3 text-sm" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>{row.crosses}</td>
                   <td
                     className="p-3 text-sm font-medium"
-                    style={{ borderBottom: "1px solid var(--border)", color: row.neverCrosses === "—" ? "var(--text-muted)" : "var(--danger)" }}
+                    style={{ borderBottom: "1px solid var(--border)" }}
+                  >
+                    {row.boundary}
+                  </td>
+                  <td
+                    className="p-3 text-sm"
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {row.crosses}
+                  </td>
+                  <td
+                    className="p-3 text-sm font-medium"
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      color: row.neverCrosses === "—" ? "var(--text-muted)" : "var(--danger)",
+                    }}
                   >
                     {row.neverCrosses}
                   </td>
@@ -67,7 +109,9 @@ export default function ArchitecturePage() {
               ))}
             </tbody>
           </ScrollTable>
-          <p className="m-0 mt-3 text-xs" style={{ color: "var(--text-muted)" }}>{boundarySourceNote}</p>
+          <p className="m-0 mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
+            {boundarySourceNote}
+          </p>
         </div>
       </Section>
 

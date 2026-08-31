@@ -28,7 +28,9 @@ import { tenantTable } from "./org-tree.js";
  */
 export const workTypeTaxonomyTable = pgTable("work_type_taxonomy", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   /** Scope anchor — the agent's department / plant / workstream (§6.1). */
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id").notNull(),
@@ -41,10 +43,7 @@ export const workTypeTaxonomyTable = pgTable("work_type_taxonomy", {
    * ["tool:web_search", "model:claude-sonnet"]). Secondary tags are ≤5 per
    * prompt (sub-decision D7.s1).
    */
-  secondaryTagPresets: jsonb("secondary_tag_presets")
-    .$type<string[]>()
-    .notNull()
-    .default([]),
+  secondaryTagPresets: jsonb("secondary_tag_presets").$type<string[]>().notNull().default([]),
   /** Monotonic version — incremented on label edits to guard re-labeling. */
   classifierVersion: text("classifier_version").notNull().default("1"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

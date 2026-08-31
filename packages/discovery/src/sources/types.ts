@@ -34,7 +34,10 @@ export interface DiscoverySourceRef {
 
 export interface DiscoverySourceAdapter {
   kind: "mcp_registry" | "git" | "http_index";
-  fetchCandidates(source: DiscoverySourceRef, deps?: { fetchImpl?: typeof fetch }): Promise<DiscoveredCandidate[]>;
+  fetchCandidates(
+    source: DiscoverySourceRef,
+    deps?: { fetchImpl?: typeof fetch },
+  ): Promise<DiscoveredCandidate[]>;
 }
 
 /**

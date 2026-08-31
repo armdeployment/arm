@@ -30,7 +30,15 @@
 
 import { execFileSync, execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, chmodSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  copyFileSync,
+  chmodSync,
+  rmSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -189,7 +197,10 @@ function sign() {
       note: "CREDENTIAL GATE: Windows EV signing runs separately in windows/sign.ps1 (needs ARM_WINDOWS_CERT_THUMBPRINT / a HW token) — this build produced an unsigned arm.exe",
     };
   }
-  return { signed: false, note: "Linux binaries are not code-signed; package integrity is carried by the deb/rpm's detached GPG signature (see linux/README)." };
+  return {
+    signed: false,
+    note: "Linux binaries are not code-signed; package integrity is carried by the deb/rpm's detached GPG signature (see linux/README).",
+  };
 }
 
 async function main() {

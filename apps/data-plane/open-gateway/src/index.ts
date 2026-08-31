@@ -28,12 +28,14 @@ const meteringBuffer: Array<{
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
-app.get("/health", (c) => c.json({
-  status: "ok",
-  service: "open-gateway",
-  version: "0.0.0",
-  vllmEndpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT ? "configured" : "unconfigured (stub mode)",
-}));
+app.get("/health", (c) =>
+  c.json({
+    status: "ok",
+    service: "open-gateway",
+    version: "0.0.0",
+    vllmEndpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT ? "configured" : "unconfigured (stub mode)",
+  }),
+);
 
 /**
  * OpenAI-compatible chat completions endpoint.
@@ -41,10 +43,12 @@ app.get("/health", (c) => c.json({
  */
 app.post("/v1/chat/completions", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const { model, messages } = z.object({
-    model: z.string().default("glm-5.2"),
-    messages: z.array(z.object({ role: z.string(), content: z.string() })).default([]),
-  }).parse(body);
+  const { model, messages } = z
+    .object({
+      model: z.string().default("glm-5.2"),
+      messages: z.array(z.object({ role: z.string(), content: z.string() })).default([]),
+    })
+    .parse(body);
 
   const promptText = messages.map((m) => m.content).join("\n");
   const inputTokens = Math.ceil(promptText.length / 4);
@@ -52,27 +56,41 @@ app.post("/v1/chat/completions", async (c) => {
   // Stub: generate a fixture response (real: POST to vLLM /v1/chat/completions)
   const outputTokens = Math.floor(inputTokens * 0.5 + Math.random() * 150);
   // Self-hosted cost: approximate GPU compute cost
-  const costUsd = (inputTokens / 1_000_000) * 0.10 + (outputTokens / 1_000_000) * 0.40;
+  const costUsd = (inputTokens / 1_000_000) * 0.1 + (outputTokens / 1_000_000) * 0.4;
 
   // Record metering
-  meteringBuffer.push({ model, inputTokens, outputTokens, costUsd: Math.round(costUsd * 1000) / 1000, ts: new Date().toISOString() });
+  meteringBuffer.push({
+    model,
+    inputTokens,
+    outputTokens,
+    costUsd: Math.round(costUsd * 1000) / 1000,
+    ts: new Date().toISOString(),
+  });
 
   return c.json({
     id: `chatcmpl-${Date.now()}`,
     object: "chat.completion",
     model,
-    choices: [{
-      index: 0,
-      message: {
-        role: "assistant",
-        content: `[ARM open-gateway stub] Fixture response from self-hosted ${model}. ${outputTokens} tokens. Cost: $${costUsd.toFixed(4)}`,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: `[ARM open-gateway stub] Fixture response from self-hosted ${model}. ${outputTokens} tokens. Cost: $${costUsd.toFixed(4)}`,
+        },
+        finish_reason: "stop",
       },
-      finish_reason: "stop",
-    }],
-    usage: { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens },
+    ],
+    usage: {
+      prompt_tokens: inputTokens,
+      completion_tokens: outputTokens,
+      total_tokens: inputTokens + outputTokens,
+    },
   });
 });
 
-app.get("/metering", (c) => c.json({ events: meteringBuffer.length, buffer: meteringBuffer.slice(-10) }));
+app.get("/metering", (c) =>
+  c.json({ events: meteringBuffer.length, buffer: meteringBuffer.slice(-10) }),
+);
 
 export default app;

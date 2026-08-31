@@ -43,11 +43,7 @@ export const scopeTypeEnum = pgEnum("scope_type", [
 ]);
 
 /** Agent priority tier (§6.6). Assignment is POLICY, not self-declared (Invariant 8). */
-export const priorityTierEnum = pgEnum("priority_tier", [
-  "critical",
-  "standard",
-  "background",
-]);
+export const priorityTierEnum = pgEnum("priority_tier", ["critical", "standard", "background"]);
 
 /** Who spawned an agent. user-owned agents have owner_user_id set; scope-owned have it NULL. */
 export const spawnedByEnum = pgEnum("spawned_by", ["user", "automation", "template"]);

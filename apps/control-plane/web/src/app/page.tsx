@@ -64,7 +64,8 @@ function DashboardContent() {
 
   const s = summary.data;
   const hasChildren = children.data ? children.data.children.length > 0 : false;
-  const pendingPackageApprovals = packageApprovals.data?.assignments.filter((a) => a.status === "requested").length ?? 0;
+  const pendingPackageApprovals =
+    packageApprovals.data?.assignments.filter((a) => a.status === "requested").length ?? 0;
   const pendingAccessApprovals = accessApprovals.data?.requests.length ?? 0;
 
   return (
@@ -73,15 +74,27 @@ function DashboardContent() {
       <div>
         <ScopeBreadcrumb scope={scope} />
         <div className="mt-1.5 flex items-center gap-2.5">
-          <h1 className="text-[22px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>{s.scope.name}</h1>
+          <h1
+            className="text-[22px] font-semibold tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {s.scope.name}
+          </h1>
           <span
             className="label-meta px-2 py-0.5 capitalize"
-            style={{ backgroundColor: "var(--navy-light)", color: "var(--navy)", borderRadius: "var(--radius-sm)" }}
+            style={{
+              backgroundColor: "var(--navy-light)",
+              color: "var(--navy)",
+              borderRadius: "var(--radius-sm)",
+            }}
           >
             {s.scope.type}
           </span>
         </div>
-        <div className="mt-1 flex items-center gap-1.5 text-[12px]" style={{ color: "var(--text-muted)" }}>
+        <div
+          className="mt-1 flex items-center gap-1.5 text-[12px]"
+          style={{ color: "var(--text-muted)" }}
+        >
           <span className="status-dot live" />
           Live · {s.tenantId}
         </div>
@@ -93,12 +106,27 @@ function DashboardContent() {
           <FunnelPanel scope={scope} />
         </div>
         <div className="space-y-4">
-          <StatCard label="Weekly Active" value={active.data ? String(active.data.weeklyActive) : "—"} sub="A1 primary metric" tone="success" />
+          <StatCard
+            label="Weekly Active"
+            value={active.data ? String(active.data.weeklyActive) : "—"}
+            sub="A1 primary metric"
+            tone="success"
+          />
           <a href="/governance" className="block">
-            <StatCard label="Package Approvals" value={String(pendingPackageApprovals)} sub="pending in Governance" tone={pendingPackageApprovals > 0 ? "warning" : "default"} />
+            <StatCard
+              label="Package Approvals"
+              value={String(pendingPackageApprovals)}
+              sub="pending in Governance"
+              tone={pendingPackageApprovals > 0 ? "warning" : "default"}
+            />
           </a>
           <a href="/access" className="block">
-            <StatCard label="Access Approvals" value={String(pendingAccessApprovals)} sub="pending JIT requests" tone={pendingAccessApprovals > 0 ? "warning" : "default"} />
+            <StatCard
+              label="Access Approvals"
+              value={String(pendingAccessApprovals)}
+              sub="pending JIT requests"
+              tone={pendingAccessApprovals > 0 ? "warning" : "default"}
+            />
           </a>
         </div>
       </div>
@@ -113,10 +141,29 @@ function DashboardContent() {
       <div>
         <h2 className="label-meta mb-3">Spend — secondary to adoption (A1)</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Monthly Spend" value={`$${s.totalMonthlySpend.toLocaleString()}`} sub={`Budget: $${s.budgetCap.toLocaleString()}`} tone={s.budgetUtilPct > 80 ? "danger" : s.budgetUtilPct > 60 ? "warning" : "default"} />
-          <StatCard label="Active Agents" value={String(s.agentCount)} sub={`${s.tierBreakdown[0]!.count} critical · ${s.tierBreakdown[1]!.count} standard · ${s.tierBreakdown[2]!.count} background`} />
-          <StatCard label="Budget Used" value={`${s.budgetUtilPct}%`} sub={s.budgetUtilPct > 80 ? "Over threshold" : "Healthy"} tone={s.budgetUtilPct > 80 ? "danger" : "success"} />
-          <StatCard label="Proxied Traffic" value={`${s.proxiedTrafficPct}%`} sub="Target ≥ 80%" tone="success" />
+          <StatCard
+            label="Monthly Spend"
+            value={`$${s.totalMonthlySpend.toLocaleString()}`}
+            sub={`Budget: $${s.budgetCap.toLocaleString()}`}
+            tone={s.budgetUtilPct > 80 ? "danger" : s.budgetUtilPct > 60 ? "warning" : "default"}
+          />
+          <StatCard
+            label="Active Agents"
+            value={String(s.agentCount)}
+            sub={`${s.tierBreakdown[0]!.count} critical · ${s.tierBreakdown[1]!.count} standard · ${s.tierBreakdown[2]!.count} background`}
+          />
+          <StatCard
+            label="Budget Used"
+            value={`${s.budgetUtilPct}%`}
+            sub={s.budgetUtilPct > 80 ? "Over threshold" : "Healthy"}
+            tone={s.budgetUtilPct > 80 ? "danger" : "success"}
+          />
+          <StatCard
+            label="Proxied Traffic"
+            value={`${s.proxiedTrafficPct}%`}
+            sub="Target ≥ 80%"
+            tone="success"
+          />
         </div>
       </div>
 
@@ -127,7 +174,9 @@ function DashboardContent() {
 
       {/* Charts: trend + tier breakdown — de-emphasized detail, not the lead */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">{trend.data && <SpendTrendChart data={trend.data.points} />}</div>
+        <div className="lg:col-span-2">
+          {trend.data && <SpendTrendChart data={trend.data.points} />}
+        </div>
         <TierBreakdownChart data={s.tierBreakdown} />
       </div>
 
@@ -158,10 +207,17 @@ function DashboardContent() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="h-4 w-32 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+      <div
+        className="h-4 w-32 animate-pulse rounded"
+        style={{ backgroundColor: "var(--bg-elevated)" }}
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }} />
+          <div
+            key={i}
+            className="h-28 animate-pulse rounded-lg border"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+          />
         ))}
       </div>
     </div>

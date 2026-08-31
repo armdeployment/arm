@@ -12,6 +12,7 @@ supersedes: none
 **Per-prompt work-type tagging in the data plane**, computed with a **zero-LLM-call classification cascade** (structural features → prompt-hash label cache → fastText/linear classifier → embedding-centroid fallback), with an **async sampled LLM judge for QA only**. Labels are **per-department / per-plant presets with custom labels from day 1**, emitted **per prompt** (every proxied LLM call), and are **enforcement-ready**: the same label stream feeds dashboards today and work-type gates/governance later, with the schema and event model built for gating from the start.
 
 Locked with the requester (2026-08-02):
+
 1. **Taxonomy is per-department/per-plant from day 1** — preset label sets shipped for known department types; admins extend with custom labels. No single global label list.
 2. **Not dashboard-only** — the tag stream is the substrate for future gating (work-type-aware routing) and governance (budgets, priority, audit). Event/schema design must not foreclose enforcement.
 3. **Granularity is per-prompt** — every metered LLM call carries its own tag; no session-level rollup as the unit of classification.
@@ -20,8 +21,8 @@ Locked with the requester (2026-08-02):
 
 ARM already has two classification concepts, neither of which answers "what work is this prompt doing":
 
-- **§6.5 `classification_context`** (D2, locked 2026-07-26) — *data-sensitivity* classification (public/internal/confidential/restricted) of **resources**, tagged at vend/return, gating model routing. DLP, not usage.
-- **§1.3 `taskType`** — a **static, per-agent** attribute ("CNC toolpath optimization") describing what an agent *is*, never what each prompt *does*.
+- **§6.5 `classification_context`** (D2, locked 2026-07-26) — _data-sensitivity_ classification (public/internal/confidential/restricted) of **resources**, tagged at vend/return, gating model routing. DLP, not usage.
+- **§1.3 `taskType`** — a **static, per-agent** attribute ("CNC toolpath optimization") describing what an agent _is_, never what each prompt _does_.
 
 The `token_usage_event` ledger (§4.2) carries `priority_tier`, `model_id`, tokens — but no work-type. Management cannot answer "how is each agent being used, by work category, per department/plant?" except via static agent metadata.
 
@@ -41,13 +42,13 @@ Zero cost, sub-ms. **Rejected as sole mechanism.** Covers ~60% of traffic on str
 
 The industry-validated pattern (LiteLLM Auto Router v2 is the only in-gateway reference; the 3-tier cascade is the consensus across semantic-router literature):
 
-| Stage | Mechanism | Cost | Latency | Coverage role |
-|---|---|---|---|---|
-| 1 | Structural freebies (model_id, agent type from UA, tool-call names, file paths, priority tier, department) | $0 | 0 ms | ~60%: obvious cases fully labeled from already-present metadata |
-| 2 | Prompt-hash → label cache (LRU) | $0 | ns | Repeats (15–20% of gateway traffic is exact-duplicate; 40–70% for classification/extraction-heavy workloads) |
-| 3 | fastText / TF-IDF+SGD→ONNX linear classifier, one tiny model per taxonomy | ~0 CPU | µs–1 ms | The general case; F1 0.85–0.92 on intent tasks — beats an 8B LLM on the same task at ~1/1000 the cost |
-| 4 | Embedding centroid (MiniLM-L6 / bge-small, ONNX, in-VPC) | ~0 CPU | 6–35 ms | **Only** when stage 3 confidence < threshold; class centroids from 5–10 labeled examples; result may be `unknown` |
-| QA | Sampled LLM judge (1–5%, batch cron) | 1–5% of calls × judge tokens | offline | Label-quality audit + taxonomy drift detection. The only LLM spend, ever. |
+| Stage | Mechanism                                                                                                  | Cost                         | Latency | Coverage role                                                                                                     |
+| ----- | ---------------------------------------------------------------------------------------------------------- | ---------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1     | Structural freebies (model_id, agent type from UA, tool-call names, file paths, priority tier, department) | $0                           | 0 ms    | ~60%: obvious cases fully labeled from already-present metadata                                                   |
+| 2     | Prompt-hash → label cache (LRU)                                                                            | $0                           | ns      | Repeats (15–20% of gateway traffic is exact-duplicate; 40–70% for classification/extraction-heavy workloads)      |
+| 3     | fastText / TF-IDF+SGD→ONNX linear classifier, one tiny model per taxonomy                                  | ~0 CPU                       | µs–1 ms | The general case; F1 0.85–0.92 on intent tasks — beats an 8B LLM on the same task at ~1/1000 the cost             |
+| 4     | Embedding centroid (MiniLM-L6 / bge-small, ONNX, in-VPC)                                                   | ~0 CPU                       | 6–35 ms | **Only** when stage 3 confidence < threshold; class centroids from 5–10 labeled examples; result may be `unknown` |
+| QA    | Sampled LLM judge (1–5%, batch cron)                                                                       | 1–5% of calls × judge tokens | offline | Label-quality audit + taxonomy drift detection. The only LLM spend, ever.                                         |
 
 **Why per-prompt works at this cost:** stage 2's cache means repeated prompts (autocomplete, retries, tool loops) are free; stage 1 covers structural cases; only genuinely novel free-text prompts reach stage 3 (µs). Stage 4 fires on a small ambiguous tail. Worst-case added latency is dominated by stage 4 (off-budget), so stage 4 runs only when stage 3 is uncertain — and `unknown` is a first-class label, never a guess.
 
@@ -67,6 +68,7 @@ The industry-validated pattern (LiteLLM Auto Router v2 is the only in-gateway re
 ### Data model (§4.2 delta)
 
 `token_usage_event` gains:
+
 - `work_type LowCardinality(String)` — primary label (from the agent's department taxonomy; NULL until the cascade resolves, i.e. `unknown` is stored as-is, never guessed)
 - `usage_tags Array(LowCardinality(String))` — secondary tags (structural, e.g. `tool:web_search`, `model:claude-sonnet`)
 - `classifier_version UInt32` + `classifier_stage Enum('structural','cache','linear','embedding','unknown')` — enables re-labeling when taxonomies change and gate-audit forensics

@@ -30,7 +30,9 @@ const AGENTS: SimAgent[] = [
     maxCalls: 8,
     prompts: [
       "Review this TypeScript function for potential memory leaks: async function processData(items: Item[]) { return items.map(async i => await fetch(i.url)); }",
-      "Check this SQL query for injection risks: SELECT * FROM users WHERE name = '" + "user_input" + "'",
+      "Check this SQL query for injection risks: SELECT * FROM users WHERE name = '" +
+        "user_input" +
+        "'",
       "Analyze this React component for re-render issues: const Component = ({data}) => { const sorted = data.sort(); return <List items={sorted} />; }",
       "Review this error handling pattern and suggest improvements: try { await api.call(); } catch(e) { console.log(e); }",
     ],
@@ -185,7 +187,7 @@ async function makeCall(agent: SimAgent, promptIndex: number): Promise<void> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${agent.apiKey}`,
+        Authorization: `Bearer ${agent.apiKey}`,
       },
       body: JSON.stringify({
         model: agent.model,
@@ -196,7 +198,7 @@ async function makeCall(agent: SimAgent, promptIndex: number): Promise<void> {
       }),
     });
 
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     callCount++;
 
     if (res.ok) {
@@ -204,10 +206,17 @@ async function makeCall(agent: SimAgent, promptIndex: number): Promise<void> {
       const tokens = data.usage?.total_tokens ?? 0;
       const costCents = parseInt(res.headers.get("X-ARM-Cost-CloudCents") ?? "0");
       const savings = parseInt(res.headers.get("X-ARM-Savings-Cents") ?? "0");
-      results.push({ agent: agent.name, status: "success", model: agent.model, tokens, costCents, latencyMs: Date.now() - t0 });
+      results.push({
+        agent: agent.name,
+        status: "success",
+        model: agent.model,
+        tokens,
+        costCents,
+        latencyMs: Date.now() - t0,
+      });
       const preview = (data.choices?.[0]?.message?.content ?? "").slice(0, 60).replace(/\n/g, " ");
       process.stdout.write(
-        `  ✓ [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → ${agent.model.padEnd(14)} ${String(tokens).padStart(4)} tok  ${String(Date.now() - t0).padStart(4)}ms  $${(costCents/100).toFixed(4)} cloud, $${(savings/100).toFixed(4)} saved\n`
+        `  ✓ [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → ${agent.model.padEnd(14)} ${String(tokens).padStart(4)} tok  ${String(Date.now() - t0).padStart(4)}ms  $${(costCents / 100).toFixed(4)} cloud, $${(savings / 100).toFixed(4)} saved\n`,
       );
     } else {
       deniedCount++;
@@ -219,29 +228,35 @@ async function makeCall(agent: SimAgent, promptIndex: number): Promise<void> {
       else if (res.status === 401) statusLabel = "AUTH";
       else statusLabel = `HTTP ${res.status}`;
       process.stdout.write(
-        `  [${statusLabel}] [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → ${errorMsg.slice(0, 70)}\n`
+        `  [${statusLabel}] [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → ${errorMsg.slice(0, 70)}\n`,
       );
     }
   } catch (err) {
     callCount++;
     results.push({ agent: agent.name, status: "error", error: String(err) });
-    process.stdout.write(`  ✗ [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → Connection error\n`);
+    process.stdout.write(
+      `  ✗ [${agent.department.padEnd(12)}] ${agent.name.padEnd(22)} → Connection error\n`,
+    );
   }
 }
 
 async function main() {
   console.log("\n╔══════════════════════════════════════════════════════════════╗");
   console.log("║  ARM Enterprise Simulation — Agent Activity                  ║");
-  console.log(`║  ${AGENTS.length} agents · ${DURATION_SEC}s duration · proxy at ${PROXY_URL.padEnd(26)}║`);
+  console.log(
+    `║  ${AGENTS.length} agents · ${DURATION_SEC}s duration · proxy at ${PROXY_URL.padEnd(26)}║`,
+  );
   console.log("╚══════════════════════════════════════════════════════════════╝\n");
 
   // Verify proxy is up
   try {
     const health = await fetch(`${PROXY_URL}/health`);
-    const h = await health.json() as any;
+    const h = (await health.json()) as any;
     console.log(`  Proxy: ${h.service} v${h.version} ✓\n`);
   } catch {
-    console.error("  ✗ Proxy not reachable. Start it with: pnpm --filter @arm-app/simulation proxy\n");
+    console.error(
+      "  ✗ Proxy not reachable. Start it with: pnpm --filter @arm-app/simulation proxy\n",
+    );
     process.exit(1);
   }
 
@@ -251,11 +266,21 @@ async function main() {
     try {
       await fetch(`${PROXY_URL}/v1/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer arm_sk_eng_review_x1a2b3" },
-        body: JSON.stringify({ model, messages: [{ role: "user", content: "OK" }], max_tokens: 1, stream: false }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer arm_sk_eng_review_x1a2b3",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: "OK" }],
+          max_tokens: 1,
+          stream: false,
+        }),
       });
       console.log(`    ${model} warmed up`);
-    } catch { console.log(`    ${model} warmup failed`); }
+    } catch {
+      console.log(`    ${model} warmup failed`);
+    }
   }
   console.log("");
   console.log("  DEPARTMENT     AGENT                   MODEL            TOKENS  LAT   COST\n");
@@ -282,20 +307,20 @@ async function main() {
   }
 
   // Wait for duration + buffer for slow in-flight calls
-  await new Promise(resolve => setTimeout(resolve, DURATION_SEC * 1000 + 15000));
+  await new Promise((resolve) => setTimeout(resolve, DURATION_SEC * 1000 + 15000));
 
   // Clear any remaining timers
-  timers.forEach(t => clearTimeout(t));
+  timers.forEach((t) => clearTimeout(t));
 
   // Summary
   console.log("\n  ──────────────────────────────────────────────────────────────────────────");
-  const totalTokens = results.filter(r => r.tokens).reduce((s, r) => s + (r.tokens ?? 0), 0);
-  const totalCost = results.filter(r => r.costCents).reduce((s, r) => s + (r.costCents ?? 0), 0);
+  const totalTokens = results.filter((r) => r.tokens).reduce((s, r) => s + (r.tokens ?? 0), 0);
+  const totalCost = results.filter((r) => r.costCents).reduce((s, r) => s + (r.costCents ?? 0), 0);
 
   // Per-department breakdown
   const byDept: Record<string, { calls: number; tokens: number; cost: number }> = {};
   for (const r of results) {
-    const agent = AGENTS.find(a => a.name === r.agent)!;
+    const agent = AGENTS.find((a) => a.name === r.agent)!;
     const d = byDept[agent.department] ?? { calls: 0, tokens: 0, cost: 0 };
     d.calls++;
     d.tokens += r.tokens ?? 0;
@@ -306,14 +331,25 @@ async function main() {
   console.log("\n  DEPARTMENT          CALLS   TOKENS     CLOUD-EQUIV COST");
   console.log("  ────────────────────────────────────────────────────────");
   for (const [dept, d] of Object.entries(byDept)) {
-    console.log(`  ${dept.padEnd(20)} ${String(d.calls).padStart(4)}    ${String(d.tokens).padStart(7)}    $${(d.cost/100).toFixed(4)}`);
+    console.log(
+      `  ${dept.padEnd(20)} ${String(d.calls).padStart(4)}    ${String(d.tokens).padStart(7)}    $${(d.cost / 100).toFixed(4)}`,
+    );
   }
   console.log("  ────────────────────────────────────────────────────────");
-  console.log(`  ${"TOTAL".padEnd(20)} ${String(callCount).padStart(4)}    ${String(totalTokens).padStart(7)}    $${(totalCost/100).toFixed(4)}`);
-  console.log(`  ${"SUCCESS".padEnd(20)} ${String(successCount).padStart(4)}    ${"DENIED".padEnd(10)} ${String(deniedCount).padStart(4)}`);
-  console.log(`  ${"SAVINGS (self-hosted)".padEnd(20)}                                    $${(totalCost/100).toFixed(4)}\n`);
+  console.log(
+    `  ${"TOTAL".padEnd(20)} ${String(callCount).padStart(4)}    ${String(totalTokens).padStart(7)}    $${(totalCost / 100).toFixed(4)}`,
+  );
+  console.log(
+    `  ${"SUCCESS".padEnd(20)} ${String(successCount).padStart(4)}    ${"DENIED".padEnd(10)} ${String(deniedCount).padStart(4)}`,
+  );
+  console.log(
+    `  ${"SAVINGS (self-hosted)".padEnd(20)}                                    $${(totalCost / 100).toFixed(4)}\n`,
+  );
 
   process.exit(0);
 }
 
-main().catch(e => { console.error("Simulation error:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("Simulation error:", e);
+  process.exit(1);
+});

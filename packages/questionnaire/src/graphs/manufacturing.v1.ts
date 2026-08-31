@@ -25,10 +25,26 @@ const raw = {
       prompt: "Where do you work?",
       help: "Pick the plant or site closest to your primary work location.",
       options: [
-        { value: "hq", label: "Headquarters / office", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "plant_a", label: "Plant A", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "plant_b", label: "Plant B", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "other_site", label: "Another site", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "hq",
+          label: "Headquarters / office",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "plant_a",
+          label: "Plant A",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "plant_b",
+          label: "Plant B",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "other_site",
+          label: "Another site",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
       ],
       next: [{ when: null, goto: "role_cluster" }],
     },
@@ -182,7 +198,11 @@ const raw = {
         {
           value: "sharepoint",
           label: "SharePoint",
-          signals: { job_functions: ["office_worker_general"], components: ["sharepoint"], weight: 1 },
+          signals: {
+            job_functions: ["office_worker_general"],
+            components: ["sharepoint"],
+            weight: 1,
+          },
         },
         {
           value: "tia_portal",
@@ -197,12 +217,20 @@ const raw = {
         {
           value: "teamcenter",
           label: "Teamcenter",
-          signals: { job_functions: ["design_release_engineer"], components: ["teamcenter"], weight: 1 },
+          signals: {
+            job_functions: ["design_release_engineer"],
+            components: ["teamcenter"],
+            weight: 1,
+          },
         },
         {
           value: "windchill",
           label: "Windchill",
-          signals: { job_functions: ["design_release_engineer"], components: ["windchill"], weight: 1 },
+          signals: {
+            job_functions: ["design_release_engineer"],
+            components: ["windchill"],
+            weight: 1,
+          },
         },
       ],
       next: [{ when: null, goto: "code_plc" }],
@@ -228,8 +256,16 @@ const raw = {
       prompt: "How do you prefer to work?",
       help: "This tunes your agent's defaults — it doesn't change which package you get.",
       options: [
-        { value: "chat_first", label: "Chat first", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "in_editor", label: "In my editor", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "chat_first",
+          label: "Chat first",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "in_editor",
+          label: "In my editor",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
         {
           value: "scheduled_reports",
           label: "Scheduled reports",
@@ -244,9 +280,21 @@ const raw = {
       prompt: "Which computer will you install on?",
       help: "This selects the right installer — it is never stored on your response.",
       options: [
-        { value: "windows", label: "Windows", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "macos", label: "macOS", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "linux", label: "Linux", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "windows",
+          label: "Windows",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "macos",
+          label: "macOS",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "linux",
+          label: "Linux",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
       ],
       next: [{ when: null, goto: null }],
     },
@@ -256,7 +304,11 @@ const raw = {
       prompt: "Thanks — none of the standard roles fit your day-to-day.",
       help: "We've recorded that as a coverage gap for the library team — no free text is stored, just this structured marker.",
       options: [
-        { value: "ack", label: "Continue", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "ack",
+          label: "Continue",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
       ],
       next: [],
     },

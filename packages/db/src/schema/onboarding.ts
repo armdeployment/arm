@@ -29,7 +29,9 @@ export const questionnaireDefinitionTable = pgTable(
   "questionnaire_definition",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     version: integer("version").notNull().default(1),
     industryProfile: industryProfileEnum("industry_profile").notNull(),
     graph: jsonb("graph").$type<Record<string, unknown>>().notNull(),
@@ -53,7 +55,9 @@ export const questionnaireDefinitionTable = pgTable(
  */
 export const questionnaireResponseTable = pgTable("questionnaire_response", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   definitionVersion: integer("definition_version").notNull(),
   userId: uuid("user_id").references(() => userTable.id),
   orgNodeId: uuid("org_node_id"),
@@ -80,10 +84,14 @@ export const setupTokenTable = pgTable(
   "setup_token",
   {
     id: uuid("id").primaryKey().defaultRandom(), // = jti
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     /** sha256 of the signed token — the token itself is NEVER stored (Invariant 4). */
     tokenSha256: text("token_sha256").notNull(),
-    userId: uuid("user_id").notNull().references(() => userTable.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => userTable.id),
     packageVersionIds: jsonb("package_version_ids").$type<string[]>().notNull().default([]),
     /** sha256 of the connections manifest this token was issued against. */
     connectionsDigest: text("connections_digest").notNull(),
@@ -94,6 +102,9 @@ export const setupTokenTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("setup_token_tenant_id_activation_code_uq").on(table.tenantId, table.activationCode),
+    uniqueIndex("setup_token_tenant_id_activation_code_uq").on(
+      table.tenantId,
+      table.activationCode,
+    ),
   ],
 );

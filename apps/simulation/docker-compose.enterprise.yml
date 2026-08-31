@@ -28,7 +28,6 @@ networks:
     driver: bridge
 
 services:
-
   # ── Infrastructure (internal network only) ──────────────────────────────
 
   postgres-ent:
@@ -51,7 +50,11 @@ services:
       CLICKHOUSE_PASSWORD: arm_dev_password
       CLICKHOUSE_DB: arm
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'",
+        ]
       interval: 3s
       retries: 15
       start_period: 10s
@@ -65,9 +68,9 @@ services:
     networks:
       armtest-internal:
         aliases:
-          - arm.armtest.com        # Main ARM domain
-          - proxy.armtest.com      # LLM proxy endpoint
-          - dashboard.armtest.com  # Management dashboard
+          - arm.armtest.com # Main ARM domain
+          - proxy.armtest.com # LLM proxy endpoint
+          - dashboard.armtest.com # Management dashboard
     depends_on:
       postgres-ent:
         condition: service_healthy
@@ -80,7 +83,7 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       PROXY_PORT: "8787"
     ports:
-      - "8787:8787"   # ARM Proxy (accessible from host for monitoring)
+      - "8787:8787" # ARM Proxy (accessible from host for monitoring)
 
   # ── Employee Workstations ───────────────────────────────────────────────
   #  Each container = one employee's computer running a coding agent

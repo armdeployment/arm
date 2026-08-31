@@ -15,31 +15,34 @@ describe("FlowDiagram — renders diagram content module data, with accessible t
     ["employee-path", employeePathDiagram, []],
     ["trust-boundary", trustBoundaryDiagram, [trustBoundaryCrossingEdgeIndex]],
     ["artifactory", artifactoryDiagram, []],
-  ] as const)("%s: every node label, sublabel, and edge label is present in the SVG", (id, labels, boundaryEdgeIndexes) => {
-    const { container } = render(
-      <FlowDiagram labels={labels} boundaryEdgeIndexes={[...boundaryEdgeIndexes]} titleId={id} />,
-    );
-    const svg = container.querySelector("svg");
-    expect(svg).toBeTruthy();
-    expect(svg?.getAttribute("role")).toBe("img");
+  ] as const)(
+    "%s: every node label, sublabel, and edge label is present in the SVG",
+    (id, labels, boundaryEdgeIndexes) => {
+      const { container } = render(
+        <FlowDiagram labels={labels} boundaryEdgeIndexes={[...boundaryEdgeIndexes]} titleId={id} />,
+      );
+      const svg = container.querySelector("svg");
+      expect(svg).toBeTruthy();
+      expect(svg?.getAttribute("role")).toBe("img");
 
-    const text = container.textContent ?? "";
-    expect(text).toContain(labels.title);
-    expect(text).toContain(labels.desc);
-    for (const node of labels.nodes) {
-      expect(text).toContain(node.label);
-      if (node.sublabel) expect(text).toContain(node.sublabel);
-    }
-    for (const edge of labels.edges) {
-      if (edge.label) expect(text).toContain(edge.label);
-    }
+      const text = container.textContent ?? "";
+      expect(text).toContain(labels.title);
+      expect(text).toContain(labels.desc);
+      for (const node of labels.nodes) {
+        expect(text).toContain(node.label);
+        if (node.sublabel) expect(text).toContain(node.sublabel);
+      }
+      for (const edge of labels.edges) {
+        if (edge.label) expect(text).toContain(edge.label);
+      }
 
-    // Colors must come from CSS custom properties, never hard-coded hex,
-    // so the diagram flips with the page's theme (guide 04 §3).
-    const html = container.innerHTML;
-    expect(html).not.toMatch(/#[0-9a-fA-F]{3,6}/);
-    expect(html).toMatch(/var\(--/);
-  });
+      // Colors must come from CSS custom properties, never hard-coded hex,
+      // so the diagram flips with the page's theme (guide 04 §3).
+      const html = container.innerHTML;
+      expect(html).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+      expect(html).toMatch(/var\(--/);
+    },
+  );
 
   it("has a <title> and <desc> wired to aria-labelledby for screen readers", () => {
     const { container } = render(<FlowDiagram labels={employeePathDiagram} titleId="a11y-check" />);

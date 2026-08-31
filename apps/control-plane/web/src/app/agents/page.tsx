@@ -11,7 +11,14 @@ const STATUS_FILTERS = ["all", "active", "disabled"] as const;
 
 export default function AgentsPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense
+      fallback={
+        <div
+          className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+          style={{ borderColor: "var(--border)" }}
+        />
+      }
+    >
       <AgentsPageContent />
     </Suspense>
   );
@@ -27,12 +34,20 @@ function AgentsPageContent() {
       <div className="flex items-center justify-between">
         <div>
           <ScopeBreadcrumb scope={scope} />
-          <h1 className="mt-2 text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Agents</h1>
+          <h1
+            className="mt-2 text-2xl font-bold tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Agents
+          </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
             Governed identities — every agent has an accountable stakeholder (Invariant §11.7)
           </p>
         </div>
-        <div className="flex gap-1 rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}>
+        <div
+          className="flex gap-1 rounded-md border p-1"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)" }}
+        >
           {STATUS_FILTERS.map((f) => (
             <button
               key={f}
@@ -50,11 +65,18 @@ function AgentsPageContent() {
       </div>
 
       {isLoading || !data ? (
-        <div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+        <div
+          className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+          style={{ borderColor: "var(--border)" }}
+        />
       ) : data.agents.length === 0 ? (
         <div
           className="rounded-lg border px-5 py-16 text-center text-sm"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-muted)" }}
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-muted)",
+          }}
         >
           No agents in this scope
         </div>

@@ -81,7 +81,10 @@ export async function sendChatMessage(args: ChatTurnArgs): Promise<string> {
   }
 
   if (!res.ok) {
-    throw new ArmClientError("PROXY_UNREACHABLE", `install assistant request failed (HTTP ${res.status})`);
+    throw new ArmClientError(
+      "PROXY_UNREACHABLE",
+      `install assistant request failed (HTTP ${res.status})`,
+    );
   }
 
   let json: unknown;

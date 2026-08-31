@@ -27,7 +27,14 @@ const TENANT_ID = "tn-fixture-1";
 const CMM_CONNECTOR_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 const AVAILABLE_COMPONENTS: ResolvableComponentVersion[] = [
-  { componentId: CMM_CONNECTOR_ID, slug: "spc.cmm-connector", version: "2.1.0", yanked: false, tenantId: null, sourceKind: "first_party" },
+  {
+    componentId: CMM_CONNECTOR_ID,
+    slug: "spc.cmm-connector",
+    version: "2.1.0",
+    yanked: false,
+    tenantId: null,
+    sourceKind: "first_party",
+  },
 ];
 
 const seed: WorkPackageSeedInput = {
@@ -38,7 +45,12 @@ const seed: WorkPackageSeedInput = {
   description: "8D / PPAP / SPC toolkit",
   approvalRequired: true,
   components: [
-    { component: "spc.cmm-connector", componentVersion: "2.1.0", kind: "connector", scopes: ["invoke", "configure"] },
+    {
+      component: "spc.cmm-connector",
+      componentVersion: "2.1.0",
+      kind: "connector",
+      scopes: ["invoke", "configure"],
+    },
   ],
   jobFunctions: ["quality_engineer"],
   permissions: ["tool:invoke", "resource:read"],
@@ -50,23 +62,40 @@ const seed: WorkPackageSeedInput = {
 
 describe("buildPackageVersionFromSeed", () => {
   it("resolves slug refs through @arm/artifactory's resolve() into insert-ready componentId refs", () => {
-    const built = buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const built = buildPackageVersionFromSeed(
+      seed,
+      PACKAGE_ID,
+      "1.0.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     expect(built.components).toEqual([
-      { componentId: CMM_CONNECTOR_ID, version: "2.1.0", kind: "connector", scopes: ["invoke", "configure"] },
+      {
+        componentId: CMM_CONNECTOR_ID,
+        version: "2.1.0",
+        kind: "connector",
+        scopes: ["invoke", "configure"],
+      },
     ]);
   });
 
   it("throws when a seed slug@version has no match in the Component Registry", () => {
-    expect(() => buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", [], TENANT_ID)).toThrowError(
-      /spc\.cmm-connector/,
-    );
-    expect(() => buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", [], TENANT_ID)).toThrowError(
-      /Component Registry/,
-    );
+    expect(() =>
+      buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", [], TENANT_ID),
+    ).toThrowError(/spc\.cmm-connector/);
+    expect(() =>
+      buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", [], TENANT_ID),
+    ).toThrowError(/Component Registry/);
   });
 
   it("produces all required insert fields", () => {
-    const built = buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const built = buildPackageVersionFromSeed(
+      seed,
+      PACKAGE_ID,
+      "1.0.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     expect(built.packageId).toBe(PACKAGE_ID);
     expect(built.version).toBe("1.0.0");
     expect(built.manifestVersion).toBe(2);
@@ -80,7 +109,13 @@ describe("buildPackageVersionFromSeed", () => {
   });
 
   it("round-trips: recomputing the hash from the returned object yields the same value", () => {
-    const built = buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.1.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const built = buildPackageVersionFromSeed(
+      seed,
+      PACKAGE_ID,
+      "1.1.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     const recomputed = manifestSha256(
       canonicalManifest({
         components: built.components,
@@ -96,10 +131,23 @@ describe("buildPackageVersionFromSeed", () => {
   });
 
   it("stores the hash of the wire-shaped manifest v2 over the RESOLVED refs", () => {
-    const built = buildPackageVersionFromSeed(seed, PACKAGE_ID, "2.0.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const built = buildPackageVersionFromSeed(
+      seed,
+      PACKAGE_ID,
+      "2.0.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     const wire = {
       manifest_version: 2 as const,
-      components: [{ component_id: CMM_CONNECTOR_ID, version: "2.1.0", kind: "connector", scopes: ["invoke", "configure"] }],
+      components: [
+        {
+          component_id: CMM_CONNECTOR_ID,
+          version: "2.1.0",
+          kind: "connector",
+          scopes: ["invoke", "configure"],
+        },
+      ],
       permissions: [...seed.permissions].sort(),
       model_routing: seed.modelRouting,
       budget_template: seed.budgetTemplate,
@@ -111,7 +159,13 @@ describe("buildPackageVersionFromSeed", () => {
   });
 
   it("produces different hashes for different content of the same seed", () => {
-    const v1 = buildPackageVersionFromSeed(seed, PACKAGE_ID, "1.0.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const v1 = buildPackageVersionFromSeed(
+      seed,
+      PACKAGE_ID,
+      "1.0.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     const v2 = buildPackageVersionFromSeed(
       { ...seed, permissions: [...seed.permissions, "resource:extra"] },
       PACKAGE_ID,
@@ -126,12 +180,23 @@ describe("buildPackageVersionFromSeed", () => {
     const multiComponent: WorkPackageSeedInput = {
       ...seed,
       components: [
-        { component: "spc.cmm-connector", componentVersion: "2.1.0", kind: "connector", scopes: [] },
+        {
+          component: "spc.cmm-connector",
+          componentVersion: "2.1.0",
+          kind: "connector",
+          scopes: [],
+        },
       ],
       permissions: ["zeta:perm", "alpha:perm"],
       jobFunctions: ["zeta_role", "alpha_role"],
     };
-    const built = buildPackageVersionFromSeed(multiComponent, PACKAGE_ID, "1.0.0", AVAILABLE_COMPONENTS, TENANT_ID);
+    const built = buildPackageVersionFromSeed(
+      multiComponent,
+      PACKAGE_ID,
+      "1.0.0",
+      AVAILABLE_COMPONENTS,
+      TENANT_ID,
+    );
     expect(built.permissions).toEqual(["alpha:perm", "zeta:perm"]);
     expect(built.jobFunctions).toEqual(["alpha_role", "zeta_role"]);
   });

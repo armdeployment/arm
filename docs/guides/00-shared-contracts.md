@@ -32,7 +32,7 @@ Delete the old tables and their proto schemas. There is no production data — d
 **not** write a compatibility shim, a dual-read path, or a v1 canonicalizer.
 
 Permission verbs are the one thing that does **not** rename. `tool:invoke`,
-`tool:configure`, `tool:publish` (D8/D9) stay as-is and apply only to *callable*
+`tool:configure`, `tool:publish` (D8/D9) stay as-is and apply only to _callable_
 components (`kind ∈ {mcp, http_api, cli, connector}`). Non-callable components
 (skill, subagent, template, prompt_pack, plugin) are installed, not invoked, and
 have no verb. Record this rule in `docs/CONCEPTS.md`.
@@ -43,24 +43,41 @@ have no verb. Record this rule in `docs/CONCEPTS.md`.
 
 ```ts
 export const componentKindEnum = pgEnum("component_kind", [
-  "mcp", "http_api", "cli", "connector",      // callable  → tool:* verbs apply
-  "plugin", "skill", "subagent", "template", "prompt_pack", // installable
+  "mcp",
+  "http_api",
+  "cli",
+  "connector", // callable  → tool:* verbs apply
+  "plugin",
+  "skill",
+  "subagent",
+  "template",
+  "prompt_pack", // installable
 ]);
 
 export const componentSourceKindEnum = pgEnum("component_source_kind", [
-  "first_party", "tenant_authored", "imported",
+  "first_party",
+  "tenant_authored",
+  "imported",
 ]);
 
-export const storageBackendEnum   = pgEnum("storage_backend", ["fs", "s3", "oci"]);
-export const blobResidencyEnum    = pgEnum("blob_residency", ["control_plane", "tenant"]);
+export const storageBackendEnum = pgEnum("storage_backend", ["fs", "s3", "oci"]);
+export const blobResidencyEnum = pgEnum("blob_residency", ["control_plane", "tenant"]);
 export const discoverySourceKindEnum = pgEnum("discovery_source_kind", [
-  "mcp_registry", "git", "http_index", "marketplace",
+  "mcp_registry",
+  "git",
+  "http_index",
+  "marketplace",
 ]);
 export const discoveryCandidateStatusEnum = pgEnum("discovery_candidate_status", [
-  "new", "triaged", "promoted", "rejected",
+  "new",
+  "triaged",
+  "promoted",
+  "rejected",
 ]);
 export const questionnaireStatusEnum = pgEnum("questionnaire_status", [
-  "draft", "published", "archived",
+  "draft",
+  "published",
+  "archived",
 ]);
 ```
 
@@ -190,7 +207,7 @@ structural mirrors in `types.ts`):
 - `packageManifestV2Schema` (the 8 fields above)
 - `questionnaireGraphSchema` — see §5.1
 - `questionnaireAnswerSchema` — **structured values only**: `z.record(z.string(),
-  z.union([z.string(), z.array(z.string()), z.number(), z.boolean()]))`. No free-text
+z.union([z.string(), z.array(z.string()), z.number(), z.boolean()]))`. No free-text
   field exists in this schema; that is the enforcement point for A5.
 - `setupTokenClaimsSchema` — see §5.2
 - `activationEventSchema`, `componentPullEventSchema` — see §6
@@ -202,18 +219,20 @@ structural mirrors in `types.ts`):
 ```ts
 questionNodeSchema = z.object({
   id: z.string(),
-  kind: z.enum(["single", "multi", "scale"]),        // NOTE: no "text" — A5
+  kind: z.enum(["single", "multi", "scale"]), // NOTE: no "text" — A5
   prompt: z.string(),
   help: z.string().default(""),
-  options: z.array(z.object({
-    value: z.string(),
-    label: z.string(),
-    signals: z.object({
-      job_functions: z.array(z.string()).default([]),
-      components:    z.array(z.string()).default([]),
-      weight:        z.number().default(1),
+  options: z.array(
+    z.object({
+      value: z.string(),
+      label: z.string(),
+      signals: z.object({
+        job_functions: z.array(z.string()).default([]),
+        components: z.array(z.string()).default([]),
+        weight: z.number().default(1),
+      }),
     }),
-  })),
+  ),
   next: z.array(z.object({ when: z.string().nullable(), goto: z.string().nullable() })),
 });
 
@@ -229,15 +248,18 @@ questionnaireGraphSchema = z.object({
 
 ```ts
 setupTokenClaimsSchema = z.object({
-  iss: z.string(), aud: z.literal("arm-client"), jti: z.string(),
-  sub: z.string(),                 // user id
+  iss: z.string(),
+  aud: z.literal("arm-client"),
+  jti: z.string(),
+  sub: z.string(), // user id
   tenant_id: z.string(),
   package_version_ids: z.array(z.string()),
-  connections_digest: z.string(),  // sha256 of the connections manifest
+  connections_digest: z.string(), // sha256 of the connections manifest
   control_plane_url: z.string().url(),
   data_plane_url: z.string().url(),
   proxy_url: z.string().url(),
-  exp: z.number(), iat: z.number(),
+  exp: z.number(),
+  iat: z.number(),
 });
 ```
 
@@ -334,13 +356,13 @@ frozen here):
 Create in `scripts/guardrails/src/checks/`, registered in `run.ts`, each currently
 asserting the shape it will police (and **failing loudly on empty input** — §14.2):
 
-| File | Asserts | Filled by |
-|---|---|---|
-| `component-review.ts` | no `work_package_version.components` entry references a component whose `review_status ≠ approved` | `library` |
-| `artifact-integrity.ts` | every `component_version` with a blob has a `sha256:` digest; no manifest contains a mutable URL where a digest belongs | `library` |
-| `blob-residency.ts` | no `component_blob` with `source_kind = tenant_authored` has `residency = control_plane` (Invariant 1) | `library` |
-| `questionnaire-determinism.ts` | the mapping module imports nothing outside `proto`/`config`; no `fetch`, `Date.now`, `Math.random`, or `crypto.randomUUID` reachable from it | `client` |
-| `no-content-in-activation.ts` | `activationEventSchema` + `questionnaireAnswerSchema` contain no free-text field (extends `no-content-egress`) | `client` |
+| File                           | Asserts                                                                                                                                      | Filled by |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `component-review.ts`          | no `work_package_version.components` entry references a component whose `review_status ≠ approved`                                           | `library` |
+| `artifact-integrity.ts`        | every `component_version` with a blob has a `sha256:` digest; no manifest contains a mutable URL where a digest belongs                      | `library` |
+| `blob-residency.ts`            | no `component_blob` with `source_kind = tenant_authored` has `residency = control_plane` (Invariant 1)                                       | `library` |
+| `questionnaire-determinism.ts` | the mapping module imports nothing outside `proto`/`config`; no `fetch`, `Date.now`, `Math.random`, or `crypto.randomUUID` reachable from it | `client`  |
+| `no-content-in-activation.ts`  | `activationEventSchema` + `questionnaireAnswerSchema` contain no free-text field (extends `no-content-egress`)                               | `client`  |
 
 Update the `AGENTS.md` CI table and `docs/arm-spec.md` §14.1 in the same PR
 (`ci-sync` guard enforces the first).

@@ -50,8 +50,22 @@ describe("resolveAccess — basic semantics", () => {
 
   it("denies when a matching deny grant exists at the same level", () => {
     const grants: Grant[] = [
-      { scopeType: "team", scopeId: "t1", principalId: "p1", resourceId: "r1", actions: ["read"], deny: false },
-      { scopeType: "team", scopeId: "t1", principalId: "p1", resourceId: "r1", actions: ["read"], deny: true },
+      {
+        scopeType: "team",
+        scopeId: "t1",
+        principalId: "p1",
+        resourceId: "r1",
+        actions: ["read"],
+        deny: false,
+      },
+      {
+        scopeType: "team",
+        scopeId: "t1",
+        principalId: "p1",
+        resourceId: "r1",
+        actions: ["read"],
+        deny: true,
+      },
     ];
     const r = resolveAccess({
       grants,
@@ -176,9 +190,9 @@ describe("Invariant §11.3 — deny-wins property tests (fast-check)", () => {
   it("if only allows exist (no deny), the result is always allow", () => {
     fc.assert(
       fc.property(
-        fc.array(grantArbitrary, { minLength: 1, maxLength: 10 }).map((gs) =>
-          gs.map((g) => ({ ...g, deny: false })),
-        ),
+        fc
+          .array(grantArbitrary, { minLength: 1, maxLength: 10 })
+          .map((gs) => gs.map((g) => ({ ...g, deny: false }))),
         (allows) => {
           const result = resolveAccess({
             grants: allows,
@@ -207,12 +221,14 @@ describe("resolveLLMModel — model routing policy", () => {
 
   it("denies and suggests downgrade when model not allowed", () => {
     const r = resolveLLMModel(
-      [{
-        scopeType: "org",
-        scopeId: "o1",
-        allowedModels: ["glm-5.2"],
-        autoDowngradeTo: "glm-5.2",
-      }],
+      [
+        {
+          scopeType: "org",
+          scopeId: "o1",
+          allowedModels: ["glm-5.2"],
+          autoDowngradeTo: "glm-5.2",
+        },
+      ],
       "claude-sonnet-4.5",
       "workstream",
       "w1",

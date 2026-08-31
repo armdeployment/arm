@@ -2,7 +2,7 @@
 #
 # Starts the complete ARM stack for local testing/demo:
 #   - Control plane (Next.js dashboard, port 3100)
-#   - Closed proxy (Hono, port 8787) 
+#   - Closed proxy (Hono, port 8787)
 #   - Open gateway (Hono, port 8788)
 #   - Ollama (local model server, port 11434)
 #

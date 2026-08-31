@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { resolve, compareSemVer, satisfiesRange, type ResolvableComponentVersion } from "../src/resolve.js";
+import {
+  resolve,
+  compareSemVer,
+  satisfiesRange,
+  type ResolvableComponentVersion,
+} from "../src/resolve.js";
 
 const TENANT = "tn-1";
 const OTHER_TENANT = "tn-2";
@@ -82,8 +87,18 @@ describe("resolve", () => {
 
   it("prefers the tenant's own component over the first-party fallback", () => {
     const versions = [
-      v({ componentId: "first-party", version: "1.0.0", tenantId: null, sourceKind: "first_party" }),
-      v({ componentId: "tenant-own", version: "1.0.0", tenantId: TENANT, sourceKind: "tenant_authored" }),
+      v({
+        componentId: "first-party",
+        version: "1.0.0",
+        tenantId: null,
+        sourceKind: "first_party",
+      }),
+      v({
+        componentId: "tenant-own",
+        version: "1.0.0",
+        tenantId: TENANT,
+        sourceKind: "tenant_authored",
+      }),
     ];
     const r = resolve("jira", "1.0.0", versions, { tenantId: TENANT });
     expect(r?.componentId).toBe("tenant-own");
@@ -91,15 +106,32 @@ describe("resolve", () => {
 
   it("falls back to first-party when the tenant has no own copy", () => {
     const versions = [
-      v({ componentId: "first-party", version: "1.0.0", tenantId: null, sourceKind: "first_party" }),
-      v({ componentId: "other-tenant", version: "1.0.0", tenantId: OTHER_TENANT, sourceKind: "tenant_authored" }),
+      v({
+        componentId: "first-party",
+        version: "1.0.0",
+        tenantId: null,
+        sourceKind: "first_party",
+      }),
+      v({
+        componentId: "other-tenant",
+        version: "1.0.0",
+        tenantId: OTHER_TENANT,
+        sourceKind: "tenant_authored",
+      }),
     ];
     const r = resolve("jira", "1.0.0", versions, { tenantId: TENANT });
     expect(r?.componentId).toBe("first-party");
   });
 
   it("never returns a version belonging to a different tenant with no first-party fallback", () => {
-    const versions = [v({ componentId: "other", version: "1.0.0", tenantId: OTHER_TENANT, sourceKind: "tenant_authored" })];
+    const versions = [
+      v({
+        componentId: "other",
+        version: "1.0.0",
+        tenantId: OTHER_TENANT,
+        sourceKind: "tenant_authored",
+      }),
+    ];
     expect(resolve("jira", "1.0.0", versions, { tenantId: TENANT })).toBeNull();
   });
 

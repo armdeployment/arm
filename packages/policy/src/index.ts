@@ -88,9 +88,7 @@ export function resolveAccess(input: ResolveAccessInput): AccessDecision {
   // No denies — check for any allow.
   const allows = matching.filter((g) => !g.deny);
   if (allows.length > 0) {
-    const topAllow = allows.sort(
-      (a, b) => SCOPE_RANK[a.scopeType] - SCOPE_RANK[b.scopeType],
-    )[0]!;
+    const topAllow = allows.sort((a, b) => SCOPE_RANK[a.scopeType] - SCOPE_RANK[b.scopeType])[0]!;
     return {
       decision: "allow",
       reason: `granted_at_${topAllow.scopeType}`,
@@ -195,7 +193,13 @@ registerDLPHook({
   scan(content: string): DLPContentResult {
     // Stub: check for obvious PII patterns
     const ssnMatch = content.match(/\d{3}-\d{2}-\d{4}/);
-    if (ssnMatch) return { matched: true, patternName: "SSN", severity: "critical", detail: "Social Security Number detected" };
+    if (ssnMatch)
+      return {
+        matched: true,
+        patternName: "SSN",
+        severity: "critical",
+        detail: "Social Security Number detected",
+      };
     return { matched: false };
   },
 });
@@ -207,7 +211,12 @@ registerDLPHook({
   blockOnMatch: true,
   scan(content: string): DLPContentResult {
     if (content.includes("sk-ant-") || content.includes("sk-proj-"))
-      return { matched: true, patternName: "API_KEY", severity: "critical", detail: "Provider API key detected in content" };
+      return {
+        matched: true,
+        patternName: "API_KEY",
+        severity: "critical",
+        detail: "Provider API key detected in content",
+      };
     return { matched: false };
   },
 });

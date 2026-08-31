@@ -32,21 +32,24 @@ export const adoptionSection = {
       width: 1100,
       height: 1243,
       alt: "Manufacturing org tree showing departments, agent counts, and spend rolling up from Team to Org level",
-      caption: "The org tree a manager sees, built from the questionnaire's structured answers — not free text.",
+      caption:
+        "The org tree a manager sees, built from the questionnaire's structured answers — not free text.",
     },
     {
       src: "/screenshots/profile-tech-review.png",
       width: 1100,
       height: 952,
       alt: "Package recommendation review screen showing a recommended work package with its included components and required approvals",
-      caption: "What the employee sees at the end of the questionnaire: the recommended package, plainly described.",
+      caption:
+        "What the employee sees at the end of the questionnaire: the recommended package, plainly described.",
     },
     {
       src: "/screenshots/profile-manufacturing-done.png",
       width: 1100,
       height: 785,
       alt: "Completed provisioning screen confirming an agent is configured and ready to use",
-      caption: "Provisioning complete — the agent is configured, metered, and governed before the employee writes a prompt.",
+      caption:
+        "Provisioning complete — the agent is configured, metered, and governed before the employee writes a prompt.",
     },
   ],
   managementLede: "The other half of adoption is visibility for the people paying for it.",
@@ -90,10 +93,26 @@ export const deploymentSection = {
 };
 
 export const deploymentTable: DeploymentRow[] = [
-  { dimension: "Control plane", saas: "ARM-operated, multi-tenant", selfHosted: "Customer-operated, single-tenant" },
-  { dimension: "Data plane", saas: "Per-tenant, in customer VPC", selfHosted: "Customer VPC (same packaging)" },
-  { dimension: "Model provider keys", saas: "ARM brokers on your behalf", selfHosted: "Your own keys — pass-through, never leave your environment" },
-  { dimension: "Open / self-hosted models", saas: "Optional — bring your own if you want them", selfHosted: "Optional — bring your own if you want them" },
+  {
+    dimension: "Control plane",
+    saas: "ARM-operated, multi-tenant",
+    selfHosted: "Customer-operated, single-tenant",
+  },
+  {
+    dimension: "Data plane",
+    saas: "Per-tenant, in customer VPC",
+    selfHosted: "Customer VPC (same packaging)",
+  },
+  {
+    dimension: "Model provider keys",
+    saas: "ARM brokers on your behalf",
+    selfHosted: "Your own keys — pass-through, never leave your environment",
+  },
+  {
+    dimension: "Open / self-hosted models",
+    saas: "Optional — bring your own if you want them",
+    selfHosted: "Optional — bring your own if you want them",
+  },
 ];
 
 export const honestyNote =

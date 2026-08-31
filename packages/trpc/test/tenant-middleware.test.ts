@@ -16,7 +16,9 @@ function caller(claims: ARMClaims | null) {
 
 describe("tenant middleware (Invariant §11.6)", () => {
   it("REJECTS unauthenticated requests", async () => {
-    await expect(caller(null).orgTree.children({ scope: null })).rejects.toThrowError(/No authenticated tenant context/);
+    await expect(caller(null).orgTree.children({ scope: null })).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
   });
   it("ALLOWS authenticated requests", async () => {
     const r = await caller(authedClaims).orgTree.children({ scope: null });
@@ -55,7 +57,10 @@ describe("org tree (manufacturing company)", () => {
       scope: { type: "team", id: "team_cad" },
     });
     expect(r.path.map((p) => p.name)).toEqual([
-      "Acme Manufacturing", "Engineering", "Product Design", "CAD Design",
+      "Acme Manufacturing",
+      "Engineering",
+      "Product Design",
+      "CAD Design",
     ]);
   });
 
@@ -104,8 +109,12 @@ describe("scope-aware spend summary", () => {
   });
 
   it("budget utilization varies by department", async () => {
-    const mfg = await caller(authedClaims).spend.summary({ scope: { type: "department", id: "dept_mfg" } });
-    const hr = await caller(authedClaims).spend.summary({ scope: { type: "department", id: "dept_hr" } });
+    const mfg = await caller(authedClaims).spend.summary({
+      scope: { type: "department", id: "dept_mfg" },
+    });
+    const hr = await caller(authedClaims).spend.summary({
+      scope: { type: "department", id: "dept_hr" },
+    });
     expect(mfg.budgetUtilPct).toBeGreaterThan(0);
     expect(hr.budgetUtilPct).toBeGreaterThan(0);
   });
@@ -118,16 +127,27 @@ describe("scope-aware agents list", () => {
   });
 
   it("a team returns only that team's agents", async () => {
-    const r = await caller(authedClaims).agents.list({ scope: { type: "team", id: "team_line_a" }, status: "all" });
+    const r = await caller(authedClaims).agents.list({
+      scope: { type: "team", id: "team_line_a" },
+      status: "all",
+    });
     expect(r.agents.length).toBe(2);
-    expect(r.agents.every((a: any) => a.name.includes("monitor") || a.name.includes("detector"))).toBe(true);
+    expect(
+      r.agents.every((a: any) => a.name.includes("monitor") || a.name.includes("detector")),
+    ).toBe(true);
   });
 });
 
 describe("input validation", () => {
   it("rejects invalid agent creation input", async () => {
-    await expect(caller(authedClaims).agents.create({
-      name: "", scopeType: "org", scopeId: "bad-uuid", stakeholderUserId: "bad-uuid", type: "test",
-    })).rejects.toThrow();
+    await expect(
+      caller(authedClaims).agents.create({
+        name: "",
+        scopeType: "org",
+        scopeId: "bad-uuid",
+        stakeholderUserId: "bad-uuid",
+        type: "test",
+      }),
+    ).rejects.toThrow();
   });
 });

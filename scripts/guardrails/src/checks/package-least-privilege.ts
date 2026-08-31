@@ -119,7 +119,9 @@ register({
     let totalEntries = 0;
     for (const s of wpScans) {
       if (s.block === null) {
-        issues.push(`${s.file}: 'workPackages' present but not an inline array — cannot validate permissions`);
+        issues.push(
+          `${s.file}: 'workPackages' present but not an inline array — cannot validate permissions`,
+        );
         continue;
       }
       const arrays = arraysForKey(s.block, "permissions");

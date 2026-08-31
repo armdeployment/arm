@@ -127,7 +127,12 @@ export interface PackageManifest {
 
 function normalizeComponentRef(ref: ManifestComponentRef): ManifestComponentRefWire {
   const componentId = "componentId" in ref ? ref.componentId : ref.component_id;
-  return { component_id: componentId, version: ref.version, kind: ref.kind, scopes: ref.scopes ?? [] };
+  return {
+    component_id: componentId,
+    version: ref.version,
+    kind: ref.kind,
+    scopes: ref.scopes ?? [],
+  };
 }
 
 /**
@@ -178,8 +183,8 @@ export function validatePackageVersion(
   if (!parsed.success) {
     return {
       ok: false,
-      errors: parsed.error.issues.map((issue) =>
-        `${issue.path.length > 0 ? `${issue.path.join(".")}: ` : ""}${issue.message}`,
+      errors: parsed.error.issues.map(
+        (issue) => `${issue.path.length > 0 ? `${issue.path.join(".")}: ` : ""}${issue.message}`,
       ),
     };
   }
@@ -190,7 +195,9 @@ export function validatePackageVersion(
     const key = `${ref.component_id}@${ref.version}`;
     const cv = componentVersionsById.get(key);
     if (cv === undefined) {
-      errors.push(`components[${i}]: unknown component_version "${ref.component_id}@${ref.version}"`);
+      errors.push(
+        `components[${i}]: unknown component_version "${ref.component_id}@${ref.version}"`,
+      );
       continue;
     }
     if (cv.reviewStatus !== "approved") {
@@ -200,12 +207,16 @@ export function validatePackageVersion(
       );
     }
     if (cv.yanked) {
-      errors.push(`components[${i}]: component "${ref.component_id}" version "${ref.version}" is yanked`);
+      errors.push(
+        `components[${i}]: component "${ref.component_id}" version "${ref.version}" is yanked`,
+      );
     }
   }
 
   if (data.components.length === 0) {
-    errors.push("package ships nothing usable: components is empty — a package must ship at least one component");
+    errors.push(
+      "package ships nothing usable: components is empty — a package must ship at least one component",
+    );
   }
 
   for (const [i, key] of data.job_functions.entries()) {

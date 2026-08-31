@@ -11,7 +11,13 @@ const STUB_RESULT: SetupResult = {
   components: ["jira", "kpi-briefing-generator"],
   installedPaths: [],
   connectionsNeeded: [
-    { componentId: "c1", componentName: "jira", authMethod: "oauth", guideId: "jira-pat", requiredScopes: ["read:issue"] },
+    {
+      componentId: "c1",
+      componentName: "jira",
+      authMethod: "oauth",
+      guideId: "jira-pat",
+      requiredScopes: ["read:issue"],
+    },
   ],
   configPath: "/tmp/opencode/config.json",
   budgetHint: "$300/month",
@@ -69,9 +75,14 @@ describe("startInstallWizardServer", () => {
       body: JSON.stringify({ token: "G7NHCF", controlPlaneUrl: "http://localhost:3300" }),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as SetupResult & { connectionsNeeded: Array<{ guideSteps: string[] }> };
+    const body = (await res.json()) as SetupResult & {
+      connectionsNeeded: Array<{ guideSteps: string[] }>;
+    };
     expect(body.roleKey).toBe("senior_manager");
-    expect(capturedRedeemArgs).toEqual({ token: "G7NHCF", controlPlaneUrl: "http://localhost:3300" });
+    expect(capturedRedeemArgs).toEqual({
+      token: "G7NHCF",
+      controlPlaneUrl: "http://localhost:3300",
+    });
     expect(capturedSetupArgs?.roleKey).toBe("senior_manager");
     expect(body.connectionsNeeded[0]!.guideSteps.length).toBeGreaterThan(0);
   });
@@ -109,18 +120,29 @@ describe("startInstallWizardServer", () => {
   it("POST /api/refine wires pain points, a multi-folder scan (only when paths are given), and always scans installed tools", async () => {
     let capturedPaths: string[] | undefined;
     handle = await startInstallWizardServer({
-      classifyPainPointsFn: (text) => [{ tag: "budget_approval_pain", jobFunctionHint: "senior_manager", matchedKeywords: [text] }],
+      classifyPainPointsFn: (text) => [
+        { tag: "budget_approval_pain", jobFunctionHint: "senior_manager", matchedKeywords: [text] },
+      ],
       scanWorkFoldersFn: async (paths) => {
         capturedPaths = paths;
-        return { filesScanned: 6, extensionCounts: { ".xlsx": 3, ".sldprt": 3 }, tags: ["spreadsheet_heavy", "cad_heavy"] };
+        return {
+          filesScanned: 6,
+          extensionCounts: { ".xlsx": 3, ".sldprt": 3 },
+          tags: ["spreadsheet_heavy", "cad_heavy"],
+        };
       },
-      scanInstalledToolsFn: async () => [{ id: "vscode", label: "Visual Studio Code", componentSlug: "vscode" }],
+      scanInstalledToolsFn: async () => [
+        { id: "vscode", label: "Visual Studio Code", componentSlug: "vscode" },
+      ],
     });
 
     const res = await fetch(new URL("/api/refine", handle.url), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ painPoints: "budget approvals", folderPaths: ["/Users/alice/finance", "/Users/alice/cad-project"] }),
+      body: JSON.stringify({
+        painPoints: "budget approvals",
+        folderPaths: ["/Users/alice/finance", "/Users/alice/cad-project"],
+      }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -172,7 +194,9 @@ describe("startInstallWizardServer", () => {
   });
 
   it("POST /api/pick-folder returns the injected picker's result", async () => {
-    handle = await startInstallWizardServer({ pickFolderFn: async () => "/Users/alice/Documents/work" });
+    handle = await startInstallWizardServer({
+      pickFolderFn: async () => "/Users/alice/Documents/work",
+    });
     const res = await fetch(new URL("/api/pick-folder", handle.url), { method: "POST" });
     const body = (await res.json()) as { path: string | null };
     expect(body.path).toBe("/Users/alice/Documents/work");
@@ -195,7 +219,15 @@ describe("startInstallWizardServer", () => {
   });
 
   it("POST /api/chat routes through the tenant's proxy using the credentials captured at redeem time", async () => {
-    let capturedArgs: { armProxyUrl: string; agentToken: string; subAccountId: string; tenantId: string; messages: unknown[] } | undefined;
+    let capturedArgs:
+      | {
+          armProxyUrl: string;
+          agentToken: string;
+          subAccountId: string;
+          tenantId: string;
+          messages: unknown[];
+        }
+      | undefined;
     handle = await startInstallWizardServer({
       resolveFn: async (args) => ({
         controlPlaneUrl: args.controlPlaneUrl,
@@ -224,7 +256,9 @@ describe("startInstallWizardServer", () => {
     const res = await fetch(new URL("/api/chat", handle.url), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ messages: [{ role: "user", content: "I spend a lot of time on budget approvals" }] }),
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "I spend a lot of time on budget approvals" }],
+      }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { role: string; content: string };
@@ -232,7 +266,9 @@ describe("startInstallWizardServer", () => {
     expect(body.content).toContain("budget approvals");
     expect(capturedArgs?.armProxyUrl).toBe("http://localhost:8787");
     expect(capturedArgs?.agentToken).toBe("arm_mtr_real-token");
-    expect(capturedArgs?.messages).toEqual([{ role: "user", content: "I spend a lot of time on budget approvals" }]);
+    expect(capturedArgs?.messages).toEqual([
+      { role: "user", content: "I spend a lot of time on budget approvals" },
+    ]);
   });
 
   it("POST /api/chat rejects an empty message list", async () => {

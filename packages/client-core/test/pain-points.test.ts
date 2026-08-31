@@ -3,7 +3,9 @@ import { classifyPainPoints } from "../src/pain-points.js";
 
 describe("classifyPainPoints", () => {
   it("matches a budget/approval pain point to senior_manager", () => {
-    const tags = classifyPainPoints("I spend most of my week chasing budget approvals from my team");
+    const tags = classifyPainPoints(
+      "I spend most of my week chasing budget approvals from my team",
+    );
     const match = tags.find((t) => t.tag === "budget_approval_pain");
     expect(match).toBeDefined();
     expect(match?.jobFunctionHint).toBe("senior_manager");
@@ -12,7 +14,9 @@ describe("classifyPainPoints", () => {
   });
 
   it("matches a design-release pain point to design_release_engineer", () => {
-    const tags = classifyPainPoints("Tracking ECN impacts across the BOM takes forever, and PPAP status is always unclear");
+    const tags = classifyPainPoints(
+      "Tracking ECN impacts across the BOM takes forever, and PPAP status is always unclear",
+    );
     const hints = tags.map((t) => t.jobFunctionHint);
     expect(hints).toContain("design_release_engineer");
   });

@@ -58,7 +58,10 @@ function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-function redemptionError(status: SetupRedemptionResponse["status"], message: string): ArmClientError {
+function redemptionError(
+  status: SetupRedemptionResponse["status"],
+  message: string,
+): ArmClientError {
   switch (status) {
     case "expired":
       return new ArmClientError("TOKEN_EXPIRED", message || "this setup link has expired");

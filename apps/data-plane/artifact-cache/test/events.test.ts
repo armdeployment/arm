@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { buildComponentPullEvent, recordPull, getPullEventBuffer, clearPullEventBuffer } from "../src/events.js";
+import {
+  buildComponentPullEvent,
+  recordPull,
+  getPullEventBuffer,
+  clearPullEventBuffer,
+} from "../src/events.js";
 
 describe("component_pull_event emission (metadata only)", () => {
   beforeEach(() => clearPullEventBuffer());
@@ -35,13 +40,34 @@ describe("component_pull_event emission (metadata only)", () => {
 
   it("recordPull appends to the in-memory buffer", () => {
     expect(getPullEventBuffer()).toHaveLength(0);
-    recordPull({ tenantId: "tn-1", componentId: "c1", version: "1.0.0", blobDigest: `sha256:${"a".repeat(64)}`, bytes: 5, cacheHit: false });
+    recordPull({
+      tenantId: "tn-1",
+      componentId: "c1",
+      version: "1.0.0",
+      blobDigest: `sha256:${"a".repeat(64)}`,
+      bytes: 5,
+      cacheHit: false,
+    });
     expect(getPullEventBuffer()).toHaveLength(1);
   });
 
   it("cacheHit maps to 0/1 correctly", () => {
-    const hit = buildComponentPullEvent({ tenantId: "t", componentId: "c", version: "1.0.0", blobDigest: `sha256:${"a".repeat(64)}`, bytes: 1, cacheHit: true });
-    const miss = buildComponentPullEvent({ tenantId: "t", componentId: "c", version: "1.0.0", blobDigest: `sha256:${"a".repeat(64)}`, bytes: 1, cacheHit: false });
+    const hit = buildComponentPullEvent({
+      tenantId: "t",
+      componentId: "c",
+      version: "1.0.0",
+      blobDigest: `sha256:${"a".repeat(64)}`,
+      bytes: 1,
+      cacheHit: true,
+    });
+    const miss = buildComponentPullEvent({
+      tenantId: "t",
+      componentId: "c",
+      version: "1.0.0",
+      blobDigest: `sha256:${"a".repeat(64)}`,
+      bytes: 1,
+      cacheHit: false,
+    });
     expect(hit.cache_hit).toBe(1);
     expect(miss.cache_hit).toBe(0);
   });

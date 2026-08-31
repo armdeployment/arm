@@ -14,10 +14,21 @@ export default function DemoPage() {
   return (
     <>
       <Section tone="dark" className="py-14 sm:py-20">
-        <h1 className="m-0 mb-4 font-semibold" style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}>
+        <h1
+          className="m-0 mb-4 font-semibold"
+          style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}
+        >
           {demoHero.title}
         </h1>
-        <p style={{ fontSize: "var(--font-lead)", maxWidth: "42rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.6 }} className="m-0 mb-8">
+        <p
+          style={{
+            fontSize: "var(--font-lead)",
+            maxWidth: "42rem",
+            color: "var(--text-on-dark-secondary)",
+            lineHeight: 1.6,
+          }}
+          className="m-0 mb-8"
+        >
           {demoHero.body}
         </p>
         <a
@@ -35,7 +46,10 @@ export default function DemoPage() {
       </Section>
 
       <Section tone="surface">
-        <p className="m-0 text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "44rem" }}>
+        <p
+          className="m-0 text-sm"
+          style={{ color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "44rem" }}
+        >
           {demoStatusNote}
         </p>
       </Section>
@@ -51,7 +65,10 @@ export default function DemoPage() {
               <p className="m-0 mb-3 text-sm" style={{ color: "var(--text-secondary)" }}>
                 {path.description}
               </p>
-              <ol className="m-0 flex flex-col gap-2 pl-5 text-sm" style={{ color: "var(--text-secondary)" }}>
+              <ol
+                className="m-0 flex flex-col gap-2 pl-5 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {path.steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}

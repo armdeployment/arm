@@ -5,7 +5,12 @@
  * All connectors emit access_audit_event records and enforce classification gates.
  */
 
-export { mintS3Credential, validateS3Access, type S3ScopeRequest, type S3Credential } from "./s3.js";
+export {
+  mintS3Credential,
+  validateS3Access,
+  type S3ScopeRequest,
+  type S3Credential,
+} from "./s3.js";
 export { mintGCSCredential, type GCSScopeRequest, type GCSCredential } from "./gcs.js";
 export { proxyDBQuery, type DBQueryRequest, type DBQueryResult, type DBType } from "./db.js";
 export {

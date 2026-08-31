@@ -5,7 +5,4 @@
  * assets; this list additionally covers anchor links, which are held to the
  * same bar — self-contained, no surprise third parties.
  */
-export const externalLinkAllowlist: string[] = [
-  "fonts.googleapis.com",
-  "fonts.gstatic.com",
-];
+export const externalLinkAllowlist: string[] = ["fonts.googleapis.com", "fonts.gstatic.com"];

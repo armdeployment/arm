@@ -11,8 +11,8 @@ You need one thing: **a link from your admin**, or your company's ARM setup URL
 
 1. **Open the link.** Answer a handful of multiple-choice questions about your
    day-to-day work — no free text, ever (Invariant 1). ARM figures out your
-   job function and recommends a package: *"We recommend the **Quality
-   Engineer** package."*
+   job function and recommends a package: _"We recommend the **Quality
+   Engineer** package."_
 2. **Download.** This issues a signed, single-use setup token (15-minute TTL)
    that travels as a small `.armsetup` file, or as a 6-character activation
    code you can read aloud or type.
@@ -21,6 +21,7 @@ You need one thing: **a link from your admin**, or your company's ARM setup URL
    Just running `arm setup` with nothing prompts you for the code.)
 
 The client does everything else, and asks you nothing else:
+
 1. Redeems the setup token exactly once against the control plane
 2. Detects/installs OpenCode if missing
 3. Verifies the package manifest's integrity (sha256 over the signed
@@ -30,11 +31,11 @@ The client does everything else, and asks you nothing else:
 5. Writes the config: MCP servers, skills, sub-agents, permissions —
    credentials as env-var references only
 6. Connections wizard for third-party tools (see below)
-7. Verifies a metered round-trip → *"Online. Dept budget remaining: $X. Tools connected: M/N."*
+7. Verifies a metered round-trip → _"Online. Dept budget remaining: $X. Tools connected: M/N."_
 
 If your recommended package needs manager approval, you still get a working
-agent right away — you'll see *"your agent is installed; tool access is
-waiting on your manager"* instead of a blocked install.
+agent right away — you'll see _"your agent is installed; tool access is
+waiting on your manager"_ instead of a blocked install.
 
 Your agent token is written to `<agent-home>/.arm-env` with mode `0600` — **never** into the agent config file.
 
@@ -52,19 +53,21 @@ for an activation code.
 Every package component declares how it authenticates. The wizard renders exactly what your package needs:
 
 ### Tier A — one-click OAuth (no copy-paste)
+
 Jira/Atlassian · GitHub · Google (incl. BigQuery) · Microsoft 365/SharePoint · AWS IAM Identity Center
 → "Connect" → authorize in browser → ARM mints a short-lived, least-scope token.
 
 ### Tier B — guided PAT / service-account steps
+
 The wizard shows server-pushed, versioned step-by-step guides (exact vendor-console clicks, scopes pre-filled):
 
-| Tool | Guide |
-|---|---|
-| Jira | Atlassian → **Profile** → **Security** → **Create API token** → scopes: `read:jira-work` |
-| GitHub | Settings → **Developer settings** → **Fine-grained PAT** → scopes: `repo` + `read:org` |
+| Tool         | Guide                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------ |
+| Jira         | Atlassian → **Profile** → **Security** → **Create API token** → scopes: `read:jira-work`   |
+| GitHub       | Settings → **Developer settings** → **Fine-grained PAT** → scopes: `repo` + `read:org`     |
 | GCP BigQuery | Console → **IAM** → **Service account** → create key JSON → role: `roles/bigquery.jobUser` |
-| AWS | **IAM Identity Center** → CLI access → paste device code |
-| SharePoint | Entra app consent flow (admin-granted) |
+| AWS          | **IAM Identity Center** → CLI access → paste device code                                   |
+| SharePoint   | Entra app consent flow (admin-granted)                                                     |
 
 Skip-later is allowed: the package installs fully; unconnected tools show "not connected" until completed. Re-enter anytime.
 

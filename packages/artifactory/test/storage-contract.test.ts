@@ -31,7 +31,8 @@ function makeFakeS3(): { fetchImpl: typeof fetch; signer: S3RequestSigner } {
     const method = url.searchParams.get("method");
     if (method === "PUT") {
       const body = init?.body as Uint8Array;
-      const mediaType = (init?.headers as Record<string, string>)["content-type"] ?? "application/octet-stream";
+      const mediaType =
+        (init?.headers as Record<string, string>)["content-type"] ?? "application/octet-stream";
       store.set(key, { body: new Uint8Array(body), mediaType });
       return new Response(null, { status: 200 });
     }
@@ -40,7 +41,10 @@ function makeFakeS3(): { fetchImpl: typeof fetch; signer: S3RequestSigner } {
       if (!entry) return new Response(null, { status: 404 });
       return new Response(null, {
         status: 200,
-        headers: { "content-length": String(entry.body.byteLength), "content-type": entry.mediaType },
+        headers: {
+          "content-length": String(entry.body.byteLength),
+          "content-type": entry.mediaType,
+        },
       });
     }
     if (method === "GET") {
@@ -136,7 +140,9 @@ describe("StorageBackend contract: oci (stub — throws NotImplementedError)", (
   const digest = digestOf(body);
 
   it("put() throws NotImplementedError", async () => {
-    await expect(backend.put(digest, body, "text/plain")).rejects.toBeInstanceOf(NotImplementedError);
+    await expect(backend.put(digest, body, "text/plain")).rejects.toBeInstanceOf(
+      NotImplementedError,
+    );
   });
   it("get() throws NotImplementedError", async () => {
     await expect(backend.get(digest)).rejects.toBeInstanceOf(NotImplementedError);

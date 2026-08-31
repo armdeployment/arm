@@ -15,10 +15,7 @@ export interface CISyncResult extends CheckResult {
 }
 
 /** Pure function — used by mutation proofs. */
-export function checkCISync(
-  tableWorkflows: string[],
-  actualWorkflows: string[],
-): CISyncResult {
+export function checkCISync(tableWorkflows: string[], actualWorkflows: string[]): CISyncResult {
   const tableSet = new Set(tableWorkflows);
   const actualSet = new Set(actualWorkflows);
 
@@ -27,8 +24,10 @@ export function checkCISync(
 
   if (missing.length > 0 || extra.length > 0) {
     const parts: string[] = [];
-    if (missing.length > 0) parts.push(`in AGENTS.md but not in .github/workflows/: ${missing.join(", ")}`);
-    if (extra.length > 0) parts.push(`in .github/workflows/ but not in AGENTS.md: ${extra.join(", ")}`);
+    if (missing.length > 0)
+      parts.push(`in AGENTS.md but not in .github/workflows/: ${missing.join(", ")}`);
+    if (extra.length > 0)
+      parts.push(`in .github/workflows/ but not in AGENTS.md: ${extra.join(", ")}`);
     return {
       id: "ci-sync",
       status: "fail",

@@ -44,7 +44,9 @@ describe("runSetupGuiCommand", () => {
   it("propagates a failure to start the server rather than silently opening a dead URL", async () => {
     const startServerFn = vi.fn().mockRejectedValue(new Error("port already in use"));
     const openBrowserFn = vi.fn();
-    await expect(runSetupGuiCommand({ startServerFn, openBrowserFn })).rejects.toThrow("port already in use");
+    await expect(runSetupGuiCommand({ startServerFn, openBrowserFn })).rejects.toThrow(
+      "port already in use",
+    );
     expect(openBrowserFn).not.toHaveBeenCalled();
   });
 });

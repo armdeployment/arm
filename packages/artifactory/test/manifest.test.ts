@@ -23,7 +23,10 @@ describe("component manifest canonicalization + hashing", () => {
   });
 
   it("canonicalize recursively sorts nested object keys", () => {
-    const canonical = canonicalizeComponentManifest({ z: 1, a: { y: 1, x: 2 } }) as Record<string, unknown>;
+    const canonical = canonicalizeComponentManifest({ z: 1, a: { y: 1, x: 2 } }) as Record<
+      string,
+      unknown
+    >;
     expect(Object.keys(canonical)).toEqual(["a", "z"]);
     expect(Object.keys(canonical.a as Record<string, unknown>)).toEqual(["x", "y"]);
   });

@@ -100,7 +100,12 @@ export class FsStorageBackend implements StorageBackend {
   /** Verify a presigned URL's signature + expiry — used by the artifact-cache
    *  service's own (independently-implemented, non-imported) verifier tests,
    *  and by this package's own tests. Not part of the StorageBackend interface. */
-  verifyPresignedSignature(digest: string, exp: number, sig: string, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
+  verifyPresignedSignature(
+    digest: string,
+    exp: number,
+    sig: string,
+    nowSeconds = Math.floor(Date.now() / 1000),
+  ): boolean {
     if (nowSeconds > exp) return false;
     const expected = Buffer.from(this.sign(digest, exp), "hex");
     const actual = Buffer.from(sig, "hex");

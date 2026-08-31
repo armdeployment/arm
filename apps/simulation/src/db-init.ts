@@ -253,10 +253,7 @@ const profile = getProfile(PROFILE_ID);
 // Tenant name/identifier differ by profile
 const TENANT_ID = "tn_acme";
 const TENANT_SLUG = PROFILE_ID === "manufacturing" ? "acme" : "acme-tech";
-const TENANT_NAME =
-  PROFILE_ID === "manufacturing"
-    ? "Acme Manufacturing Corp"
-    : "Acme Tech Corp";
+const TENANT_NAME = PROFILE_ID === "manufacturing" ? "Acme Manufacturing Corp" : "Acme Tech Corp";
 
 // ── Provisioning: materialize profile defaults into tenant config rows ─────
 
@@ -265,13 +262,19 @@ const TENANT_NAME =
  * Mapping: department name → dept_<slug>
  */
 function deptIdFromName(name: string): string {
-  const slug = name.toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "_")
+    .replace(/^_|_$/g, "");
   return `dept_${slug}`;
 }
 
 /** Deterministic API key per agent. */
 function apiKeyForAgent(agentName: string, index: number): string {
-  const slug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const slug = agentName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
   return `arm_sk_${slug}_${index.toString(36).padStart(6, "x")}`;
 }
 
@@ -315,7 +318,9 @@ function provisionAgents(): ProvisionedAgent[] {
     hit = allNodes.find((n) => n.name.toLowerCase() === deptName.toLowerCase());
     if (hit) return hit.id;
     // 3. Partial match: deptName appears in a path segment.
-    hit = allNodes.find((n) => n.path.some((p) => p.toLowerCase().includes(deptName.toLowerCase())));
+    hit = allNodes.find((n) =>
+      n.path.some((p) => p.toLowerCase().includes(deptName.toLowerCase())),
+    );
     if (hit) return hit.id;
     // 4. Fallback: first leaf node.
     return allNodes.find((n) => n.leaf)?.id ?? allNodes[0]!.id;
@@ -348,11 +353,14 @@ async function main() {
   await pgClient.query(PG_SCHEMA);
 
   // Tenant — seeded with industry_profile (D6)
-  await pgClient.query(`
+  await pgClient.query(
+    `
     INSERT INTO tenants (id, name, slug, industry_profile, profile_applied_at)
     VALUES ($1, $2, $3, $4, NOW())
     ON CONFLICT (id) DO NOTHING
-  `, [TENANT_ID, TENANT_NAME, TENANT_SLUG, PROFILE_ID]);
+  `,
+    [TENANT_ID, TENANT_NAME, TENANT_SLUG, PROFILE_ID],
+  );
 
   // ── Classification levels (from profile, D6 dual-axis) ──
   for (const level of profile.classification.levels) {
@@ -360,7 +368,7 @@ async function main() {
     await pgClient.query(
       `INSERT INTO classification_levels (id, tenant_id, rank, name, regulatory_flags)
        VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, level.rank, level.name, level.regulatoryFlags]
+      [id, TENANT_ID, level.rank, level.name, level.regulatoryFlags],
     );
   }
 
@@ -370,7 +378,15 @@ async function main() {
     await pgClient.query(
       `INSERT INTO dlp_patterns (id, tenant_id, name, pattern, flags, severity, category, enabled)
        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, pattern.name, pattern.pattern, pattern.flags ?? "", pattern.severity, pattern.category]
+      [
+        id,
+        TENANT_ID,
+        pattern.name,
+        pattern.pattern,
+        pattern.flags ?? "",
+        pattern.severity,
+        pattern.category,
+      ],
     );
   }
 
@@ -381,21 +397,30 @@ async function main() {
     await pgClient.query(
       `INSERT INTO work_type_taxonomies (id, tenant_id, scope_type, scope_id, name, labels, classifier_version)
        VALUES ($1, $2, 'department', $3, $4, $5, '1') ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, deptId, tax.departmentName, tax.labels]
+      [id, TENANT_ID, deptId, tax.departmentName, tax.labels],
     );
   }
 
   // ── Departments (from profile orgTree — recursive tree) ──
   const flatNodes = flattenOrgTree(profile.orgTree.nodes);
-  const nodeById = new Map<string, typeof flatNodes[number]>();
+  const nodeById = new Map<string, (typeof flatNodes)[number]>();
   for (const item of flatNodes) {
     const id = deptIdFromName(item.path.join(" / "));
-    const parentId = item.path.length > 1 ? deptIdFromName(item.path.slice(0, -1).join(" / ")) : null;
+    const parentId =
+      item.path.length > 1 ? deptIdFromName(item.path.slice(0, -1).join(" / ")) : null;
     nodeById.set(id, item);
     await pgClient.query(
       `INSERT INTO departments (id, tenant_id, name, parent_id, node_type, location, budget_monthly_cents)
        VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING`,
-      [id, TENANT_ID, item.node.name, parentId, item.node.type, item.node.location ?? null, item.node.budgetMonthlyCents ?? 0]
+      [
+        id,
+        TENANT_ID,
+        item.node.name,
+        parentId,
+        item.node.type,
+        item.node.location ?? null,
+        item.node.budgetMonthlyCents ?? 0,
+      ],
     );
   }
 
@@ -409,14 +434,14 @@ async function main() {
     await pgClient.query(
       `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
        VALUES ($1, $2, $3, $4, $5, 'dept_head') ON CONFLICT (id) DO NOTHING`,
-      [userId, TENANT_ID, email, displayName, deptId]
+      [userId, TENANT_ID, email, displayName, deptId],
     );
   }
   // CEO
   await pgClient.query(
     `INSERT INTO users (id, tenant_id, email, display_name, department_id, role)
      VALUES ('usr_ceo', $1, 'ceo@${TENANT_SLUG}.com', 'CEO', NULL, 'ceo') ON CONFLICT (id) DO NOTHING`,
-    [TENANT_ID]
+    [TENANT_ID],
   );
 
   // ── D8: Seed role presets from the profile + grant CEO org_admin ──
@@ -429,10 +454,15 @@ async function main() {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (id) DO UPDATE SET permissions = EXCLUDED.permissions`,
       [
-        roleId, TENANT_ID, preset.scopeType, TENANT_ID,
-        preset.label, preset.key, preset.description,
+        roleId,
+        TENANT_ID,
+        preset.scopeType,
+        TENANT_ID,
+        preset.label,
+        preset.key,
+        preset.description,
         JSON.stringify(preset.permissions),
-      ]
+      ],
     );
   }
 
@@ -440,22 +470,49 @@ async function main() {
   await pgClient.query(
     `INSERT INTO user_roles (user_id, role_id, tenant_id)
      VALUES ('usr_ceo', 'role_org_admin', $1) ON CONFLICT DO NOTHING`,
-    [TENANT_ID]
+    [TENANT_ID],
   );
 
   // Models
   const models = [
     // Self-hosted via Ollama (actual cost = $0, but we track cloud-equivalent for savings calc)
-    ["mdl_minicpm", "minicpm5-1b", "ollama", "self-hosted", 4096, 15, 60, "{public,internal,confidential,restricted}"],
-    ["mdl_qwen35", "qwen3.5", "ollama", "self-hosted", 32768, 70, 210, "{public,internal,confidential,restricted}"],
+    [
+      "mdl_minicpm",
+      "minicpm5-1b",
+      "ollama",
+      "self-hosted",
+      4096,
+      15,
+      60,
+      "{public,internal,confidential,restricted}",
+    ],
+    [
+      "mdl_qwen35",
+      "qwen3.5",
+      "ollama",
+      "self-hosted",
+      32768,
+      70,
+      210,
+      "{public,internal,confidential,restricted}",
+    ],
     // Simulated cloud models (for cost comparison — not actually called)
     ["mdl_gpt4_sim", "gpt-4o", "openai", "cloud", 128000, 250, 1000, "{public,internal}"],
-    ["mdl_claude_sim", "claude-sonnet-4", "anthropic", "cloud", 200000, 300, 1500, "{public,internal}"],
+    [
+      "mdl_claude_sim",
+      "claude-sonnet-4",
+      "anthropic",
+      "cloud",
+      200000,
+      300,
+      1500,
+      "{public,internal}",
+    ],
   ];
   for (const [id, name, provider, kind, ctx, ic, oc, cls] of models) {
     await pgClient.query(
       `INSERT INTO models (id, name, provider, kind, context_window, input_cost_per_1m_cents, output_cost_per_1m_cents, allowed_classifications) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
-      [id, name, provider, kind, ctx, ic, oc, cls]
+      [id, name, provider, kind, ctx, ic, oc, cls],
     );
   }
 
@@ -464,14 +521,25 @@ async function main() {
     await pgClient.query(
       `INSERT INTO agents (id, tenant_id, name, agent_type, stakeholder_user_id, department_id, task_type, classification_clearance, priority_tier, preferred_model, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active') ON CONFLICT (id) DO NOTHING`,
-      [a.id, TENANT_ID, a.name, a.type, a.stakeholder, a.dept, a.taskType, a.clearance, a.tier, a.model]
+      [
+        a.id,
+        TENANT_ID,
+        a.name,
+        a.type,
+        a.stakeholder,
+        a.dept,
+        a.taskType,
+        a.clearance,
+        a.tier,
+        a.model,
+      ],
     );
     // Sub-account
     const saId = `sa_${a.id}`;
     await pgClient.query(
       `INSERT INTO sub_accounts (id, agent_id, api_key, api_key_prefix, monthly_quota_tokens)
        VALUES ($1,$2,$3,$4,2000000) ON CONFLICT (id) DO NOTHING`,
-      [saId, a.id, a.apiKey, a.apiKey.slice(0, 16)]
+      [saId, a.id, a.apiKey, a.apiKey.slice(0, 16)],
     );
   }
 
@@ -480,21 +548,27 @@ async function main() {
   const deptCount = await pgClient.query("SELECT count(*) as c FROM departments");
   const dlpCount = await pgClient.query("SELECT count(*) as c FROM dlp_patterns");
   const taxCount = await pgClient.query("SELECT count(*) as c FROM work_type_taxonomies");
-  console.log(`  ✓ Postgres: 1 tenant (${PROFILE_ID}), ${deptCount.rows[0].c} depts, ${agentCount.rows[0].c} agents, ${dlpCount.rows[0].c} DLP patterns, ${taxCount.rows[0].c} work-type taxonomies`);
+  console.log(
+    `  ✓ Postgres: 1 tenant (${PROFILE_ID}), ${deptCount.rows[0].c} depts, ${agentCount.rows[0].c} agents, ${dlpCount.rows[0].c} DLP patterns, ${taxCount.rows[0].c} work-type taxonomies`,
+  );
 
   await pgClient.end();
 
   // ── Init ClickHouse ──
   console.log("▸ Initializing ClickHouse...");
   // Create tables
-  for (const stmt of CH_SCHEMA.split(";").map(s => s.trim()).filter(Boolean)) {
+  for (const stmt of CH_SCHEMA.split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     await chExec(stmt);
   }
   // Clear old data
   await chExec("TRUNCATE TABLE arm.llm_events");
   await chExec("TRUNCATE TABLE arm.policy_events");
 
-  console.log("  ✓ ClickHouse: llm_events + policy_events tables ready (partitioned by tenant_id, toYYYYMM)");
+  console.log(
+    "  ✓ ClickHouse: llm_events + policy_events tables ready (partitioned by tenant_id, toYYYYMM)",
+  );
   console.log("\n✓ Database initialization complete.\n");
 }
 
@@ -502,7 +576,7 @@ async function chExec(sql: string): Promise<void> {
   const res = await fetch(`${CH_URL}/`, {
     method: "POST",
     headers: {
-      "Authorization": "Basic " + Buffer.from(CH_AUTH).toString("base64"),
+      Authorization: "Basic " + Buffer.from(CH_AUTH).toString("base64"),
       "Content-Type": "text/plain",
     },
     body: sql,
@@ -513,4 +587,7 @@ async function chExec(sql: string): Promise<void> {
   }
 }
 
-main().catch(e => { console.error("✗ Init failed:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("✗ Init failed:", e);
+  process.exit(1);
+});

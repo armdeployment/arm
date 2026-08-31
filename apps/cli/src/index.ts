@@ -234,7 +234,8 @@ export async function runSetupCommand(
       );
     }
     const code = await promptFn("Activation code: ");
-    const tenantUrl = envTenantUrl ?? (await promptFn("ARM setup URL (e.g. https://arm.acme.com): "));
+    const tenantUrl =
+      envTenantUrl ?? (await promptFn("ARM setup URL (e.g. https://arm.acme.com): "));
     if (!code.trim() || !tenantUrl.trim()) {
       console.error("arm setup: an activation code and a setup URL are required");
       return null;
@@ -259,7 +260,9 @@ export async function runSetupCommand(
       );
     }
     if (!isArmSetupFile(raw)) {
-      throw new Error(`"${parsed.setupFile}" is not a valid .armsetup file (expected {version, token, control_plane_url})`);
+      throw new Error(
+        `"${parsed.setupFile}" is not a valid .armsetup file (expected {version, token, control_plane_url})`,
+      );
     }
     const resolved = await resolveFn({ token: raw.token, controlPlaneUrl: raw.control_plane_url });
     return runSetupFn({
@@ -403,7 +406,8 @@ export async function runRefineCommand(
         "Path to a folder of your everyday work files (optional, only file extensions are read — press enter to skip): ",
       );
     }
-    const folderScan = folderPath.trim().length > 0 ? await scanFolder(folderPath.trim()) : undefined;
+    const folderScan =
+      folderPath.trim().length > 0 ? await scanFolder(folderPath.trim()) : undefined;
 
     const installedTools = await scanTools();
 
@@ -428,7 +432,9 @@ export function printRefineSummary(result: RefineResult): void {
   if (result.painPointTags.length > 0) {
     console.log("\nPain-point signals detected:");
     for (const tag of result.painPointTags) {
-      console.log(`  • ${tag.tag} → ${tag.jobFunctionHint} (matched: ${tag.matchedKeywords.join(", ")})`);
+      console.log(
+        `  • ${tag.tag} → ${tag.jobFunctionHint} (matched: ${tag.matchedKeywords.join(", ")})`,
+      );
     }
   } else {
     console.log("\nPain-point signals: none (skipped, or nothing matched)");
@@ -475,7 +481,9 @@ export function printSetupSummary(result: SetupResult): void {
         ? [`  Installed:  ${result.installedPaths.join(", ")}`]
         : []),
       ...(result.runtimesProvisioned.length > 0
-        ? [`  Runtimes:   ${result.runtimesProvisioned.join(", ")} (downloaded — not found on this machine)`]
+        ? [
+            `  Runtimes:   ${result.runtimesProvisioned.join(", ")} (downloaded — not found on this machine)`,
+          ]
         : []),
     ].join("\n"),
   );
@@ -580,7 +588,9 @@ export async function main(args: string[]): Promise<void> {
           await runSetupGuiCommand();
           await new Promise(() => {}); // keep listening until the process is killed
         } catch (err) {
-          console.error(`arm setup: could not start the installation wizard: ${err instanceof Error ? err.message : String(err)}`);
+          console.error(
+            `arm setup: could not start the installation wizard: ${err instanceof Error ? err.message : String(err)}`,
+          );
           process.exitCode = 1;
         }
         break;

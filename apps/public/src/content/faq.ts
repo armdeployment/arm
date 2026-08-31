@@ -29,7 +29,7 @@ export const faqItems: FaqItem[] = [
   {
     question: "What happens if an employee's role doesn't match any package?",
     answer:
-      "The questionnaire has a structured \"none of these fit\" terminal answer — never free text — which surfaces as a labelled gap in the library's coverage report. That gap is a roadmap item, not a dead end for the employee, who still gets routed to the closest available option.",
+      'The questionnaire has a structured "none of these fit" terminal answer — never free text — which surfaces as a labelled gap in the library\'s coverage report. That gap is a roadmap item, not a dead end for the employee, who still gets routed to the closest available option.',
   },
   {
     question: "What's actually built today versus planned?",

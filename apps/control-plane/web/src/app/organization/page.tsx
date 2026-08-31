@@ -83,7 +83,9 @@ export default function OrganizationPage() {
   const [tree, setTree] = useState<TreeNode>(() => buildTreeFromProfile());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingNode, setEditingNode] = useState<{ verb: string; node: TreeNode } | null>(null);
-  const [auditLog, setAuditLog] = useState<{ verb: string; nodeName: string; timestamp: string }[]>([]);
+  const [auditLog, setAuditLog] = useState<{ verb: string; nodeName: string; timestamp: string }[]>(
+    [],
+  );
 
   const mutate = trpc.orgTree.mutate.useMutation();
 
@@ -99,9 +101,7 @@ export default function OrganizationPage() {
   function findAndRemove(node: TreeNode, id: string): TreeNode {
     return {
       ...node,
-      children: node.children
-        .filter((c) => c.id !== id)
-        .map((c) => findAndRemove(c, id)),
+      children: node.children.filter((c) => c.id !== id).map((c) => findAndRemove(c, id)),
     };
   }
 
@@ -126,14 +126,23 @@ export default function OrganizationPage() {
       if (!confirm(`Delete "${node.name}"? This action is logged.`)) return;
       mutate.mutate({ verb: "delete", nodeId: node.id });
       setTree((t) => findAndRemove(t, node.id));
-      setAuditLog((l) => [{ verb: "delete", nodeName: node.name, timestamp: new Date().toISOString() }, ...l]);
+      setAuditLog((l) => [
+        { verb: "delete", nodeName: node.name, timestamp: new Date().toISOString() },
+        ...l,
+      ]);
       setSelectedId(null);
       return;
     }
     setEditingNode({ verb, node });
   }
 
-  function handleSaveCreate(parentNode: TreeNode, name: string, type: string, location: string, budget: number) {
+  function handleSaveCreate(
+    parentNode: TreeNode,
+    name: string,
+    type: string,
+    location: string,
+    budget: number,
+  ) {
     const newNode: TreeNode = {
       id: `${parentNode.id}/${name}`.replace(/\s+/g, "_").toLowerCase(),
       name,
@@ -143,16 +152,33 @@ export default function OrganizationPage() {
       location: location || null,
       children: [],
     };
-    mutate.mutate({ verb: "create", parentId: parentNode.id, name, type: type as never, location, budgetMonthlyCents: budget });
+    mutate.mutate({
+      verb: "create",
+      parentId: parentNode.id,
+      name,
+      type: type as never,
+      location,
+      budgetMonthlyCents: budget,
+    });
     setTree((t) => addChild(t, parentNode.id, newNode));
-    setAuditLog((l) => [{ verb: "create", nodeName: name, timestamp: new Date().toISOString() }, ...l]);
+    setAuditLog((l) => [
+      { verb: "create", nodeName: name, timestamp: new Date().toISOString() },
+      ...l,
+    ]);
     setEditingNode(null);
   }
 
   function handleSaveRename(node: TreeNode, newName: string) {
     mutate.mutate({ verb: "rename", nodeId: node.id, name: newName });
     setTree((t) => renameNode(t, node.id, newName));
-    setAuditLog((l) => [{ verb: "rename", nodeName: `${node.name} → ${newName}`, timestamp: new Date().toISOString() }, ...l]);
+    setAuditLog((l) => [
+      {
+        verb: "rename",
+        nodeName: `${node.name} → ${newName}`,
+        timestamp: new Date().toISOString(),
+      },
+      ...l,
+    ]);
     setEditingNode(null);
   }
 
@@ -173,9 +199,15 @@ export default function OrganizationPage() {
 
       <div className="grid grid-cols-[1fr_360px] gap-6">
         {/* Tree view */}
-        <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+        <div
+          className="rounded-lg border p-5"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+        >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+            <h2
+              className="text-sm font-semibold uppercase tracking-wide"
+              style={{ color: "var(--text-muted)" }}
+            >
               Org Tree
             </h2>
             <div className="flex gap-3 text-[11px]" style={{ color: "var(--text-secondary)" }}>
@@ -203,7 +235,10 @@ export default function OrganizationPage() {
           {selectedNode ? (
             <NodeDetailPanel node={selectedNode} onVerb={handleVerb} />
           ) : (
-            <div className="rounded-lg border border-dashed p-6 text-center" style={{ borderColor: "var(--border)" }}>
+            <div
+              className="rounded-lg border border-dashed p-6 text-center"
+              style={{ borderColor: "var(--border)" }}
+            >
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                 Select a node to view details or restructure.
               </p>
@@ -211,8 +246,14 @@ export default function OrganizationPage() {
           )}
 
           {/* Audit log */}
-          <div className="rounded-lg border p-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="rounded-lg border p-4"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+          >
+            <h3
+              className="mb-2 text-sm font-semibold uppercase tracking-wide"
+              style={{ color: "var(--text-muted)" }}
+            >
               Recent Changes
             </h3>
             {auditLog.length === 0 ? (
@@ -226,7 +267,8 @@ export default function OrganizationPage() {
                     <span
                       className="rounded px-1.5 py-0.5 text-[9px] font-mono font-bold"
                       style={{
-                        backgroundColor: entry.verb === "delete" ? "rgba(220,38,38,0.1)" : "rgba(37,99,235,0.1)",
+                        backgroundColor:
+                          entry.verb === "delete" ? "rgba(220,38,38,0.1)" : "rgba(37,99,235,0.1)",
                         color: entry.verb === "delete" ? "var(--red)" : "var(--navy)",
                       }}
                     >
@@ -298,7 +340,10 @@ function TreeRow({
             <button
               className="text-[10px]"
               style={{ color: "var(--text-muted)" }}
-              onClick={(e) => { e.stopPropagation(); setExpanded(!isOpen); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!isOpen);
+              }}
             >
               {isOpen ? "▼" : "▶"}
             </button>
@@ -323,11 +368,41 @@ function TreeRow({
 
         {/* Hover actions */}
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <ActionBtn label="＋" title="Add child" onClick={(e) => { e.stopPropagation(); onVerb("create", node); }} />
-          <ActionBtn label="✎" title="Rename" onClick={(e) => { e.stopPropagation(); onVerb("rename", node); }} />
-          <ActionBtn label="↗" title="Move" danger onClick={(e) => { e.stopPropagation(); onVerb("reparent", node); }} />
+          <ActionBtn
+            label="＋"
+            title="Add child"
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerb("create", node);
+            }}
+          />
+          <ActionBtn
+            label="✎"
+            title="Rename"
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerb("rename", node);
+            }}
+          />
+          <ActionBtn
+            label="↗"
+            title="Move"
+            danger
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerb("reparent", node);
+            }}
+          />
           {node.id !== "org_root" && (
-            <ActionBtn label="✕" title="Delete" danger onClick={(e) => { e.stopPropagation(); onVerb("delete", node); }} />
+            <ActionBtn
+              label="✕"
+              title="Delete"
+              danger
+              onClick={(e) => {
+                e.stopPropagation();
+                onVerb("delete", node);
+              }}
+            />
           )}
         </div>
       </div>
@@ -347,7 +422,17 @@ function TreeRow({
   );
 }
 
-function ActionBtn({ label, title, danger, onClick }: { label: string; title: string; danger?: boolean; onClick: (e: React.MouseEvent) => void }) {
+function ActionBtn({
+  label,
+  title,
+  danger,
+  onClick,
+}: {
+  label: string;
+  title: string;
+  danger?: boolean;
+  onClick: (e: React.MouseEvent) => void;
+}) {
   return (
     <button
       title={title}
@@ -362,14 +447,25 @@ function ActionBtn({ label, title, danger, onClick }: { label: string; title: st
 
 // ── Node detail panel ────────────────────────────────────────────────────
 
-function NodeDetailPanel({ node, onVerb }: { node: TreeNode; onVerb: (verb: string, node: TreeNode) => void }) {
+function NodeDetailPanel({
+  node,
+  onVerb,
+}: {
+  node: TreeNode;
+  onVerb: (verb: string, node: TreeNode) => void;
+}) {
   const budget = node.budgetCap > 0 ? `$${(node.budgetCap / 100).toLocaleString()}/mo` : "—";
   return (
-    <div className="rounded-lg border p-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+    >
       <div className="mb-3 flex items-center gap-2">
         <span className="text-lg">{NODE_ICONS[node.type]}</span>
         <div>
-          <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{node.name}</div>
+          <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+            {node.name}
+          </div>
           <div className="text-[10px] font-mono uppercase" style={{ color: "var(--text-muted)" }}>
             {node.type}
           </div>
@@ -380,14 +476,27 @@ function NodeDetailPanel({ node, onVerb }: { node: TreeNode; onVerb: (verb: stri
         <Row label="Budget" value={budget} />
         {node.location && <Row label="Location" value={`📍 ${node.location}`} />}
         {node.tags?.regulatory && (
-          <Row label="Regulatory" value={
-            <span className="rounded px-1.5 py-0.5 text-[9px] font-mono" style={{ backgroundColor: "rgba(220,38,38,0.08)", color: "var(--red)" }}>
-              {node.tags.regulatory}
-            </span>
-          } />
+          <Row
+            label="Regulatory"
+            value={
+              <span
+                className="rounded px-1.5 py-0.5 text-[9px] font-mono"
+                style={{ backgroundColor: "rgba(220,38,38,0.08)", color: "var(--red)" }}
+              >
+                {node.tags.regulatory}
+              </span>
+            }
+          />
         )}
         <Row label="Children" value={`${node.children.length}`} />
-        <Row label="Node ID" value={<code className="text-[10px]" style={{ color: "var(--text-muted)" }}>{node.id.substring(0, 24)}…</code>} />
+        <Row
+          label="Node ID"
+          value={
+            <code className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+              {node.id.substring(0, 24)}…
+            </code>
+          }
+        />
       </div>
 
       {/* Actions */}
@@ -401,7 +510,15 @@ function NodeDetailPanel({ node, onVerb }: { node: TreeNode; onVerb: (verb: stri
   );
 }
 
-function ActionTile({ verb, node, onVerb }: { verb: string; node: TreeNode; onVerb: (verb: string, node: TreeNode) => void }) {
+function ActionTile({
+  verb,
+  node,
+  onVerb,
+}: {
+  verb: string;
+  node: TreeNode;
+  onVerb: (verb: string, node: TreeNode) => void;
+}) {
   const config = VERB_LABELS[verb] ?? { label: verb, icon: "?" };
   return (
     <button
@@ -437,7 +554,13 @@ function EditModal({
 }: {
   state: { verb: string; node: TreeNode };
   onCancel: () => void;
-  onCreate: (parent: TreeNode, name: string, type: string, location: string, budget: number) => void;
+  onCreate: (
+    parent: TreeNode,
+    name: string,
+    type: string,
+    location: string,
+    budget: number,
+  ) => void;
   onRename: (node: TreeNode, newName: string) => void;
 }) {
   const [name, setName] = useState(state.node.name);
@@ -458,13 +581,18 @@ function EditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onCancel}
+    >
       <div
         className="w-[420px] rounded-lg p-5 shadow-xl"
         style={{ backgroundColor: "var(--surface)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-4 text-sm font-bold" style={{ color: "var(--text-primary)" }}>{title}</h3>
+        <h3 className="mb-4 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+          {title}
+        </h3>
 
         <div className="space-y-3">
           <Field label="Name">
@@ -543,7 +671,12 @@ function EditModal({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>{label}</label>
+      <label
+        className="mb-1 block text-[11px] font-medium"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        {label}
+      </label>
       {children}
     </div>
   );
@@ -556,5 +689,7 @@ function countNodes(node: TreeNode): number {
 }
 
 function countByType(node: TreeNode, type: string): number {
-  return (node.type === type ? 1 : 0) + node.children.reduce((sum, c) => sum + countByType(c, type), 0);
+  return (
+    (node.type === type ? 1 : 0) + node.children.reduce((sum, c) => sum + countByType(c, type), 0)
+  );
 }

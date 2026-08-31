@@ -21,14 +21,21 @@ const CH_AUTH = "arm:arm_dev_password";
 const PROXY_PORT = process.env.PROXY_PORT ?? "8787";
 const SIM_DURATION = process.env.SIM_DURATION ?? "50";
 
-function log(msg: string) { console.log(`\n  ▸ ${msg}`); }
+function log(msg: string) {
+  console.log(`\n  ▸ ${msg}`);
+}
 
-async function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function chExec(sql: string): Promise<void> {
   await fetch(`${CH_URL}/`, {
     method: "POST",
-    headers: { "Authorization": "Basic " + Buffer.from(CH_AUTH).toString("base64"), "Content-Type": "text/plain" },
+    headers: {
+      Authorization: "Basic " + Buffer.from(CH_AUTH).toString("base64"),
+      "Content-Type": "text/plain",
+    },
     body: sql,
   });
 }
@@ -59,7 +66,10 @@ async function main() {
   for (let i = 0; i < 20; i++) {
     try {
       const res = await fetch(`http://localhost:${PROXY_PORT}/health`);
-      if (res.ok) { proxyReady = true; break; }
+      if (res.ok) {
+        proxyReady = true;
+        break;
+      }
     } catch {}
     await sleep(500);
   }
@@ -163,4 +173,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(e => { console.error("Simulation failed:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("Simulation failed:", e);
+  process.exit(1);
+});

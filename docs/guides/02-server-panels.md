@@ -67,14 +67,14 @@ eligible → invited → questionnaire completed → token issued → downloaded
 
 Panels:
 
-| Panel | Form | Notes |
-|---|---|---|
-| Funnel | horizontal stepped bar, absolute counts + conversion % between steps | the hero panel; clicking a step filters the table below |
-| Stall breakdown | ranked horizontal bars of `step × error_code` | plain-language labels ("38 stalled connecting Jira"), not raw codes |
-| Time-to-value | histogram of questionnaire-start → first-metered-call, p50/p90 markers | target line at 10 min |
-| Coverage | matrix: job function (rows) × published-package / activated-seats (cols) | headcount-weighted, sorted by uncovered weight |
-| Gaps | ranked list from `library.gaps` | each row links to `/library` prefiltered |
-| Recent activations | TanStack table, live | pseudonymous `user_ref`, never an email |
+| Panel              | Form                                                                     | Notes                                                               |
+| ------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Funnel             | horizontal stepped bar, absolute counts + conversion % between steps     | the hero panel; clicking a step filters the table below             |
+| Stall breakdown    | ranked horizontal bars of `step × error_code`                            | plain-language labels ("38 stalled connecting Jira"), not raw codes |
+| Time-to-value      | histogram of questionnaire-start → first-metered-call, p50/p90 markers   | target line at 10 min                                               |
+| Coverage           | matrix: job function (rows) × published-package / activated-seats (cols) | headcount-weighted, sorted by uncovered weight                      |
+| Gaps               | ranked list from `library.gaps`                                          | each row links to `/library` prefiltered                            |
+| Recent activations | TanStack table, live                                                     | pseudonymous `user_ref`, never an email                             |
 
 Chart rules (design system is already pinned: Tailwind v4 + Recharts):
 
@@ -129,14 +129,14 @@ imported components.
 All `tenantProcedure`. Every query takes the existing optional `scope` input so the
 org-tree drill-down works exactly like the other routers.
 
-| Procedure | Returns |
-|---|---|
-| `funnel` | `{ steps: [{ step, count, conversionFromPrev }], filters }` |
-| `stalls` | `{ rows: [{ step, errorCode, label, count, share }] }` |
-| `timeToValue` | `{ buckets: [{ ltMinutes, count }], p50, p90 }` |
-| `coverage` | `{ rows: [{ jobFunctionKey, name, headcountWeight, packages, activatedSeats, eligibleSeats }] }` |
-| `activeUsers` | `{ weeklyActive, activatedSeats, eligibleSeats, trend: [...] }` |
-| `recentActivations` | paginated activation events |
+| Procedure           | Returns                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| `funnel`            | `{ steps: [{ step, count, conversionFromPrev }], filters }`                                      |
+| `stalls`            | `{ rows: [{ step, errorCode, label, count, share }] }`                                           |
+| `timeToValue`       | `{ buckets: [{ ltMinutes, count }], p50, p90 }`                                                  |
+| `coverage`          | `{ rows: [{ jobFunctionKey, name, headcountWeight, packages, activatedSeats, eligibleSeats }] }` |
+| `activeUsers`       | `{ weeklyActive, activatedSeats, eligibleSeats, trend: [...] }`                                  |
+| `recentActivations` | paginated activation events                                                                      |
 
 ### 5.1 Fixture mode and real reads
 

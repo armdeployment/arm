@@ -64,7 +64,8 @@ function TreemapCell(props: any) {
   const { x, y, width, height, name, size, depth, criticalCount, index } = props;
   if (width < 2 || height < 2) return null;
 
-  const fill = criticalCount > 0 ? CRIT_COLOR : DEPTH_COLORS[Math.min(depth - 1, DEPTH_COLORS.length - 1)];
+  const fill =
+    criticalCount > 0 ? CRIT_COLOR : DEPTH_COLORS[Math.min(depth - 1, DEPTH_COLORS.length - 1)];
   const opacity = 0.85 + (depth === 1 ? 0.15 : 0);
 
   return (
@@ -130,12 +131,23 @@ export function SpendTreemap() {
               const d = payload[0].payload;
               return (
                 <div style={TOOLTIP_STYLE}>
-                  <div className="font-bold" style={{ color: "var(--text-primary)" }}>{d.name}</div>
-                  <div className="mt-1 space-y-0.5 text-xs" style={{ color: "var(--text-secondary)" }}>
-                    <div>Spend: <strong>${d.size?.toLocaleString()}/mo</strong></div>
+                  <div className="font-bold" style={{ color: "var(--text-primary)" }}>
+                    {d.name}
+                  </div>
+                  <div
+                    className="mt-1 space-y-0.5 text-xs"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <div>
+                      Spend: <strong>${d.size?.toLocaleString()}/mo</strong>
+                    </div>
                     <div>Agents: {d.agentCount}</div>
                     <div>Type: {d.type}</div>
-                    {d.criticalCount > 0 && <div className="font-semibold" style={{ color: CRIT_COLOR }}>{d.criticalCount} critical</div>}
+                    {d.criticalCount > 0 && (
+                      <div className="font-semibold" style={{ color: CRIT_COLOR }}>
+                        {d.criticalCount} critical
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -145,16 +157,19 @@ export function SpendTreemap() {
       </ResponsiveContainer>
       <div className="mt-3 flex flex-wrap gap-4 text-xs" style={{ color: "var(--text-secondary)" }}>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: DEPTH_COLORS[0] }} /> Department
+          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: DEPTH_COLORS[0] }} />{" "}
+          Department
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: DEPTH_COLORS[1] }} /> Group
+          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: DEPTH_COLORS[1] }} />{" "}
+          Group
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: DEPTH_COLORS[2] }} /> Team
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: CRIT_COLOR }} /> Has critical agents
+          <span className="h-2.5 w-2.5 rounded" style={{ backgroundColor: CRIT_COLOR }} /> Has
+          critical agents
         </span>
       </div>
     </ChartCard>
@@ -165,15 +180,7 @@ export function SpendTreemap() {
 
 const INDENT_PX = 24;
 
-function TreeRow({
-  node,
-  depth,
-  isLast,
-}: {
-  node: TreeNode;
-  depth: number;
-  isLast: boolean;
-}) {
+function TreeRow({ node, depth, isLast }: { node: TreeNode; depth: number; isLast: boolean }) {
   const color = DEPTH_COLORS[Math.min(depth, DEPTH_COLORS.length - 1)];
   const isDept = depth === 1;
 
@@ -188,7 +195,12 @@ function TreeRow({
         {depth > 0 && (
           <div
             className="absolute -ml-1 h-full border-l border-dashed"
-            style={{ borderColor: "var(--border)", left: `${depth * INDENT_PX - 10}px`, top: "-10px", bottom: "-10px" }}
+            style={{
+              borderColor: "var(--border)",
+              left: `${depth * INDENT_PX - 10}px`,
+              top: "-10px",
+              bottom: "-10px",
+            }}
           />
         )}
 
@@ -222,14 +234,22 @@ function TreeRow({
           >
             {node.budgetUtilPct}%
           </span>
-          <span className="w-24 text-sm font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+          <span
+            className="w-24 text-sm font-bold tabular-nums"
+            style={{ color: "var(--text-primary)" }}
+          >
             ${node.monthlySpend.toLocaleString()}
           </span>
         </div>
       </a>
       {node.children.length > 0 &&
         node.children.map((child, i) => (
-          <TreeRow key={child.id} node={child} depth={depth + 1} isLast={i === node.children.length - 1} />
+          <TreeRow
+            key={child.id}
+            node={child}
+            depth={depth + 1}
+            isLast={i === node.children.length - 1}
+          />
         ))}
     </>
   );
@@ -254,7 +274,10 @@ export function SpendTreeView() {
     <ChartCard title="Spend by Org Tree (Full Hierarchy)">
       <div className="space-y-0">
         {/* Root row */}
-        <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5 font-bold" style={{ color: "var(--text-primary)" }}>
+        <div
+          className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5 font-bold"
+          style={{ color: "var(--text-primary)" }}
+        >
           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: DEPTH_COLORS[0] }} />
           <div className="flex-1">{data.tree.name}</div>
           <div className="flex items-center gap-4 text-right">
@@ -269,7 +292,12 @@ export function SpendTreeView() {
         {/* Tree */}
         <div className="mt-1">
           {data.tree.children.map((child, i) => (
-            <TreeRow key={child.id} node={child} depth={1} isLast={i === data.tree.children.length - 1} />
+            <TreeRow
+              key={child.id}
+              node={child}
+              depth={1}
+              isLast={i === data.tree.children.length - 1}
+            />
           ))}
         </div>
       </div>
@@ -283,9 +311,15 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   return (
     <div
       className="rounded-lg border p-5"
-      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
+      style={{
+        borderColor: "var(--border)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-sm)",
+      }}
     >
-      <h3 className="mb-5 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h3>
+      <h3 className="mb-5 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+        {title}
+      </h3>
       {children}
     </div>
   );

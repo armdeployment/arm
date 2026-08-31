@@ -3,7 +3,7 @@
 
 # ── Control plane connection (required) ──
 controlPlane:
-  url: ""      # Set at install: https://control.arm.example.com
+  url: "" # Set at install: https://control.arm.example.com
   tenantId: "" # Set at install: tenant UUID from registration
 
 # ── Closed proxy ──
@@ -16,7 +16,7 @@ proxy:
     pullPolicy: IfNotPresent
   resources:
     requests: { cpu: "500m", memory: "256Mi" }
-    limits:   { cpu: "2000m", memory: "512Mi" }
+    limits: { cpu: "2000m", memory: "512Mi" }
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -25,7 +25,7 @@ proxy:
   port: 8787
   env:
     ARM_FAIL_MODE: "fail_closed"
-    PROXY_PERFORMANCE_BUDGET_MS: "25"  # p50 latency budget (spec §5.2)
+    PROXY_PERFORMANCE_BUDGET_MS: "25" # p50 latency budget (spec §5.2)
 
 # ── Open gateway ──
 openGateway:
@@ -37,7 +37,7 @@ openGateway:
     pullPolicy: IfNotPresent
   resources:
     requests: { cpu: "250m", memory: "256Mi" }
-    limits:   { cpu: "1000m", memory: "512Mi" }
+    limits: { cpu: "1000m", memory: "512Mi" }
   port: 8788
   vllmEndpoint: "" # Set at install: http://vllm:8000
 
@@ -49,12 +49,12 @@ meterAgent:
     tag: latest
     pullPolicy: IfNotPresent
   buffer:
-    maxBytes: 1073741024  # 1 GB (spec §5.2)
+    maxBytes: 1073741024 # 1 GB (spec §5.2)
     maxAgeHours: 24
     dir: /data/meter-buffer
   resources:
     requests: { cpu: "100m", memory: "128Mi" }
-    limits:   { cpu: "500m", memory: "256Mi" }
+    limits: { cpu: "500m", memory: "256Mi" }
 
 # ── Service ──
 service:
@@ -76,7 +76,7 @@ persistence:
 
 # ── Monitoring ──
 serviceMonitor:
-  enabled: false  # Enable if Prometheus Operator is installed
+  enabled: false # Enable if Prometheus Operator is installed
 
 # ── TLS / mTLS ──
 tls:

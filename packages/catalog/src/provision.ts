@@ -67,20 +67,29 @@ export function buildPackageVersionFromSeed(
   tenantId: string,
 ): PackageVersionInsert {
   const components: WorkPackageComponentRef[] = seed.components.map((ref) => {
-    const resolved = resolve(ref.component, ref.componentVersion, availableComponents, { tenantId });
+    const resolved = resolve(ref.component, ref.componentVersion, availableComponents, {
+      tenantId,
+    });
     if (resolved === null) {
       throw new Error(
         `cannot provision seed component "${ref.component}"@"${ref.componentVersion}": no match in the ` +
           `Component Registry (publish/approve the component before provisioning this package)`,
       );
     }
-    return { componentId: resolved.componentId, version: resolved.version, kind: ref.kind, scopes: ref.scopes };
+    return {
+      componentId: resolved.componentId,
+      version: resolved.version,
+      kind: ref.kind,
+      scopes: ref.scopes,
+    };
   });
 
   // Sort per the manifest-v2 wire convention (guide 00 §4): components by
   // componentId; permissions/job_functions lexicographic; starter_prompts
   // keeps insertion order.
-  const sortedComponents = [...components].sort((a, b) => a.componentId.localeCompare(b.componentId));
+  const sortedComponents = [...components].sort((a, b) =>
+    a.componentId.localeCompare(b.componentId),
+  );
   const sortedPermissions = [...seed.permissions].sort();
   const sortedJobFunctions = [...seed.jobFunctions].sort();
 

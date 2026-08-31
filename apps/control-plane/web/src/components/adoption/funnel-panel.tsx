@@ -30,8 +30,17 @@ export interface FunnelPanelViewProps {
 const STEP_COLOR = "var(--navy)";
 const STEP_COLOR_SELECTED = "var(--gold)";
 
-export function FunnelPanelView({ status, steps, freshnessMs, sampleData, errorMessage, selectedStep, onStepClick }: FunnelPanelViewProps) {
-  const isEmpty = status === "ready" && (!steps || steps.length === 0 || steps.every((s) => s.count === 0));
+export function FunnelPanelView({
+  status,
+  steps,
+  freshnessMs,
+  sampleData,
+  errorMessage,
+  selectedStep,
+  onStepClick,
+}: FunnelPanelViewProps) {
+  const isEmpty =
+    status === "ready" && (!steps || steps.length === 0 || steps.every((s) => s.count === 0));
   const effectiveStatus: PanelStatus = status === "ready" && isEmpty ? "empty" : status;
   const max = steps && steps.length > 0 ? steps[0]!.count : 1;
 
@@ -61,19 +70,34 @@ export function FunnelPanelView({ status, steps, freshnessMs, sampleData, errorM
                     className="group flex w-full items-center gap-3 rounded-md px-1.5 py-1 text-left transition-colors"
                     style={{ backgroundColor: selected ? "var(--navy-light)" : "transparent" }}
                   >
-                    <span className="w-[168px] shrink-0 truncate text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                    <span
+                      className="w-[168px] shrink-0 truncate text-[11px] font-medium"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {s.label}
                     </span>
-                    <span className="h-5 flex-1 overflow-hidden rounded" style={{ backgroundColor: "var(--bg-elevated)" }}>
+                    <span
+                      className="h-5 flex-1 overflow-hidden rounded"
+                      style={{ backgroundColor: "var(--bg-elevated)" }}
+                    >
                       <span
                         className="block h-full rounded"
-                        style={{ width: `${pct}%`, backgroundColor: selected ? STEP_COLOR_SELECTED : STEP_COLOR }}
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: selected ? STEP_COLOR_SELECTED : STEP_COLOR,
+                        }}
                       />
                     </span>
-                    <span className="w-12 shrink-0 text-right text-[12px] font-semibold tabular" style={{ color: "var(--text-primary)" }}>
+                    <span
+                      className="w-12 shrink-0 text-right text-[12px] font-semibold tabular"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {s.count}
                     </span>
-                    <span className="w-14 shrink-0 text-right text-[10px] tabular" style={{ color: "var(--text-muted)" }}>
+                    <span
+                      className="w-14 shrink-0 text-right text-[10px] tabular"
+                      style={{ color: "var(--text-muted)" }}
+                    >
                       {s.conversionFromPrev == null ? "—" : `${s.conversionFromPrev}%`}
                     </span>
                   </button>

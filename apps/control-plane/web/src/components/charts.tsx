@@ -15,9 +15,9 @@ import {
 } from "recharts";
 
 const CHART_COLORS = {
-  claude: "#6366f1",  // indigo
-  gpt: "#1E3A8A",     // navy — brand
-  glm: "#15803D",     // green-700
+  claude: "#6366f1", // indigo
+  gpt: "#1E3A8A", // navy — brand
+  glm: "#15803D", // green-700
 };
 
 const TOOLTIP_STYLE = {
@@ -66,16 +66,36 @@ export function SpendTrendChart({ data }: { data: SpendTrendPoint[] }) {
           <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
           <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
           <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#E2E8F0", strokeWidth: 1 }} />
-          <Area type="monotone" dataKey="claude" stroke={CHART_COLORS.claude} fill={`url(#g-claude)`} strokeWidth={2.5} />
-          <Area type="monotone" dataKey="gpt" stroke={CHART_COLORS.gpt} fill={`url(#g-gpt)`} strokeWidth={2.5} />
-          <Area type="monotone" dataKey="glm" stroke={CHART_COLORS.glm} fill={`url(#g-glm)`} strokeWidth={2.5} />
+          <Area
+            type="monotone"
+            dataKey="claude"
+            stroke={CHART_COLORS.claude}
+            fill={`url(#g-claude)`}
+            strokeWidth={2.5}
+          />
+          <Area
+            type="monotone"
+            dataKey="gpt"
+            stroke={CHART_COLORS.gpt}
+            fill={`url(#g-gpt)`}
+            strokeWidth={2.5}
+          />
+          <Area
+            type="monotone"
+            dataKey="glm"
+            stroke={CHART_COLORS.glm}
+            fill={`url(#g-glm)`}
+            strokeWidth={2.5}
+          />
         </AreaChart>
       </ResponsiveContainer>
-      <ChartLegend items={[
-        { label: "Claude", color: CHART_COLORS.claude },
-        { label: "GPT", color: CHART_COLORS.gpt },
-        { label: "GLM", color: CHART_COLORS.glm },
-      ]} />
+      <ChartLegend
+        items={[
+          { label: "Claude", color: CHART_COLORS.claude },
+          { label: "GPT", color: CHART_COLORS.gpt },
+          { label: "GLM", color: CHART_COLORS.glm },
+        ]}
+      />
     </ChartCard>
   );
 }
@@ -86,7 +106,15 @@ export function ModelSpendChart({ data }: { data: ModelSpendItem[] }) {
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
           <XAxis type="number" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis type="category" dataKey="model" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} width={110} />
+          <YAxis
+            type="category"
+            dataKey="model"
+            stroke="#475569"
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            width={110}
+          />
           <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#F1F5F9" }} />
           <Bar dataKey="spend" radius={[0, 4, 4, 0]} barSize={22}>
             {data.map((entry, i) => (
@@ -95,10 +123,12 @@ export function ModelSpendChart({ data }: { data: ModelSpendItem[] }) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      <ChartLegend items={[
-        { label: "Closed", color: "#1E3A8A" },
-        { label: "Self-hosted", color: "#15803D" },
-      ]} />
+      <ChartLegend
+        items={[
+          { label: "Closed", color: "#1E3A8A" },
+          { label: "Self-hosted", color: "#15803D" },
+        ]}
+      />
     </ChartCard>
   );
 }
@@ -108,7 +138,16 @@ export function TierBreakdownChart({ data }: { data: TierItem[] }) {
     <ChartCard title="Agents by Priority Tier">
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
-          <Pie data={data} dataKey="count" nameKey="tier" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4}>
+          <Pie
+            data={data}
+            dataKey="count"
+            nameKey="tier"
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={85}
+            paddingAngle={4}
+          >
             {data.map((entry, i) => (
               <Cell key={i} fill={entry.color} />
             ))}
@@ -118,7 +157,11 @@ export function TierBreakdownChart({ data }: { data: TierItem[] }) {
       </ResponsiveContainer>
       <div className="flex justify-center gap-5">
         {data.map((t) => (
-          <span key={t.tier} className="flex items-center gap-2 text-xs font-medium capitalize" style={{ color: "var(--text-secondary)" }}>
+          <span
+            key={t.tier}
+            className="flex items-center gap-2 text-xs font-medium capitalize"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color }} />
             {t.tier} ({t.count})
           </span>
@@ -143,7 +186,11 @@ function ChartLegend({ items }: { items: { label: string; color: string }[] }) {
   return (
     <div className="mt-4 flex gap-4">
       {items.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+        <span
+          key={item.label}
+          className="flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: "var(--text-secondary)" }}
+        >
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
           {item.label}
         </span>

@@ -51,7 +51,12 @@ export function checkArtifactIntegrity(versions: ComponentVersionBlobRef[]): Che
       assertsNegative: true,
     };
   }
-  return { id: "artifact-integrity", status: "pass", scanned: versions.length, assertsNegative: true };
+  return {
+    id: "artifact-integrity",
+    status: "pass",
+    scanned: versions.length,
+    assertsNegative: true,
+  };
 }
 
 register({

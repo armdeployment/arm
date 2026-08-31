@@ -21,3 +21,11 @@ demo/*.mp4
 demo/*.png
 apps/arm-video/public/
 apps/*/*/public/
+
+# Not YAML/XML that prettier can parse, so it can never format these:
+# Helm templates are Go text/template that only happens to look like YAML
+# ({{ }} where a scalar belongs), and .wxs is WiX XML, for which prettier
+# ships no parser. Listing them here is the difference between "we chose
+# not to format this" and "format:check is permanently red".
+infra/helm/*/templates/
+packaging/windows/*.wxs

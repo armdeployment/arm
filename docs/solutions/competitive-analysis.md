@@ -21,22 +21,22 @@ general company, manufacturing, finance.
 
 ## Feature comparison matrix
 
-| Capability | TrueFoundry Agent Gateway | ARM (current) | ARM (differentiation potential) |
-|---|---|---|---|
-| **Org-tree hierarchical budgeting** | ❌ Per-agent/per-workflow quotas only | ✅ Implemented (10 dept, 60 agents, $16K/mo) | **Strong differentiator** — no competitor does this |
-| **Priority tiers (critical/std/bg)** | ❌ Not mentioned | ✅ Schema + policy layer | Unique auto-downgrade/throttle/queue |
-| **Dept-level work-type classification** | ❌ Cost attribution only | ✅ taskType on all agents + workTypes query | **Strong differentiator** — see WHAT agents do |
-| **Classification clearance gating** | ❌ Not mentioned (custom guardrails generic) | ✅ clearance field on agents (planned DLP gate) | Differentiator when enforced |
-| **Stakeholder accountability** | ❌ RBAC only (role-based) | ✅ stakeholder_user_id NOT NULL per agent | Human accountability = trust for enterprises |
-| **Dual delivery (SaaS + self-hosted)** | ✅ VPC / On-Prem / Air-Gapped | ✅ Schema supports both (§3.4) | Parity |
-| **SSO / RBAC** | ✅ Yes | 🔶 Packages/auth skeleton exists | Need to implement |
-| **Agent quotas (token/cost)** | ✅ Per agent/workflow/env | 🔶 Budget caps per scope exist | Parity |
-| **Audit trails** | ✅ Full logging | ✅ access_audit_event table | Parity |
-| **MCP integration** | ✅ Agent-to-tool MCP | ❌ Not planned yet | **Needs adding** for enterprise tool access |
-| **Step-level observability** | ✅ Latency, errors, retries | ❌ OTel baseline only | **Needs adding** for enterprise parity |
-| **Open source** | ✅ Linux Foundation project | ❌ Proprietary (for now) | Consider if needed |
-| **Deployment** | VPC, On-Prem, Air-Gapped | Docker Compose + Helm planned | Parity planned |
-| **Pricing** | Per-request + enterprise custom | Not defined (deferred) | TBD |
+| Capability                              | TrueFoundry Agent Gateway                    | ARM (current)                                   | ARM (differentiation potential)                     |
+| --------------------------------------- | -------------------------------------------- | ----------------------------------------------- | --------------------------------------------------- |
+| **Org-tree hierarchical budgeting**     | ❌ Per-agent/per-workflow quotas only        | ✅ Implemented (10 dept, 60 agents, $16K/mo)    | **Strong differentiator** — no competitor does this |
+| **Priority tiers (critical/std/bg)**    | ❌ Not mentioned                             | ✅ Schema + policy layer                        | Unique auto-downgrade/throttle/queue                |
+| **Dept-level work-type classification** | ❌ Cost attribution only                     | ✅ taskType on all agents + workTypes query     | **Strong differentiator** — see WHAT agents do      |
+| **Classification clearance gating**     | ❌ Not mentioned (custom guardrails generic) | ✅ clearance field on agents (planned DLP gate) | Differentiator when enforced                        |
+| **Stakeholder accountability**          | ❌ RBAC only (role-based)                    | ✅ stakeholder_user_id NOT NULL per agent       | Human accountability = trust for enterprises        |
+| **Dual delivery (SaaS + self-hosted)**  | ✅ VPC / On-Prem / Air-Gapped                | ✅ Schema supports both (§3.4)                  | Parity                                              |
+| **SSO / RBAC**                          | ✅ Yes                                       | 🔶 Packages/auth skeleton exists                | Need to implement                                   |
+| **Agent quotas (token/cost)**           | ✅ Per agent/workflow/env                    | 🔶 Budget caps per scope exist                  | Parity                                              |
+| **Audit trails**                        | ✅ Full logging                              | ✅ access_audit_event table                     | Parity                                              |
+| **MCP integration**                     | ✅ Agent-to-tool MCP                         | ❌ Not planned yet                              | **Needs adding** for enterprise tool access         |
+| **Step-level observability**            | ✅ Latency, errors, retries                  | ❌ OTel baseline only                           | **Needs adding** for enterprise parity              |
+| **Open source**                         | ✅ Linux Foundation project                  | ❌ Proprietary (for now)                        | Consider if needed                                  |
+| **Deployment**                          | VPC, On-Prem, Air-Gapped                     | Docker Compose + Helm planned                   | Parity planned                                      |
+| **Pricing**                             | Per-request + enterprise custom              | Not defined (deferred)                          | TBD                                                 |
 
 ---
 
@@ -46,36 +46,36 @@ general company, manufacturing, finance.
 
 **Needs**: Cost visibility, budget control, SSO, easy onboarding.
 
-| Gap | Priority | Current state | Recommendation |
-|---|---|---|---|
-| SSO / IdP integration | 🔴 High | auth package skeleton | Complete OIDC SSO + Okta/Entra connector |
-| Quick-start onboarding | 🟡 Medium | arm agent init planned | Needs implementation before 1.1 |
-| Per-user dashboard | 🟢 Nice | Org-scoped only | Add user-scoped views (my agents, my spend) |
-| API for external portals | 🟢 Nice | tRPC exists but no REST | Add REST bridge for existing BI tools |
+| Gap                      | Priority  | Current state           | Recommendation                              |
+| ------------------------ | --------- | ----------------------- | ------------------------------------------- |
+| SSO / IdP integration    | 🔴 High   | auth package skeleton   | Complete OIDC SSO + Okta/Entra connector    |
+| Quick-start onboarding   | 🟡 Medium | arm agent init planned  | Needs implementation before 1.1             |
+| Per-user dashboard       | 🟢 Nice   | Org-scoped only         | Add user-scoped views (my agents, my spend) |
+| API for external portals | 🟢 Nice   | tRPC exists but no REST | Add REST bridge for existing BI tools       |
 
 ### Manufacturing Company
 
 **Core needs**: Data residency, work-type classification, hierarchical plant→line→team structure, confidential spec protection, integration with PLM/MES systems.
 
-| Gap | Priority | Current state | Recommendation |
-|---|---|---|---|
-| **Confidential classification gating** | 🔴 High | clearance field exists, gate not enforced | **Implement DLP gate**: confidential content blocked from public models (§6.5) |
-| **Work-type dashboard** | 🔴 High | taskType + workTypes query exist | **Build classification UI**: what each department's agents DO |
-| MES/PLM integration connector | 🟡 Medium | Not planned | Add as Phase 1.5 connector target |
-| Plant-level hierarchy (5+ levels) | 🟡 Medium | 4 levels (org→dept→grp→team) | Add plant/line levels for manufacturing tree |
-| Air-gapped deployment | 🟡 Medium | Planned (1.2) | Prioritize for manufacturing compliance |
+| Gap                                    | Priority  | Current state                             | Recommendation                                                                 |
+| -------------------------------------- | --------- | ----------------------------------------- | ------------------------------------------------------------------------------ |
+| **Confidential classification gating** | 🔴 High   | clearance field exists, gate not enforced | **Implement DLP gate**: confidential content blocked from public models (§6.5) |
+| **Work-type dashboard**                | 🔴 High   | taskType + workTypes query exist          | **Build classification UI**: what each department's agents DO                  |
+| MES/PLM integration connector          | 🟡 Medium | Not planned                               | Add as Phase 1.5 connector target                                              |
+| Plant-level hierarchy (5+ levels)      | 🟡 Medium | 4 levels (org→dept→grp→team)              | Add plant/line levels for manufacturing tree                                   |
+| Air-gapped deployment                  | 🟡 Medium | Planned (1.2)                             | Prioritize for manufacturing compliance                                        |
 
 ### Finance Company
 
 **Core needs**: Compliance (SOX, PCI), data classification, audit trails, stakeholder sign-off, budget control per cost center, PII protection.
 
-| Gap | Priority | Current state | Recommendation |
-|---|---|---|---|
-| **PII/PCI classification enforcement** | 🔴 High | classificationClearance exists | **Add PII classification level + routing gate** |
-| **Stakeholder sign-off workflow** | 🔴 High | JIT approval skeleton exists | **Complete approval workflow** with email/webhook |
-| Cost-center hierarchy | 🟡 Medium | org-tree can map to cost centers | Add cost_center_id to scopes |
-| Compliance reporting | 🟡 Medium | No compliance report | Add audit export (CSV, SOC2, SOX) |
-| Retention policy enforcement | 🟡 Medium | Not addressed | Add configurable retention on access_audit_event |
+| Gap                                    | Priority  | Current state                    | Recommendation                                    |
+| -------------------------------------- | --------- | -------------------------------- | ------------------------------------------------- |
+| **PII/PCI classification enforcement** | 🔴 High   | classificationClearance exists   | **Add PII classification level + routing gate**   |
+| **Stakeholder sign-off workflow**      | 🔴 High   | JIT approval skeleton exists     | **Complete approval workflow** with email/webhook |
+| Cost-center hierarchy                  | 🟡 Medium | org-tree can map to cost centers | Add cost_center_id to scopes                      |
+| Compliance reporting                   | 🟡 Medium | No compliance report             | Add audit export (CSV, SOC2, SOX)                 |
+| Retention policy enforcement           | 🟡 Medium | Not addressed                    | Add configurable retention on access_audit_event  |
 
 ---
 
@@ -92,7 +92,7 @@ The CEO should see their org tree with spend on day one.
 
 ### 2. Department-level work-type classification
 
-TrueFoundry tracks *cost* per agent. ARM tracks *what the agent does* (taskType).
+TrueFoundry tracks _cost_ per agent. ARM tracks _what the agent does_ (taskType).
 For manufacturing: "CNC toolpath optimization" vs "Defect detection" tells management
 where agent value is created. For finance: "Invoice processing" vs "Cash forecasting"
 shows automation ROI per function.
@@ -151,30 +151,30 @@ governance platforms, regulatory/market timing, GTM strategy). Findings below.
 
 ## 1. LLM gateway landscape — no one does org-tree governance
 
-| Player | Category | What they have | What they lack (ARM's gap) |
-|---|---|---|---|
-| LiteLLM | Open-source proxy | Virtual keys, per-key budgets, routing, caching | Flat budgets — no org hierarchy, no work-type classification, no stakeholder |
-| Portkey | Gateway + guardrails | Per-user/per-key policies, observability | No org-tree delegation, no deny-override at higher levels |
-| Helicone | Observability | Cost tracking, caching, prompt management | No policy engine, no identity model |
-| OpenRouter | Consumer marketplace | Cheap routing | Enterprise features absent |
-| OmniRoute | Free-tier aggregator (OSS) | Stacks 90+ documented free tiers (~1.53B free tokens/mo), zero-config keyless providers, auto-fallback Tier 1-4 (subscription → API key → cheap → free), RTK+Caveman compression (~89% token savings), key pools, local-first | Consumer/productivity tool: no org tree, no work types, no stakeholder accountability, no policy engine, no audit for governance; free-tier arbitrage + ToS-gray providers (15 flagged in own docs) — not an enterprise product |
-| Kong / Cloudflare | Enterprise gateways | Generic rate limiting, auth | No agent concepts: no work types, no accountability |
-| TrueFoundry | ML platform + gateway | VPC/on-prem, quotas, audit | See matrix above — no org tree, no work types |
-| NVIDIA NIM | Inference platform | Model hosting | Not a governance product |
+| Player            | Category                   | What they have                                                                                                                                                                                                                | What they lack (ARM's gap)                                                                                                                                                                                                      |
+| ----------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LiteLLM           | Open-source proxy          | Virtual keys, per-key budgets, routing, caching                                                                                                                                                                               | Flat budgets — no org hierarchy, no work-type classification, no stakeholder                                                                                                                                                    |
+| Portkey           | Gateway + guardrails       | Per-user/per-key policies, observability                                                                                                                                                                                      | No org-tree delegation, no deny-override at higher levels                                                                                                                                                                       |
+| Helicone          | Observability              | Cost tracking, caching, prompt management                                                                                                                                                                                     | No policy engine, no identity model                                                                                                                                                                                             |
+| OpenRouter        | Consumer marketplace       | Cheap routing                                                                                                                                                                                                                 | Enterprise features absent                                                                                                                                                                                                      |
+| OmniRoute         | Free-tier aggregator (OSS) | Stacks 90+ documented free tiers (~1.53B free tokens/mo), zero-config keyless providers, auto-fallback Tier 1-4 (subscription → API key → cheap → free), RTK+Caveman compression (~89% token savings), key pools, local-first | Consumer/productivity tool: no org tree, no work types, no stakeholder accountability, no policy engine, no audit for governance; free-tier arbitrage + ToS-gray providers (15 flagged in own docs) — not an enterprise product |
+| Kong / Cloudflare | Enterprise gateways        | Generic rate limiting, auth                                                                                                                                                                                                   | No agent concepts: no work types, no accountability                                                                                                                                                                             |
+| TrueFoundry       | ML platform + gateway      | VPC/on-prem, quotas, audit                                                                                                                                                                                                    | See matrix above — no org tree, no work types                                                                                                                                                                                   |
+| NVIDIA NIM        | Inference platform         | Model hosting                                                                                                                                                                                                                 | Not a governance product                                                                                                                                                                                                        |
 
-**Structural gap**: every gateway is a *plumbing* product (route + meter + cache). None
+**Structural gap**: every gateway is a _plumbing_ product (route + meter + cache). None
 models the agent as a member of an org tree with inherited budgets, work-type
 classification, priority tiers, or an accountable human. ARM's schema (§4) is the only
-one that does. OmniRoute (2026-07) is the extreme case: it treats *free-tier
-arbitrage* as the product (auto-fallback across 90+ free tiers, compression to stretch
+one that does. OmniRoute (2026-07) is the extreme case: it treats _free-tier
+arbitrage_ as the product (auto-fallback across 90+ free tiers, compression to stretch
 quota) — pure plumbing, zero governance; its existence confirms the cost-savings wedge
 is real demand, but nobody attaches it to org structure.
 
 ## 2. Agent governance platforms — converging, but asset-centric
 
 - **Credo AI Agent Governor** is the closest direct competitor: agent catalog, risk
-  registry, compliance posture. But it is *asset-centric* (inventory + risk assessment)
-  not *operational* (day-to-day routing, budgets, identity enforcement).
+  registry, compliance posture. But it is _asset-centric_ (inventory + risk assessment)
+  not _operational_ (day-to-day routing, budgets, identity enforcement).
 - Two convergent movements:
   - **Observability → governance**: Helicone, Langfuse, AgentOps, Braintrust adding
     policy on top of traces.
@@ -198,7 +198,7 @@ is real demand, but nobody attaches it to org structure.
   per-tool authorization is a new enterprise ask; ARM has no MCP story yet (gap).
 - **Gartner numbers to sell with**:
   - 40% of enterprise apps embed task-specific agents by end-2026.
-  - 80% of unauthorized agent transactions by 2028 will come from *internal* policy
+  - 80% of unauthorized agent transactions by 2028 will come from _internal_ policy
     violations (shadow agents — ARM's org-tree + approval is the answer).
   - 50% of genAI projects overrun budget through 2028 without cost governance.
 - **AI-FinOps** is becoming a named budget line (Cloud FinOps community); buyers are

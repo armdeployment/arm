@@ -36,7 +36,13 @@ const TOOLTIP_STYLE = {
   padding: "8px 12px",
 } as const;
 
-export function StallsPanelView({ status, rows, freshnessMs, sampleData, errorMessage }: StallsPanelViewProps) {
+export function StallsPanelView({
+  status,
+  rows,
+  freshnessMs,
+  sampleData,
+  errorMessage,
+}: StallsPanelViewProps) {
   const isEmpty = status === "ready" && (!rows || rows.length === 0);
   const effectiveStatus: PanelStatus = status === "ready" && isEmpty ? "empty" : status;
   const chartData = rows?.map((r) => ({ ...r, name: `${r.label} (${r.count})` })) ?? [];
@@ -55,9 +61,27 @@ export function StallsPanelView({ status, rows, freshnessMs, sampleData, errorMe
       {rows && (
         <>
           <ResponsiveContainer width="100%" height={Math.max(180, rows.length * 34)}>
-            <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 24, bottom: 0, left: 8 }}>
-              <XAxis type="number" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis type="category" dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} width={220} />
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ top: 4, right: 24, bottom: 0, left: 8 }}
+            >
+              <XAxis
+                type="number"
+                stroke="#94A3B8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                stroke="#475569"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                width={220}
+              />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 cursor={{ fill: "#F1F5F9" }}
@@ -101,7 +125,13 @@ export function StallsPanelView({ status, rows, freshnessMs, sampleData, errorMe
   );
 }
 
-export function StallsPanel({ scope, jobFunctionKey }: { scope: ScopeRef; jobFunctionKey?: string | null }) {
+export function StallsPanel({
+  scope,
+  jobFunctionKey,
+}: {
+  scope: ScopeRef;
+  jobFunctionKey?: string | null;
+}) {
   const q = trpc.adoption.stalls.useQuery({ scope, jobFunctionKey: jobFunctionKey ?? null });
 
   if (q.isLoading) return <StallsPanelView status="loading" />;

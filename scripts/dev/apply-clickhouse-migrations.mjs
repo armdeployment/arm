@@ -25,7 +25,9 @@ const rawUrl = process.env.CLICKHOUSE_URL ?? "http://arm:arm_dev_password@localh
 const parsedUrl = new URL(rawUrl);
 const authHeader =
   parsedUrl.username || parsedUrl.password
-    ? { Authorization: `Basic ${Buffer.from(`${parsedUrl.username}:${parsedUrl.password}`).toString("base64")}` }
+    ? {
+        Authorization: `Basic ${Buffer.from(`${parsedUrl.username}:${parsedUrl.password}`).toString("base64")}`,
+      }
     : {};
 parsedUrl.username = "";
 parsedUrl.password = "";
@@ -56,8 +58,11 @@ async function applyFile(path) {
     const res = await fetch(clickhouseUrl, { method: "POST", body: stmt, headers: authHeader });
     const text = await res.text();
     if (!res.ok || text.trim()) {
-      const firstCodeLine = stmt.split("\n").find((l) => stripComment(l).trim()) ?? stmt.slice(0, 80);
-      throw new Error(`ClickHouse migration statement failed (starts: "${firstCodeLine.trim().slice(0, 80)}"): ${text}`);
+      const firstCodeLine =
+        stmt.split("\n").find((l) => stripComment(l).trim()) ?? stmt.slice(0, 80);
+      throw new Error(
+        `ClickHouse migration statement failed (starts: "${firstCodeLine.trim().slice(0, 80)}"): ${text}`,
+      );
     }
   }
 }

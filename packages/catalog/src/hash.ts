@@ -27,5 +27,7 @@ function canonicalize(value: unknown): unknown {
 
 /** sha256 hex digest of the canonical JSON encoding of `obj`. */
 export function manifestSha256(obj: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonicalize(obj))).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalize(obj)))
+    .digest("hex");
 }

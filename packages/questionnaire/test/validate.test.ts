@@ -11,7 +11,9 @@ function node(
     kind: "single",
     prompt: `prompt ${id}`,
     help: "",
-    options: [{ value: "a", label: "A", signals: { job_functions: [], components: [], weight: 1 } }],
+    options: [
+      { value: "a", label: "A", signals: { job_functions: [], components: [], weight: 1 } },
+    ],
     next,
   };
 }

@@ -10,7 +10,12 @@ import { FunnelPanelView, type FunnelStepRow } from "../../src/components/adopti
 
 const STEPS: FunnelStepRow[] = [
   { step: "invited", label: "Invited", count: 100, conversionFromPrev: null },
-  { step: "questionnaire_started", label: "Questionnaire started", count: 80, conversionFromPrev: 80 },
+  {
+    step: "questionnaire_started",
+    label: "Questionnaire started",
+    count: 80,
+    conversionFromPrev: 80,
+  },
   { step: "weekly_active", label: "Weekly active", count: 40, conversionFromPrev: 50 },
 ];
 
@@ -33,7 +38,12 @@ describe("FunnelPanelView", () => {
   });
 
   it("empty: renders when every step count is zero (e.g. a coverage-gap job function)", () => {
-    render(<FunnelPanelView status="ready" steps={STEPS.map((s) => ({ ...s, count: 0, conversionFromPrev: null }))} />);
+    render(
+      <FunnelPanelView
+        status="ready"
+        steps={STEPS.map((s) => ({ ...s, count: 0, conversionFromPrev: null }))}
+      />,
+    );
     expect(screen.getByText(/no activation events/i)).toBeInTheDocument();
   });
 

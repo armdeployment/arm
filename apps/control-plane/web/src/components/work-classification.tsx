@@ -22,7 +22,14 @@ export function WorkClassificationPanel() {
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div
+        className="rounded-lg border p-5"
+        style={{
+          borderColor: "var(--border)",
+          backgroundColor: "var(--bg-surface)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
         <h3 className="mb-4 text-sm font-semibold">Work Classification by Department</h3>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -36,7 +43,14 @@ export function WorkClassificationPanel() {
   return (
     <div className="space-y-4">
       {/* Classification clearance summary */}
-      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div
+        className="rounded-lg border p-5"
+        style={{
+          borderColor: "var(--border)",
+          backgroundColor: "var(--bg-surface)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Work Classification Across All Departments
@@ -60,10 +74,15 @@ export function WorkClassificationPanel() {
                 <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${style}`}>
                   {clearance}
                 </span>
-                <span className="mt-1.5 text-lg font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                <span
+                  className="mt-1.5 text-lg font-bold tabular-nums"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   {entry.count}
                 </span>
-                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>agents</span>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  agents
+                </span>
               </div>
             );
           })}
@@ -71,9 +90,18 @@ export function WorkClassificationPanel() {
       </div>
 
       {/* Work types by department — what agents actually DO */}
-      <div className="rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}>
+      <div
+        className="rounded-lg border"
+        style={{
+          borderColor: "var(--border)",
+          backgroundColor: "var(--bg-surface)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
         <div className="border-b px-5 py-3.5" style={{ borderColor: "var(--border)" }}>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>What Agents Do — Work Types</h3>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            What Agents Do — Work Types
+          </h3>
         </div>
         <div className="divide-y" style={{ borderColor: "var(--border)" }}>
           {data.workTypes.slice(0, 15).map((wt) => (
@@ -85,7 +113,10 @@ export function WorkClassificationPanel() {
                 {wt.category.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium capitalize" style={{ color: "var(--text-primary)" }}>
+                <div
+                  className="text-sm font-medium capitalize"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   {wt.category}
                 </div>
                 <div className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -93,10 +124,15 @@ export function WorkClassificationPanel() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                <div
+                  className="text-sm font-bold tabular-nums"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   ${wt.spend.toLocaleString()}
                 </div>
-                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>/mo</div>
+                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  /mo
+                </div>
               </div>
             </div>
           ))}

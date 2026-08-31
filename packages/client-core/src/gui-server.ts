@@ -102,7 +102,9 @@ function sendError(res: ServerResponse, err: unknown): void {
     sendJson(res, 422, { error: { code: err.code, message: err.message } });
     return;
   }
-  sendJson(res, 500, { error: { code: "UNKNOWN", message: err instanceof Error ? err.message : String(err) } });
+  sendJson(res, 500, {
+    error: { code: "UNKNOWN", message: err instanceof Error ? err.message : String(err) },
+  });
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -123,7 +125,9 @@ type RedeemResponse = SetupResult & {
 /** Start the wizard server. Resolves once listening; call `close()` when
  *  the flow is done (or leave it running — the process exits when the CLI
  *  does, same lifetime as any other `arm setup` invocation). */
-export async function startInstallWizardServer(options: GuiServerOptions = {}): Promise<GuiServerHandle> {
+export async function startInstallWizardServer(
+  options: GuiServerOptions = {},
+): Promise<GuiServerHandle> {
   const resolveFn = options.resolveFn ?? resolveFromSetupToken;
   const runSetupFn = options.runSetupFn ?? runSetup;
   const scanWorkFoldersFn = options.scanWorkFoldersFn ?? scanWorkFolders;
@@ -139,7 +143,8 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
   // is known. This server serves exactly one install session at a time
   // (a local wizard for one employee), so module-scoped mutable state is
   // the right amount of "session" here — no multi-user concern.
-  let chatCredentials: { armProxyUrl: string; agentToken: string; subAccountId: string; tenantId: string } | undefined;
+  let chatCredentials:
+    { armProxyUrl: string; agentToken: string; subAccountId: string; tenantId: string } | undefined;
 
   const server: Server = createServer((req, res) => {
     void handleRequest(req, res);
@@ -160,7 +165,9 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
         const token = String(body["token"] ?? "");
         const controlPlaneUrl = String(body["controlPlaneUrl"] ?? "");
         if (!token || !controlPlaneUrl) {
-          sendJson(res, 400, { error: { code: "BAD_REQUEST", message: "token and controlPlaneUrl are required" } });
+          sendJson(res, 400, {
+            error: { code: "BAD_REQUEST", message: "token and controlPlaneUrl are required" },
+          });
           return;
         }
         const resolved: SetupArgs = await resolveFn({ token, controlPlaneUrl });
@@ -209,7 +216,8 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
           .map((p) => p.trim())
           .filter((p) => p.length > 0);
 
-        const painPointTags: PainPointTag[] = painPoints.length > 0 ? classifyPainPointsFn(painPoints) : [];
+        const painPointTags: PainPointTag[] =
+          painPoints.length > 0 ? classifyPainPointsFn(painPoints) : [];
         const folderScan: FolderScanResult | undefined =
           folderPaths.length > 0 ? await scanWorkFoldersFn(folderPaths) : undefined;
         const installedTools: DetectedTool[] = await scanInstalledToolsFn();
@@ -226,7 +234,10 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
       if (req.method === "POST" && url.pathname === "/api/chat") {
         if (!chatCredentials) {
           sendJson(res, 409, {
-            error: { code: "BAD_REQUEST", message: "install first — the assistant needs your tenant's proxy connection" },
+            error: {
+              code: "BAD_REQUEST",
+              message: "install first — the assistant needs your tenant's proxy connection",
+            },
           });
           return;
         }
@@ -235,11 +246,18 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
         const messages: ChatMessage[] = (Array.isArray(rawMessages) ? rawMessages : [])
           .filter(
             (m): m is { role: string; content: string } =>
-              typeof m === "object" && m !== null && typeof (m as Record<string, unknown>)["content"] === "string",
+              typeof m === "object" &&
+              m !== null &&
+              typeof (m as Record<string, unknown>)["content"] === "string",
           )
-          .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
+          .map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          }));
         if (messages.length === 0) {
-          sendJson(res, 400, { error: { code: "BAD_REQUEST", message: "messages must include at least one entry" } });
+          sendJson(res, 400, {
+            error: { code: "BAD_REQUEST", message: "messages must include at least one entry" },
+          });
           return;
         }
         const reply = await sendChatMessageFn({ ...chatCredentials, messages });
@@ -247,7 +265,9 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
         return;
       }
 
-      sendJson(res, 404, { error: { code: "NOT_FOUND", message: `no route for ${req.method} ${url.pathname}` } });
+      sendJson(res, 404, {
+        error: { code: "NOT_FOUND", message: `no route for ${req.method} ${url.pathname}` },
+      });
     } catch (err) {
       sendError(res, err);
     }
@@ -264,7 +284,10 @@ export async function startInstallWizardServer(options: GuiServerOptions = {}): 
   return {
     url,
     port,
-    close: () => new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
+    close: () =>
+      new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      ),
   };
 }
 

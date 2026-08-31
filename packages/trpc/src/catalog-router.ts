@@ -47,7 +47,12 @@ import { workPackageSchema, workPackageVersionSchema, packageAssignmentSchema } 
 import { packageVersionFixtures, manifestSha256, canonicalManifest } from "@arm/catalog";
 import { getDb } from "@arm/db";
 import { workPackageTable, workPackageVersionTable, packageAssignmentTable } from "@arm/db/schema";
-import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
+import {
+  isDemoMode,
+  registerDemoArray,
+  snapshotAllDemoStores,
+  restoreAllDemoStores,
+} from "./demo-mode.js";
 
 /**
  * ARM_FIXTURE_MODE (default "1" — ON) selects the data path, same pattern
@@ -116,9 +121,9 @@ function localNow(): string {
  * and `components`/`job_functions` parse to their empty defaults below —
  * expected, not a bug in this router.
  */
-const PACKAGE_VERSION_FIXTURES: WorkPackageVersion[] = workPackageVersionSchema.array().parse(
-  packageVersionFixtures,
-);
+const PACKAGE_VERSION_FIXTURES: WorkPackageVersion[] = workPackageVersionSchema
+  .array()
+  .parse(packageVersionFixtures);
 
 const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
   {
@@ -128,7 +133,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Quality Engineer",
     family: "Quality",
     mode: "copilot",
-    description: "8D/PPAP/SPC copilot — defect triage, control plans, and customer submissions from ticketing + MES feeds.",
+    description:
+      "8D/PPAP/SPC copilot — defect triage, control plans, and customer submissions from ticketing + MES feeds.",
   },
   {
     id: "30000000-0000-4000-8000-000000000002",
@@ -137,7 +143,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "PLC Programmer",
     family: "Engineering Controls",
     mode: "copilot",
-    description: "Ladder/ST codegen with IO-table import, AOI library, and diff/merge tooling for TIA Portal + Studio 5000.",
+    description:
+      "Ladder/ST codegen with IO-table import, AOI library, and diff/merge tooling for TIA Portal + Studio 5000.",
   },
   {
     id: "30000000-0000-4000-8000-000000000003",
@@ -146,7 +153,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Maintenance Technician",
     family: "Maintenance",
     mode: "copilot",
-    description: "Fault → fix → CMMS loop: fault-code lookup, spares catalog, SOP checklists — mobile-first.",
+    description:
+      "Fault → fix → CMMS loop: fault-code lookup, spares catalog, SOP checklists — mobile-first.",
   },
   {
     id: "30000000-0000-4000-8000-000000000004",
@@ -155,7 +163,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Office Worker (General)",
     family: "General Office",
     mode: "copilot",
-    description: "The volume default: chat, docs, SharePoint, email triage, meeting notes → actions.",
+    description:
+      "The volume default: chat, docs, SharePoint, email triage, meeting notes → actions.",
   },
   {
     id: "30000000-0000-4000-8000-000000000005",
@@ -164,7 +173,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Executive Assistant",
     family: "Executive",
     mode: "copilot",
-    description: "KPI briefings, exec digests, approvals-inbox summaries — aggregates-only guardrail enforced.",
+    description:
+      "KPI briefings, exec digests, approvals-inbox summaries — aggregates-only guardrail enforced.",
   },
   {
     id: "30000000-0000-4000-8000-000000000006",
@@ -173,7 +183,8 @@ const PACKAGE_FIXTURES: WorkPackage[] = workPackageSchema.array().parse([
     name: "Material Planner",
     family: "Supply Chain",
     mode: "automated",
-    description: "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs.",
+    description:
+      "MRP exception triage, ECN impact alerts, EOL calculators — unattended batch runs.",
   },
   {
     id: "30000000-0000-4000-8000-000000000007",
@@ -236,7 +247,9 @@ registerDemoArray(assignmentStore);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function packageForVersion(versionId: string): { version: WorkPackageVersion; package: WorkPackage } | null {
+function packageForVersion(
+  versionId: string,
+): { version: WorkPackageVersion; package: WorkPackage } | null {
   const version = PACKAGE_VERSION_FIXTURES.find((v) => v.id === versionId);
   if (!version) return null;
   const pkg = PACKAGE_FIXTURES.find((p) => p.id === version.package_id);
@@ -310,9 +323,14 @@ function pgVersionToWire(row: PgWorkPackageVersionRow): WorkPackageVersion {
     package_id: row.packageId,
     version: row.version,
     manifest_version: row.manifestVersion,
-    components: row.components.map((c: { componentId: string; version: string; kind: string; scopes: string[] }) => ({
-      component_id: c.componentId, version: c.version, kind: c.kind, scopes: c.scopes,
-    })),
+    components: row.components.map(
+      (c: { componentId: string; version: string; kind: string; scopes: string[] }) => ({
+        component_id: c.componentId,
+        version: c.version,
+        kind: c.kind,
+        scopes: c.scopes,
+      }),
+    ),
     permissions: row.permissions,
     model_routing: row.modelRouting,
     budget_template: row.budgetTemplate,
@@ -354,7 +372,11 @@ export const catalogRouter = t.router({
       const db = getDb();
       const [pkgRows, versionRows] = await Promise.all([
         db.select().from(workPackageTable).where(eq(workPackageTable.tenantId, tenantId)),
-        db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId)).orderBy(asc(workPackageVersionTable.createdAt)),
+        db
+          .select()
+          .from(workPackageVersionTable)
+          .where(eq(workPackageVersionTable.tenantId, tenantId))
+          .orderBy(asc(workPackageVersionTable.createdAt)),
       ]);
       return {
         tenantId,
@@ -372,7 +394,10 @@ export const catalogRouter = t.router({
             versionCount: versions.length,
             latestVersion: latest?.version ?? null,
             componentCount: latest?.components.length ?? 0,
-            monthlyUsdCap: typeof latest?.budgetTemplate?.["monthly_usd_cap"] === "number" ? latest.budgetTemplate["monthly_usd_cap"] : null,
+            monthlyUsdCap:
+              typeof latest?.budgetTemplate?.["monthly_usd_cap"] === "number"
+                ? latest.budgetTemplate["monthly_usd_cap"]
+                : null,
           };
         }),
       };
@@ -406,11 +431,20 @@ export const catalogRouter = t.router({
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
-        const pkgRows = await db.select().from(workPackageTable)
-          .where(and(eq(workPackageTable.id, opts.input.packageId), eq(workPackageTable.tenantId, tenantId)));
+        const pkgRows = await db
+          .select()
+          .from(workPackageTable)
+          .where(
+            and(
+              eq(workPackageTable.id, opts.input.packageId),
+              eq(workPackageTable.tenantId, tenantId),
+            ),
+          );
         const pkgRow = pkgRows[0];
         if (!pkgRow) notFound(`Package ${opts.input.packageId} not found`);
-        const versionRows = await db.select().from(workPackageVersionTable)
+        const versionRows = await db
+          .select()
+          .from(workPackageVersionTable)
           .where(eq(workPackageVersionTable.packageId, pkgRow.id));
         return {
           tenantId,
@@ -468,14 +502,24 @@ export const catalogRouter = t.router({
     if (!isFixtureMode()) {
       const db = getDb();
       const [assignmentRows, pkgRows] = await Promise.all([
-        db.select().from(packageAssignmentTable).where(eq(packageAssignmentTable.tenantId, tenantId)),
+        db
+          .select()
+          .from(packageAssignmentTable)
+          .where(eq(packageAssignmentTable.tenantId, tenantId)),
         db.select().from(workPackageTable).where(eq(workPackageTable.tenantId, tenantId)),
       ]);
-      const versionRows = await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.tenantId, tenantId));
-      const pkgByVersionId = new Map(versionRows.map((v) => [v.id, pkgRows.find((p) => p.id === v.packageId)]));
+      const versionRows = await db
+        .select()
+        .from(workPackageVersionTable)
+        .where(eq(workPackageVersionTable.tenantId, tenantId));
+      const pkgByVersionId = new Map(
+        versionRows.map((v) => [v.id, pkgRows.find((p) => p.id === v.packageId)]),
+      );
       return {
         tenantId,
-        assignments: assignmentRows.map((a) => pgAssignmentToView(a, pkgByVersionId.get(a.packageVersionId))),
+        assignments: assignmentRows.map((a) =>
+          pgAssignmentToView(a, pkgByVersionId.get(a.packageVersionId)),
+        ),
       };
     }
     return {
@@ -486,30 +530,46 @@ export const catalogRouter = t.router({
 
   /** Request a package for a user, agent, or org node. Starts in `requested`. */
   requestAssignment: tenantProcedure
-    .input(z.object({
-      packageVersionId: z.string().uuid(),
-      assigneeType: z.enum(["user", "agent", "org_node"]),
-      assigneeId: z.string().uuid(),
-    }))
+    .input(
+      z.object({
+        packageVersionId: z.string().uuid(),
+        assigneeType: z.enum(["user", "agent", "org_node"]),
+        assigneeId: z.string().uuid(),
+      }),
+    )
     .mutation(async (opts) => {
       const { packageVersionId, assigneeType, assigneeId } = opts.input;
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
-        const versionRows = await db.select().from(workPackageVersionTable)
-          .where(and(eq(workPackageVersionTable.id, packageVersionId), eq(workPackageVersionTable.tenantId, tenantId)));
+        const versionRows = await db
+          .select()
+          .from(workPackageVersionTable)
+          .where(
+            and(
+              eq(workPackageVersionTable.id, packageVersionId),
+              eq(workPackageVersionTable.tenantId, tenantId),
+            ),
+          );
         if (!versionRows[0]) notFound(`Package version ${packageVersionId} not found`);
-        const inserted = await db.insert(packageAssignmentTable).values({
-          tenantId,
-          packageVersionId,
-          assigneeType,
-          assigneeId,
-          status: "requested",
-          approverUserId: null,
-          approvedAt: null,
-        }).returning();
-        const pkgRow = (await db.select().from(workPackageTable)
-          .where(eq(workPackageTable.id, versionRows[0].packageId)))[0];
+        const inserted = await db
+          .insert(packageAssignmentTable)
+          .values({
+            tenantId,
+            packageVersionId,
+            assigneeType,
+            assigneeId,
+            status: "requested",
+            approverUserId: null,
+            approvedAt: null,
+          })
+          .returning();
+        const pkgRow = (
+          await db
+            .select()
+            .from(workPackageTable)
+            .where(eq(workPackageTable.id, versionRows[0].packageId))
+        )[0];
         return { tenantId, assignment: pgAssignmentToView(inserted[0]!, pkgRow) };
       }
       if (!packageForVersion(packageVersionId)) {
@@ -541,31 +601,62 @@ export const catalogRouter = t.router({
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
-        const current = (await db.select().from(packageAssignmentTable)
-          .where(and(eq(packageAssignmentTable.id, assignmentId), eq(packageAssignmentTable.tenantId, tenantId))))[0];
+        const current = (
+          await db
+            .select()
+            .from(packageAssignmentTable)
+            .where(
+              and(
+                eq(packageAssignmentTable.id, assignmentId),
+                eq(packageAssignmentTable.tenantId, tenantId),
+              ),
+            )
+        )[0];
         if (!current) notFound(`Assignment ${assignmentId} not found`);
 
         let nextStatus: PgPackageAssignmentRow["status"];
         if (approve) {
           if (current.status === "requested") nextStatus = "approved";
           else if (current.status === "approved") nextStatus = "active";
-          else precondition(`Cannot approve assignment in '${current.status}' state (use revokeAssignment for active)`);
+          else
+            precondition(
+              `Cannot approve assignment in '${current.status}' state (use revokeAssignment for active)`,
+            );
         } else {
-          if (current.status === "requested" || current.status === "approved") nextStatus = "revoked";
-          else precondition(`Cannot deny assignment in '${current.status}' state (use revokeAssignment for active)`);
+          if (current.status === "requested" || current.status === "approved")
+            nextStatus = "revoked";
+          else
+            precondition(
+              `Cannot deny assignment in '${current.status}' state (use revokeAssignment for active)`,
+            );
         }
 
-        const updated = (await db.update(packageAssignmentTable)
-          .set({
-            status: nextStatus,
-            approverUserId: approve ? FIXTURE_APPROVER_ID : current.approverUserId,
-            approvedAt: approve ? new Date() : current.approvedAt,
-            updatedAt: new Date(),
-          })
-          .where(eq(packageAssignmentTable.id, assignmentId))
-          .returning())[0]!;
-        const versionRow = (await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.id, updated.packageVersionId)))[0];
-        const pkgRow = versionRow ? (await db.select().from(workPackageTable).where(eq(workPackageTable.id, versionRow.packageId)))[0] : undefined;
+        const updated = (
+          await db
+            .update(packageAssignmentTable)
+            .set({
+              status: nextStatus,
+              approverUserId: approve ? FIXTURE_APPROVER_ID : current.approverUserId,
+              approvedAt: approve ? new Date() : current.approvedAt,
+              updatedAt: new Date(),
+            })
+            .where(eq(packageAssignmentTable.id, assignmentId))
+            .returning()
+        )[0]!;
+        const versionRow = (
+          await db
+            .select()
+            .from(workPackageVersionTable)
+            .where(eq(workPackageVersionTable.id, updated.packageVersionId))
+        )[0];
+        const pkgRow = versionRow
+          ? (
+              await db
+                .select()
+                .from(workPackageTable)
+                .where(eq(workPackageTable.id, versionRow.packageId))
+            )[0]
+          : undefined;
         return { tenantId, assignment: pgAssignmentToView(updated, pkgRow) };
       }
       const idx = assignmentStore.findIndex((a) => a.id === assignmentId);
@@ -576,10 +667,16 @@ export const catalogRouter = t.router({
       if (approve) {
         if (current.status === "requested") nextStatus = "approved";
         else if (current.status === "approved") nextStatus = "active";
-        else precondition(`Cannot approve assignment in '${current.status}' state (use revokeAssignment for active)`);
+        else
+          precondition(
+            `Cannot approve assignment in '${current.status}' state (use revokeAssignment for active)`,
+          );
       } else {
         if (current.status === "requested" || current.status === "approved") nextStatus = "revoked";
-        else precondition(`Cannot deny assignment in '${current.status}' state (use revokeAssignment for active)`);
+        else
+          precondition(
+            `Cannot deny assignment in '${current.status}' state (use revokeAssignment for active)`,
+          );
       }
 
       const next = packageAssignmentSchema.parse({
@@ -600,8 +697,17 @@ export const catalogRouter = t.router({
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
-        const current = (await db.select().from(packageAssignmentTable)
-          .where(and(eq(packageAssignmentTable.id, assignmentId), eq(packageAssignmentTable.tenantId, tenantId))))[0];
+        const current = (
+          await db
+            .select()
+            .from(packageAssignmentTable)
+            .where(
+              and(
+                eq(packageAssignmentTable.id, assignmentId),
+                eq(packageAssignmentTable.tenantId, tenantId),
+              ),
+            )
+        )[0];
         if (!current) notFound(`Assignment ${assignmentId} not found`);
         if (current.status === "requested") {
           precondition("Requested assignment must be decided via approveAssignment first");
@@ -609,12 +715,27 @@ export const catalogRouter = t.router({
         if (current.status === "revoked") {
           precondition("Assignment is already revoked");
         }
-        const updated = (await db.update(packageAssignmentTable)
-          .set({ status: "revoked", updatedAt: new Date() })
-          .where(eq(packageAssignmentTable.id, assignmentId))
-          .returning())[0]!;
-        const versionRow = (await db.select().from(workPackageVersionTable).where(eq(workPackageVersionTable.id, updated.packageVersionId)))[0];
-        const pkgRow = versionRow ? (await db.select().from(workPackageTable).where(eq(workPackageTable.id, versionRow.packageId)))[0] : undefined;
+        const updated = (
+          await db
+            .update(packageAssignmentTable)
+            .set({ status: "revoked", updatedAt: new Date() })
+            .where(eq(packageAssignmentTable.id, assignmentId))
+            .returning()
+        )[0]!;
+        const versionRow = (
+          await db
+            .select()
+            .from(workPackageVersionTable)
+            .where(eq(workPackageVersionTable.id, updated.packageVersionId))
+        )[0];
+        const pkgRow = versionRow
+          ? (
+              await db
+                .select()
+                .from(workPackageTable)
+                .where(eq(workPackageTable.id, versionRow.packageId))
+            )[0]
+          : undefined;
         return { tenantId, assignment: pgAssignmentToView(updated, pkgRow) };
       }
       const idx = assignmentStore.findIndex((a) => a.id === assignmentId);

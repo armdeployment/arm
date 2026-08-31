@@ -44,7 +44,9 @@ const FIXTURE = {
 
 describe("catalog tenant middleware", () => {
   it("REJECTS unauthenticated catalog calls", async () => {
-    await expect(caller(null).catalog.listPackages()).rejects.toThrowError(/No authenticated tenant context/);
+    await expect(caller(null).catalog.listPackages()).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
   });
 });
 
@@ -58,10 +60,16 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
   it("lists 6 pilot packages with the D9 role keys", async () => {
     const r = await caller(authedClaims).catalog.listPackages();
     expect(r.packages.length).toBe(7);
-    expect(r.packages.map((p) => p.roleKey)).toEqual(expect.arrayContaining([
-      "quality_engineer", "plc_programmer", "maintenance_technician",
-      "office_worker_general", "exec_assistant", "material_planner",
-    ]));
+    expect(r.packages.map((p) => p.roleKey)).toEqual(
+      expect.arrayContaining([
+        "quality_engineer",
+        "plc_programmer",
+        "maintenance_technician",
+        "office_worker_general",
+        "exec_assistant",
+        "material_planner",
+      ]),
+    );
     const office = r.packages.find((p) => p.roleKey === "office_worker_general")!;
     expect(office.mode).toBe("copilot");
     expect(office.monthlyUsdCap).toBe(300);
@@ -70,7 +78,9 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
   });
 
   it("getPackage returns the pinned component refs (D10 shape) for quality_engineer", async () => {
-    const r = await caller(authedClaims).catalog.getPackage({ packageId: "30000000-0000-4000-8000-000000000001" });
+    const r = await caller(authedClaims).catalog.getPackage({
+      packageId: "30000000-0000-4000-8000-000000000001",
+    });
     expect(r.package.role_key).toBe("quality_engineer");
     expect(r.versions.length).toBe(1);
     const v = r.versions[0]!;
@@ -105,9 +115,7 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
   it("fixture assignments cover all four statuses", async () => {
     const r = await caller(authedClaims).catalog.listAssignments();
     const fixtureStatuses = new Set(
-      r.assignments
-        .filter((a) => a.id.startsWith("50000000"))
-        .map((a) => a.status),
+      r.assignments.filter((a) => a.id.startsWith("50000000")).map((a) => a.status),
     );
     expect(fixtureStatuses).toEqual(new Set(["requested", "approved", "active", "revoked"]));
     const active = r.assignments.find((a) => a.id === "50000000-0000-4000-8000-000000000003")!;
@@ -118,7 +126,10 @@ describe("catalog queries (@arm/catalog fixture data)", () => {
 });
 
 describe("assignment state machine (D9)", () => {
-  async function requestPackage(packageVersionId: string, assigneeType: "user" | "agent" | "org_node" = "user") {
+  async function requestPackage(
+    packageVersionId: string,
+    assigneeType: "user" | "agent" | "org_node" = "user",
+  ) {
     return caller(authedClaims).catalog.requestAssignment({
       packageVersionId,
       assigneeType,
@@ -133,23 +144,34 @@ describe("assignment state machine (D9)", () => {
     expect(requested.assignment.approverUserId).toBeNull();
     expect(requested.assignment.approvedAt).toBeNull();
 
-    const approved = await c.catalog.approveAssignment({ assignmentId: requested.assignment.id, approve: true });
+    const approved = await c.catalog.approveAssignment({
+      assignmentId: requested.assignment.id,
+      approve: true,
+    });
     expect(approved.assignment.status).toBe("approved");
     expect(approved.assignment.approverUserId).not.toBeNull();
     expect(approved.assignment.approvedAt).not.toBeNull();
 
     // Second approval = provisioning confirmation → active
-    const active = await c.catalog.approveAssignment({ assignmentId: requested.assignment.id, approve: true });
+    const active = await c.catalog.approveAssignment({
+      assignmentId: requested.assignment.id,
+      approve: true,
+    });
     expect(active.assignment.status).toBe("active");
 
-    const listed = (await c.catalog.listAssignments()).assignments.find((a) => a.id === requested.assignment.id);
+    const listed = (await c.catalog.listAssignments()).assignments.find(
+      (a) => a.id === requested.assignment.id,
+    );
     expect(listed?.status).toBe("active");
   });
 
   it("deny path: request → revoked", async () => {
     const c = caller(authedClaims);
     const requested = await requestPackage(FIXTURE.plcVersion, "org_node");
-    const denied = await c.catalog.approveAssignment({ assignmentId: requested.assignment.id, approve: false });
+    const denied = await c.catalog.approveAssignment({
+      assignmentId: requested.assignment.id,
+      approve: false,
+    });
     expect(denied.assignment.status).toBe("revoked");
   });
 
@@ -174,9 +196,13 @@ describe("assignment state machine (D9)", () => {
     await c.catalog.approveAssignment({ assignmentId: id, approve: true });
 
     // active cannot be approved again
-    await expect(c.catalog.approveAssignment({ assignmentId: id, approve: true })).rejects.toThrow();
+    await expect(
+      c.catalog.approveAssignment({ assignmentId: id, approve: true }),
+    ).rejects.toThrow();
     // active cannot be denied — use revoke
-    await expect(c.catalog.approveAssignment({ assignmentId: id, approve: false })).rejects.toThrow();
+    await expect(
+      c.catalog.approveAssignment({ assignmentId: id, approve: false }),
+    ).rejects.toThrow();
 
     await c.catalog.revokeAssignment({ assignmentId: id });
     // revoked is terminal
@@ -192,7 +218,10 @@ describe("assignment state machine (D9)", () => {
       }),
     ).rejects.toThrowError(/not found/i);
     await expect(
-      caller(authedClaims).catalog.approveAssignment({ assignmentId: FIXTURE.unknownId, approve: true }),
+      caller(authedClaims).catalog.approveAssignment({
+        assignmentId: FIXTURE.unknownId,
+        approve: true,
+      }),
     ).rejects.toThrowError(/not found/i);
     await expect(
       caller(authedClaims).catalog.revokeAssignment({ assignmentId: FIXTURE.unknownId }),

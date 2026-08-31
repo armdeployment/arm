@@ -31,7 +31,10 @@ test.describe("navigation and console cleanliness", () => {
     }
   });
 
-  test("/demo link to the dashboard opens in a new tab, not an iframe", async ({ page, context }) => {
+  test("/demo link to the dashboard opens in a new tab, not an iframe", async ({
+    page,
+    context,
+  }) => {
     await page.goto("/demo");
     const cta = page.getByRole("link", { name: /open the dashboard/i });
     await expect(cta).toBeVisible();
@@ -54,9 +57,10 @@ test.describe("no horizontal overflow at required widths", () => {
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth,
         }));
-        expect(scrollWidth, `${route} at ${width}px: scrollWidth ${scrollWidth} > clientWidth ${clientWidth}`).toBeLessThanOrEqual(
-          clientWidth,
-        );
+        expect(
+          scrollWidth,
+          `${route} at ${width}px: scrollWidth ${scrollWidth} > clientWidth ${clientWidth}`,
+        ).toBeLessThanOrEqual(clientWidth);
       });
     }
   }

@@ -63,7 +63,8 @@ register({
   id: "demo-mode-readonly",
   description:
     "Every packages/trpc/src router file defining a mutation also wires the ARM_DEMO guaranteed-read-only guard (isDemoMode from ./demo-mode.js).",
-  invariant: "D10: guide 04's ARM_DEMO mechanism — a public demo deployment never persists a visitor's write",
+  invariant:
+    "D10: guide 04's ARM_DEMO mechanism — a public demo deployment never persists a visitor's write",
   run: async () => {
     const { readdirSync, readFileSync, statSync, existsSync } = await import("node:fs");
     const { join, extname, resolve } = await import("node:path");

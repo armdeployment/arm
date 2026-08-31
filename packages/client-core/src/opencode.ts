@@ -162,7 +162,12 @@ export function renderOpencodeConfig(args: RenderOpencodeConfigArgs): RenderedOp
   };
 
   const content = `${JSON.stringify(config, null, 2)}\n`;
-  return { configPath: `${agentHome}/config.json`, content, parsed: JSON.parse(content), runtimeRequirements };
+  return {
+    configPath: `${agentHome}/config.json`,
+    content,
+    parsed: JSON.parse(content),
+    runtimeRequirements,
+  };
 }
 
 const SECRET_LITERAL_PATTERNS: ReadonlyArray<RegExp> = [

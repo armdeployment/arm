@@ -9,9 +9,19 @@ import { describe, it, expect, afterEach } from "vitest";
 import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
 import { FIXTURE_TENANT_ID } from "@arm/artifactory";
-import { isDemoMode, registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores, demoStoreCount } from "../src/demo-mode.js";
+import {
+  isDemoMode,
+  registerDemoArray,
+  snapshotAllDemoStores,
+  restoreAllDemoStores,
+  demoStoreCount,
+} from "../src/demo-mode.js";
 
-const fixtureTenantClaims: ARMClaims = { sub: "user_01", tenant_id: FIXTURE_TENANT_ID, email: "eng@acme.com" };
+const fixtureTenantClaims: ARMClaims = {
+  sub: "user_01",
+  tenant_id: FIXTURE_TENANT_ID,
+  email: "eng@acme.com",
+};
 function caller(claims: ARMClaims | null) {
   return appRouter.createCaller(createContext({ claims }));
 }

@@ -41,8 +41,12 @@ const columns = [
           {info.getValue().slice(0, 2).toUpperCase()}
         </div>
         <div>
-          <div className="font-semibold" style={{ color: "var(--text-primary)" }}>{info.getValue()}</div>
-          <div className="text-xs" style={{ color: "var(--text-muted)" }}>{info.row.original.id}</div>
+          <div className="font-semibold" style={{ color: "var(--text-primary)" }}>
+            {info.getValue()}
+          </div>
+          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {info.row.original.id}
+          </div>
         </div>
       </div>
     ),
@@ -50,14 +54,20 @@ const columns = [
   columnHelper.accessor("tier", {
     header: "Tier",
     cell: (info) => (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TIER_STYLES[info.getValue()] ?? ""}`}>
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${TIER_STYLES[info.getValue()] ?? ""}`}
+      >
         {info.getValue()}
       </span>
     ),
   }),
   columnHelper.accessor("stakeholder", {
     header: "Stakeholder",
-    cell: (info) => <span className="font-medium" style={{ color: "var(--text-secondary)" }}>@{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="font-medium" style={{ color: "var(--text-secondary)" }}>
+        @{info.getValue()}
+      </span>
+    ),
   }),
   columnHelper.accessor("scope", {
     header: "Scope",
@@ -65,12 +75,19 @@ const columns = [
   }),
   columnHelper.accessor("taskType", {
     header: "Task",
-    cell: (info) => <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+        {info.getValue()}
+      </span>
+    ),
   }),
   columnHelper.accessor("monthlySpend", {
     header: "Monthly $",
     cell: (info) => (
-      <span className="font-mono font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
+      <span
+        className="font-mono font-semibold tabular-nums"
+        style={{ color: "var(--text-primary)" }}
+      >
         ${info.getValue().toLocaleString()}
       </span>
     ),
@@ -78,7 +95,9 @@ const columns = [
   columnHelper.accessor("classificationClearance", {
     header: "Clearance",
     cell: (info) => (
-      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${CLEARANCE_STYLES[info.getValue()] ?? ""}`}>
+      <span
+        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${CLEARANCE_STYLES[info.getValue()] ?? ""}`}
+      >
         {info.getValue()}
       </span>
     ),
@@ -86,7 +105,10 @@ const columns = [
   columnHelper.accessor("status", {
     header: "Status",
     cell: (info) => (
-      <span className="flex items-center gap-2 text-xs font-medium capitalize" style={{ color: "var(--text-secondary)" }}>
+      <span
+        className="flex items-center gap-2 text-xs font-medium capitalize"
+        style={{ color: "var(--text-secondary)" }}
+      >
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[info.getValue()] ?? "bg-slate-300"}`} />
         {info.getValue()}
       </span>
@@ -100,11 +122,23 @@ export function AgentsTable({ data }: { data: AgentRow[] }) {
   return (
     <div
       className="overflow-hidden rounded-lg border"
-      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
+      style={{
+        borderColor: "var(--border)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-sm)",
+      }}
     >
-      <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--border)" }}>
-        <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Top Agents by Spend</h3>
-        <span className="rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+      <div
+        className="flex items-center justify-between border-b px-5 py-4"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+          Top Agents by Spend
+        </h3>
+        <span
+          className="rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-xs font-medium"
+          style={{ color: "var(--text-muted)" }}
+        >
           {data.length} agents
         </span>
       </div>
@@ -126,7 +160,11 @@ export function AgentsTable({ data }: { data: AgentRow[] }) {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="transition-colors hover:bg-slate-50" style={{ borderBottom: "1px solid var(--border)" }}>
+            <tr
+              key={row.id}
+              className="transition-colors hover:bg-slate-50"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
               {row.getVisibleCells().map((cell) => (
                 <td key={cell.id} className="px-5 py-3.5">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

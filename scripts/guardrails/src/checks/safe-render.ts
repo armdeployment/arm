@@ -78,7 +78,14 @@ register({
     const files: { path: string; content: string }[] = [];
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir)) {
-        if (entry === "node_modules" || entry === ".git" || entry === "dist" || entry === ".turbo" || entry === ".next") continue;
+        if (
+          entry === "node_modules" ||
+          entry === ".git" ||
+          entry === "dist" ||
+          entry === ".turbo" ||
+          entry === ".next"
+        )
+          continue;
         const p = join(dir, entry);
         const st = statSync(p);
         if (st.isDirectory()) walk(p);

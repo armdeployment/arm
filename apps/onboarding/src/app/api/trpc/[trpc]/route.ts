@@ -27,7 +27,11 @@ const handler = (req: Request) =>
     router: appRouter,
     createContext: () =>
       createContext({
-        claims: { sub: "onboarding-dev-user", tenant_id: DEV_TENANT_ID, email: "employee@acme.com" },
+        claims: {
+          sub: "onboarding-dev-user",
+          tenant_id: DEV_TENANT_ID,
+          email: "employee@acme.com",
+        },
       }),
   });
 

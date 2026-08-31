@@ -123,7 +123,9 @@ export function makeComponentVersion(overrides: Partial<ComponentVersion> = {}):
   };
 }
 
-export function makeResolvedComponent(overrides: Partial<ResolvedComponent> = {}): ResolvedComponent {
+export function makeResolvedComponent(
+  overrides: Partial<ResolvedComponent> = {},
+): ResolvedComponent {
   return {
     component: overrides.component ?? makeComponent(),
     version: overrides.version ?? makeComponentVersion(),

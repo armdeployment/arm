@@ -40,7 +40,14 @@ export interface ComponentRepoPort {
    */
   insertVersionWithBlob(
     version: Omit<ComponentVersion, "id">,
-    blob: { digest: string; sizeBytes: number; mediaType: string; residency: "control_plane" | "tenant"; storageBackend: "fs" | "s3" | "oci"; storageKey: string } | null,
+    blob: {
+      digest: string;
+      sizeBytes: number;
+      mediaType: string;
+      residency: "control_plane" | "tenant";
+      storageBackend: "fs" | "s3" | "oci";
+      storageKey: string;
+    } | null,
   ): Promise<{ id: string }>;
 }
 
@@ -88,17 +95,26 @@ export async function publishComponentVersion(
   //    we validate the fields we're about to construct, not a full row yet —
   //    the full row is validated again by the repo/DB layer on insert).
   const manifestSha256 = componentManifestSha256(input.manifest);
-  const candidateVersionRow = componentVersionSchema.omit({ id: true, blob_digest: true, blob_size_bytes: true, blob_media_type: true, published_at: true, published_by: true }).safeParse({
-    tenant_id: input.tenantId,
-    component_id: input.componentId,
-    version: input.version,
-    manifest: input.manifest,
-    manifest_sha256: manifestSha256,
-    config_schema: input.configSchema ?? {},
-    requires: input.requires ?? [],
-    changelog: input.changelog ?? "",
-    yanked: false,
-  });
+  const candidateVersionRow = componentVersionSchema
+    .omit({
+      id: true,
+      blob_digest: true,
+      blob_size_bytes: true,
+      blob_media_type: true,
+      published_at: true,
+      published_by: true,
+    })
+    .safeParse({
+      tenant_id: input.tenantId,
+      component_id: input.componentId,
+      version: input.version,
+      manifest: input.manifest,
+      manifest_sha256: manifestSha256,
+      config_schema: input.configSchema ?? {},
+      requires: input.requires ?? [],
+      changelog: input.changelog ?? "",
+      yanked: false,
+    });
   if (!candidateVersionRow.success) {
     throw new Error(
       `publishComponentVersion: manifest failed schema validation: ${candidateVersionRow.error.issues
@@ -139,7 +155,14 @@ export async function publishComponentVersion(
   // 5. if a blob is supplied: compute digest, assert declared === computed,
   //    pick backend by residency, put(), upsert component_blob
   let blobDigest: string | null = null;
-  let blobRow: { digest: string; sizeBytes: number; mediaType: string; residency: "control_plane" | "tenant"; storageBackend: "fs" | "s3" | "oci"; storageKey: string } | null = null;
+  let blobRow: {
+    digest: string;
+    sizeBytes: number;
+    mediaType: string;
+    residency: "control_plane" | "tenant";
+    storageBackend: "fs" | "s3" | "oci";
+    storageKey: string;
+  } | null = null;
   if (input.blob) {
     const computed = digestOf(input.blob.body);
     if (computed !== input.blob.declaredDigest) {
@@ -192,7 +215,9 @@ export async function publishComponentVersion(
   );
   if (!inserted?.id) {
     // Never leave a blob written with no referencing row — fail loud (M5).
-    throw new Error("publishComponentVersion: insertVersionWithBlob returned no id — refusing to leave a dangling blob reference");
+    throw new Error(
+      "publishComponentVersion: insertVersionWithBlob returned no id — refusing to leave a dangling blob reference",
+    );
   }
 
   // 8. return { componentId, version, manifestSha256, blobDigest }

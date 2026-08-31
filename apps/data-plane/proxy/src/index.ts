@@ -50,17 +50,21 @@ interface MeteringEvent {
   ts: string;
 }
 
-
 // ── Delegate Key Rotation (spec §7.2, §9 1.2) ──────────────────────────────
 
-interface DelegateKey { keyRef: string; rotatedAt: string; expiresAt: string; }
+interface DelegateKey {
+  keyRef: string;
+  rotatedAt: string;
+  expiresAt: string;
+}
 
 const delegateKeys = new Map<string, DelegateKey>();
 
 export function rotateDelegateKey(tenantId: string): DelegateKey {
   const keyRef = `dk_${tenantId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const key: DelegateKey = {
-    keyRef, rotatedAt: new Date().toISOString(),
+    keyRef,
+    rotatedAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
   };
   delegateKeys.set(tenantId, key);
@@ -114,7 +118,10 @@ function resolveAgent(req: Request): AgentContext {
  *   - standard: throttled when daily cap exhausted (429 + Retry-After)
  *   - background: downgraded to open models first, then throttled
  */
-function checkQuota(agent: AgentContext, estimatedCostUsd: number): { allowed: boolean; reason?: string; retryAfter?: number } {
+function checkQuota(
+  agent: AgentContext,
+  estimatedCostUsd: number,
+): { allowed: boolean; reason?: string; retryAfter?: number } {
   const { priorityTier, quota } = agent;
 
   // Critical tier: always passes (reserve draw)
@@ -160,10 +167,16 @@ function checkQuota(agent: AgentContext, estimatedCostUsd: number): { allowed: b
 
 const CLOSED_MODELS = ["claude-sonnet-4-20250514", "gpt-4o", "gpt-4o-mini", "o3-mini"];
 
-function checkModelAccess(agent: AgentContext, model: string): { allowed: boolean; reason?: string } {
+function checkModelAccess(
+  agent: AgentContext,
+  model: string,
+): { allowed: boolean; reason?: string } {
   // Classification DLP gate: confidential/restricted → self-hosted only
-  if ((agent.classificationClearance === "confidential" || agent.classificationClearance === "restricted") &&
-      CLOSED_MODELS.includes(model)) {
+  if (
+    (agent.classificationClearance === "confidential" ||
+      agent.classificationClearance === "restricted") &&
+    CLOSED_MODELS.includes(model)
+  ) {
     return {
       allowed: false,
       reason: `classification_gate: clearance ${agent.classificationClearance} restricted from closed model ${model}. Use self-hosted models.`,
@@ -179,7 +192,11 @@ function checkModelAccess(agent: AgentContext, model: string): { allowed: boolea
 
 // ── Simulated LLM Response (stub) ─────────────────────────────────────────
 
-function simulateResponse(model: string, provider: Provider, inputTokens: number): {
+function simulateResponse(
+  model: string,
+  provider: Provider,
+  inputTokens: number,
+): {
   outputTokens: number;
   costUsd: number;
   content: string;
@@ -187,7 +204,8 @@ function simulateResponse(model: string, provider: Provider, inputTokens: number
   const outputTokens = Math.floor(inputTokens * 0.6 + Math.random() * 200);
   const pricePerMIn = provider === "openai" ? 2.5 : 3.0;
   const pricePerMOut = provider === "openai" ? 10 : 15;
-  const costUsd = (inputTokens / 1_000_000) * pricePerMIn + (outputTokens / 1_000_000) * pricePerMOut;
+  const costUsd =
+    (inputTokens / 1_000_000) * pricePerMIn + (outputTokens / 1_000_000) * pricePerMOut;
   return {
     outputTokens,
     costUsd: Math.round(costUsd * 1000) / 1000,
@@ -232,8 +250,11 @@ async function generateResponse(
           const pricePerMIn = provider === "openai" ? 2.5 : 3.0;
           const pricePerMOut = provider === "openai" ? 10 : 15;
           const costUsd =
-            Math.round(((inputTokens / 1_000_000) * pricePerMIn + (outputTokens / 1_000_000) * pricePerMOut) * 1000) /
-            1000;
+            Math.round(
+              ((inputTokens / 1_000_000) * pricePerMIn +
+                (outputTokens / 1_000_000) * pricePerMOut) *
+                1000,
+            ) / 1000;
           return { outputTokens, costUsd, content: text };
         }
       }
@@ -258,7 +279,9 @@ function emitMeteringEvent(event: MeteringEvent): void {
     quota.usedTodayUsd += event.costUsd;
   }
   // In production: push to local event buffer → meter-agent → control plane
-  console.debug(`[meter] ${event.agentId} | ${event.model} | $${event.costUsd.toFixed(4)} | ${event.inputTokens}+${event.outputTokens}tk`);
+  console.debug(
+    `[meter] ${event.agentId} | ${event.model} | $${event.costUsd.toFixed(4)} | ${event.inputTokens}+${event.outputTokens}tk`,
+  );
 }
 
 // ── Routes ─────────────────────────────────────────────────────────────────
@@ -267,7 +290,9 @@ function emitMeteringEvent(event: MeteringEvent): void {
 app.get("/health", (c) => c.json({ status: "ok", service: "closed-proxy", version: "0.0.0" }));
 
 /** Get metering buffer for debugging (stub — production: internal-only). */
-app.get("/metering", (c) => c.json({ events: meteringBuffer.length, buffer: meteringBuffer.slice(-10) }));
+app.get("/metering", (c) =>
+  c.json({ events: meteringBuffer.length, buffer: meteringBuffer.slice(-10) }),
+);
 
 /**
  * Unified LLM proxy endpoint. Routes to Anthropic or OpenAI based on model.
@@ -280,12 +305,14 @@ app.post("/v1/proxy", async (c) => {
   const agent = resolveAgent(c.req.raw);
 
   const body = await c.req.json().catch(() => ({}));
-  const { model, messages, max_tokens, stream } = z.object({
-    model: z.string().default("claude-sonnet-4-20250514"),
-    messages: z.array(z.object({ role: z.string(), content: z.string() })).default([]),
-    max_tokens: z.number().optional(),
-    stream: z.boolean().optional(),
-  }).parse(body);
+  const { model, messages, max_tokens, stream } = z
+    .object({
+      model: z.string().default("claude-sonnet-4-20250514"),
+      messages: z.array(z.object({ role: z.string(), content: z.string() })).default([]),
+      max_tokens: z.number().optional(),
+      stream: z.boolean().optional(),
+    })
+    .parse(body);
 
   // Compute prompt tokens (approximate: 4 char/token for English)
   const promptText = messages.map((m) => m.content).join("\n");
@@ -294,9 +321,12 @@ app.post("/v1/proxy", async (c) => {
   // ── Gate 1: Model access (DLP classification gate) ──
   const modelAccess = checkModelAccess(agent, model);
   if (!modelAccess.allowed) {
-    return c.json({
-      error: { type: "model_access_denied", message: modelAccess.reason },
-    }, 403);
+    return c.json(
+      {
+        error: { type: "model_access_denied", message: modelAccess.reason },
+      },
+      403,
+    );
   }
 
   // ── Gate 2: Quota (priority-aware) ──
@@ -304,10 +334,13 @@ app.post("/v1/proxy", async (c) => {
   const quotaResult = checkQuota(agent, estimatedCost);
   if (!quotaResult.allowed) {
     const status = quotaResult.reason?.includes("background") ? 429 : 402;
-    return c.json({
-      error: { type: "quota_exceeded", message: quotaResult.reason },
-      retry_after: quotaResult.retryAfter,
-    }, status);
+    return c.json(
+      {
+        error: { type: "quota_exceeded", message: quotaResult.reason },
+        retry_after: quotaResult.retryAfter,
+      },
+      status,
+    );
   }
 
   // ── Generate response ──
@@ -333,14 +366,22 @@ app.post("/v1/proxy", async (c) => {
     const encoder = new TextEncoder();
     const streamBody = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: "content_block_delta",
-          delta: { text: response.content },
-        })}\n\n`));
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: "message_stop",
-          usage: { input_tokens: inputTokens, output_tokens: response.outputTokens },
-        })}\n\n`));
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "content_block_delta",
+              delta: { text: response.content },
+            })}\n\n`,
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "message_stop",
+              usage: { input_tokens: inputTokens, output_tokens: response.outputTokens },
+            })}\n\n`,
+          ),
+        );
         controller.close();
       },
     });
@@ -375,7 +416,8 @@ createServer(async (req, res) => {
     // Read body if present
     if (req.method !== "GET" && req.method !== "HEAD") {
       const chunks: Buffer[] = [];
-      for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      for await (const chunk of req)
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       const body = Buffer.concat(chunks).toString();
       if (body) {
         const req2 = new Request(url, { method: req.method ?? "GET", headers, body });

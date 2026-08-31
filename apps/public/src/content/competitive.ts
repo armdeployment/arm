@@ -9,7 +9,8 @@ import type { FeatureRow } from "./types";
  */
 
 export const categoryClaim = {
-  headline: "Gateways meter traffic. Policy engines evaluate rules. Neither gets an agent into the hands of an employee who has never used one.",
+  headline:
+    "Gateways meter traffic. Policy engines evaluate rules. Neither gets an agent into the hands of an employee who has never used one.",
   body: "LiteLLM, Portkey, and Helicone route, cache, and observe calls that already exist — they assume the employee already has a working agent. TrueFoundry's Agent Gateway and Credo AI's Agent Governor add quotas, audit, and risk scoring on top of that same assumption. Kong and Cloudflare bring generic API-gateway controls with no concept of an agent, a job function, or an accountable human. None of them ships the step before all of that: turning a person who has never opened a terminal into someone with a correctly configured, governed agent.",
 };
 

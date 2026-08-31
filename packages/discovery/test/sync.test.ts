@@ -35,12 +35,21 @@ describe("syncSource (rule 1: lands as discovery_candidate, never a component)",
     const result = await syncSource(SOURCE, adapter, existing);
     expect(result.refreshedCount).toBe(1);
     expect(result.newCount).toBe(0);
-    expect(result.upserts[0]).toMatchObject({ id: "cand-1", name: "Jira MCP (renamed)", status: "promoted" });
+    expect(result.upserts[0]).toMatchObject({
+      id: "cand-1",
+      name: "Jira MCP (renamed)",
+      status: "promoted",
+    });
   });
 
   it("only considers existing rows scoped to the same source", async () => {
     const existing: ExistingCandidateRow[] = [
-      { id: "cand-other-source", sourceId: "src-OTHER", externalRef: "jira-mcp", status: "rejected" },
+      {
+        id: "cand-other-source",
+        sourceId: "src-OTHER",
+        externalRef: "jira-mcp",
+        status: "rejected",
+      },
     ];
     const adapter = fakeAdapter([{ externalRef: "jira-mcp", name: "Jira MCP" }]);
     const result = await syncSource(SOURCE, adapter, existing);

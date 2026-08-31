@@ -36,7 +36,9 @@ describe("canonical manifest v2 golden vector (shared with @arm/proto + @arm/cli
   });
 
   it("@arm/catalog's canonicalManifest + manifestSha256 hash the golden fixture to the golden constant", () => {
-    expect(manifestSha256(canonicalManifest(GOLDEN_MANIFEST as Record<string, unknown>))).toBe(GOLDEN_SHA256);
+    expect(manifestSha256(canonicalManifest(GOLDEN_MANIFEST as Record<string, unknown>))).toBe(
+      GOLDEN_SHA256,
+    );
   });
 
   it("is invariant to top-level key-order permutations", () => {
@@ -51,7 +53,9 @@ describe("canonical manifest v2 golden vector (shared with @arm/proto + @arm/cli
       model_routing: m["model_routing"],
       manifest_version: m["manifest_version"],
     };
-    expect(manifestSha256(canonicalManifest(permuted as Record<string, unknown>))).toBe(GOLDEN_SHA256);
+    expect(manifestSha256(canonicalManifest(permuted as Record<string, unknown>))).toBe(
+      GOLDEN_SHA256,
+    );
   });
 
   it("canonicalizes the DB (camelCase) source form to the same hash", () => {
@@ -65,7 +69,12 @@ describe("canonical manifest v2 golden vector (shared with @arm/proto + @arm/cli
       job_functions: string[];
     };
     const camelSource = {
-      components: m.components.map((c) => ({ componentId: c.component_id, version: c.version, kind: c.kind, scopes: c.scopes })),
+      components: m.components.map((c) => ({
+        componentId: c.component_id,
+        version: c.version,
+        kind: c.kind,
+        scopes: c.scopes,
+      })),
       permissions: m.permissions,
       modelRouting: m.model_routing,
       budgetTemplate: m.budget_template,

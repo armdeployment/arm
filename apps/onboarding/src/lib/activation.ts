@@ -10,7 +10,8 @@
 const USER_REF_KEY = "arm_onboarding_user_ref";
 const DEV_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001"; // see api/trpc/[trpc]/route.ts
 
-export type OnboardingStep = "questionnaire_started" | "questionnaire_completed" | "token_issued" | "downloaded";
+export type OnboardingStep =
+  "questionnaire_started" | "questionnaire_completed" | "token_issued" | "downloaded";
 
 /** A pseudonymous per-browser-session id — never an email or other PII. */
 export function getUserRef(): string {

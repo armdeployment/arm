@@ -10,64 +10,170 @@ const STATS = [
 
 export const SceneV7Outro: React.FC = () => {
   const frame = useCurrentFrame();
-  const appear = interpolate(frame, [0, 15], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const appear = interpolate(frame, [0, 15], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const y = interpolate(frame, [0, 15], [30, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.16, 1, 0.3, 1),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
   });
 
   return (
-    <div style={{
-      width: "100%", height: "100%", backgroundColor: COLORS.navyDark,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      fontFamily: FONT_SANS, padding: "40px 60px",
-    }}>
-      <div style={{ opacity: appear, transform: `translateY(${y}px)`, textAlign: "center" }}>
-        <div style={{ fontSize: 19, color: COLORS.goldLight, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        backgroundColor: COLORS.navyDark,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: FONT_SANS,
+        padding: "40px 60px",
+      }}
+    >
+      <div
+        style={{
+          opacity: appear,
+          transform: `translateY(${y}px)`,
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 19,
+            color: COLORS.goldLight,
+            fontWeight: 600,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            marginBottom: 12,
+          }}
+        >
           Open Source · Apache 2.0
         </div>
-        <div style={{ fontSize: 54, fontWeight: 700, color: COLORS.white, letterSpacing: -1 }}>
+        <div
+          style={{
+            fontSize: 54,
+            fontWeight: 700,
+            color: COLORS.white,
+            letterSpacing: -1,
+          }}
+        >
           Run the Whole Thing in 60 Seconds
         </div>
       </div>
 
-      <div style={{
-        opacity: interpolate(frame, [18, 32], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        marginTop: 30, backgroundColor: COLORS.slate900, border: `1px solid ${COLORS.borderDark}`,
-        borderRadius: 12, padding: "22px 32px",
-      }}>
-        <div style={{ fontSize: 20, fontFamily: FONT_MONO, color: COLORS.greenDark, lineHeight: 2 }}>
-          <div><span style={{ color: COLORS.textDarkMuted }}>$</span> corepack enable pnpm</div>
-          <div><span style={{ color: COLORS.textDarkMuted }}>$</span> pnpm install</div>
-          <div><span style={{ color: COLORS.textDarkMuted }}>$</span> pnpm --filter @arm-app/web build && pnpm --filter @arm-app/web start</div>
+      <div
+        style={{
+          opacity: interpolate(frame, [18, 32], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+          marginTop: 30,
+          backgroundColor: COLORS.slate900,
+          border: `1px solid ${COLORS.borderDark}`,
+          borderRadius: 12,
+          padding: "22px 32px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 20,
+            fontFamily: FONT_MONO,
+            color: COLORS.greenDark,
+            lineHeight: 2,
+          }}
+        >
+          <div>
+            <span style={{ color: COLORS.textDarkMuted }}>$</span> corepack
+            enable pnpm
+          </div>
+          <div>
+            <span style={{ color: COLORS.textDarkMuted }}>$</span> pnpm install
+          </div>
+          <div>
+            <span style={{ color: COLORS.textDarkMuted }}>$</span> pnpm --filter
+            @arm-app/web build && pnpm --filter @arm-app/web start
+          </div>
         </div>
-        <div style={{ fontSize: 16, color: COLORS.textDarkMuted, marginTop: 14, fontFamily: FONT_MONO }}>
+        <div
+          style={{
+            fontSize: 16,
+            color: COLORS.textDarkMuted,
+            marginTop: 14,
+            fontFamily: FONT_MONO,
+          }}
+        >
           no database · no Docker · no API key — fixtures by default
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 26, marginTop: 36 }}>
         {STATS.map((s, i) => (
-          <div key={s.unit} style={{
-            opacity: interpolate(frame, [36 + i * 8, 50 + i * 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-            textAlign: "center", minWidth: 190,
-          }}>
-            <div style={{ fontSize: 48, fontWeight: 800, color: COLORS.goldLight, fontFamily: FONT_MONO }}>{s.n}</div>
-            <div style={{ fontSize: 15.5, color: COLORS.textDarkMuted, marginTop: 7 }}>{s.unit}</div>
+          <div
+            key={s.unit}
+            style={{
+              opacity: interpolate(frame, [36 + i * 8, 50 + i * 8], [0, 1], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              }),
+              textAlign: "center",
+              minWidth: 190,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 800,
+                color: COLORS.goldLight,
+                fontFamily: FONT_MONO,
+              }}
+            >
+              {s.n}
+            </div>
+            <div
+              style={{
+                fontSize: 15.5,
+                color: COLORS.textDarkMuted,
+                marginTop: 7,
+              }}
+            >
+              {s.unit}
+            </div>
           </div>
         ))}
       </div>
 
-      <div style={{
-        opacity: interpolate(frame, [74, 90], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        marginTop: 36, fontSize: 18, color: COLORS.white, fontFamily: FONT_MONO,
-      }}>
+      <div
+        style={{
+          opacity: interpolate(frame, [74, 90], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+          marginTop: 36,
+          fontSize: 18,
+          color: COLORS.white,
+          fontFamily: FONT_MONO,
+        }}
+      >
         github.com/armdeployment/arm
       </div>
-      <div style={{
-        opacity: interpolate(frame, [80, 96], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        marginTop: 12, fontSize: 15.5, color: COLORS.textDarkMuted, textAlign: "center",
-      }}>
-        Every screen in this video is a real capture from a live run — no mockups.
+      <div
+        style={{
+          opacity: interpolate(frame, [80, 96], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+          marginTop: 12,
+          fontSize: 15.5,
+          color: COLORS.textDarkMuted,
+          textAlign: "center",
+        }}
+      >
+        Every screen in this video is a real capture from a live run — no
+        mockups.
       </div>
     </div>
   );

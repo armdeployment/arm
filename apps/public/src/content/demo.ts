@@ -11,7 +11,8 @@ export const demoStatusNote =
 export const clickPaths: ClickPath[] = [
   {
     title: "As a CEO or department exec",
-    description: "Start from the org-level home. Look for the adoption funnel and approvals up top — spend is a strip, not the headline.",
+    description:
+      "Start from the org-level home. Look for the adoption funnel and approvals up top — spend is a strip, not the headline.",
     steps: [
       "Land on the role home — adoption + approvals lead, spend is one strip",
       "Open the org tree and drill from Org → Department → Team",
@@ -20,7 +21,8 @@ export const clickPaths: ClickPath[] = [
   },
   {
     title: "As a plant manager or team lead",
-    description: "Scope down to one department and look for where people are stalling, not just what they've spent.",
+    description:
+      "Scope down to one department and look for where people are stalling, not just what they've spent.",
     steps: [
       "Drill into one department's scope",
       "Open the agent list scoped to that team",

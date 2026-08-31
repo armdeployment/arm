@@ -23,6 +23,7 @@ The original spec had Organization as the top-level entity. The question: where 
 ## Rationale
 
 (b) wins because:
+
 1. **Deployment-neutral**: self-hosted on-prem is a degenerate case of multi-tenant SaaS (one Tenant row). Same schema, same guardrails, same code paths.
 2. **MSP / holding-company support**: one tenant can host several organizations without schema changes.
 3. **Uniform isolation**: every multi-tenant table carries `tenant_id NOT NULL` (Invariant §11.6), enforced by `guardrails/tenant-isolation`. This guard runs identically in both deployments.

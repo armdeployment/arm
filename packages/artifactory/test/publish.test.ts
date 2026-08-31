@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { publishComponentVersion, type ComponentRepoPort, type ComponentRow, type BackendsByResidency } from "../src/publish.js";
+import {
+  publishComponentVersion,
+  type ComponentRepoPort,
+  type ComponentRow,
+  type BackendsByResidency,
+} from "../src/publish.js";
 import type { ComponentVersion } from "@arm/proto";
 import { FsStorageBackend } from "../src/storage/fs.js";
 import { digestOf } from "../src/digest.js";
@@ -31,9 +36,7 @@ class FakeComponentRepo implements ComponentRepoPort {
     return this.versions.some((v) => v.component_id === componentId && v.version === version);
   }
 
-  async insertVersionWithBlob(
-    version: Omit<ComponentVersion, "id">,
-  ): Promise<{ id: string }> {
+  async insertVersionWithBlob(version: Omit<ComponentVersion, "id">): Promise<{ id: string }> {
     const id = `cv-${this.nextId++}`;
     this.versions.push({ ...version, id });
     return { id };
@@ -50,7 +53,12 @@ describe("publishComponentVersion", () => {
 
   beforeEach(async () => {
     repo = new FakeComponentRepo();
-    repo.components.set(COMPONENT_ID, { id: COMPONENT_ID, tenantId: TENANT, slug: "jira", reviewStatus: "approved" });
+    repo.components.set(COMPONENT_ID, {
+      id: COMPONENT_ID,
+      tenantId: TENANT,
+      slug: "jira",
+      reviewStatus: "approved",
+    });
     const dir = await mkdtemp(join(tmpdir(), "arm-publish-test-"));
     backends = {
       tenant: new FsStorageBackend({ baseDir: dir }),
@@ -100,10 +108,23 @@ describe("publishComponentVersion", () => {
   });
 
   it("2. rejects when component.review_status !== 'approved'", async () => {
-    repo.components.set(COMPONENT_ID, { id: COMPONENT_ID, tenantId: TENANT, slug: "jira", reviewStatus: "draft" });
+    repo.components.set(COMPONENT_ID, {
+      id: COMPONENT_ID,
+      tenantId: TENANT,
+      slug: "jira",
+      reviewStatus: "draft",
+    });
     await expect(
       publishComponentVersion(
-        { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: COMPONENT_ID,
+          tenantId: TENANT,
+          version: "1.0.0",
+          manifest: {},
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo, backends },
       ),
     ).rejects.toThrow(/not approved/);
@@ -113,7 +134,15 @@ describe("publishComponentVersion", () => {
     const wellFormedButUnknown = "99999999-9999-4999-8999-999999999999";
     await expect(
       publishComponentVersion(
-        { componentId: wellFormedButUnknown, tenantId: TENANT, version: "1.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: wellFormedButUnknown,
+          tenantId: TENANT,
+          version: "1.0.0",
+          manifest: {},
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo, backends },
       ),
     ).rejects.toThrow(/unknown component/);
@@ -121,12 +150,28 @@ describe("publishComponentVersion", () => {
 
   it("3. rejects publishing a version that already exists (immutability)", async () => {
     await publishComponentVersion(
-      { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+      {
+        componentId: COMPONENT_ID,
+        tenantId: TENANT,
+        version: "1.0.0",
+        manifest: {},
+        publishedBy: PUBLISHER,
+        residency: "tenant",
+        storageBackend: "fs",
+      },
       { repo, backends },
     );
     await expect(
       publishComponentVersion(
-        { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.0.0", manifest: { changed: true }, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: COMPONENT_ID,
+          tenantId: TENANT,
+          version: "1.0.0",
+          manifest: { changed: true },
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo, backends },
       ),
     ).rejects.toThrow(/already exists/);
@@ -134,12 +179,28 @@ describe("publishComponentVersion", () => {
 
   it("4. rejects a version not strictly greater than the latest published version", async () => {
     await publishComponentVersion(
-      { componentId: COMPONENT_ID, tenantId: TENANT, version: "2.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+      {
+        componentId: COMPONENT_ID,
+        tenantId: TENANT,
+        version: "2.0.0",
+        manifest: {},
+        publishedBy: PUBLISHER,
+        residency: "tenant",
+        storageBackend: "fs",
+      },
       { repo, backends },
     );
     await expect(
       publishComponentVersion(
-        { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.5.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: COMPONENT_ID,
+          tenantId: TENANT,
+          version: "1.5.0",
+          manifest: {},
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo, backends },
       ),
     ).rejects.toThrow(/not strictly greater/);
@@ -147,12 +208,28 @@ describe("publishComponentVersion", () => {
 
   it("accepts a version strictly greater than the latest", async () => {
     await publishComponentVersion(
-      { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+      {
+        componentId: COMPONENT_ID,
+        tenantId: TENANT,
+        version: "1.0.0",
+        manifest: {},
+        publishedBy: PUBLISHER,
+        residency: "tenant",
+        storageBackend: "fs",
+      },
       { repo, backends },
     );
     await expect(
       publishComponentVersion(
-        { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.1.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: COMPONENT_ID,
+          tenantId: TENANT,
+          version: "1.1.0",
+          manifest: {},
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo, backends },
       ),
     ).resolves.toBeDefined();
@@ -207,7 +284,15 @@ describe("publishComponentVersion", () => {
     };
     await expect(
       publishComponentVersion(
-        { componentId: COMPONENT_ID, tenantId: TENANT, version: "1.0.0", manifest: {}, publishedBy: PUBLISHER, residency: "tenant", storageBackend: "fs" },
+        {
+          componentId: COMPONENT_ID,
+          tenantId: TENANT,
+          version: "1.0.0",
+          manifest: {},
+          publishedBy: PUBLISHER,
+          residency: "tenant",
+          storageBackend: "fs",
+        },
         { repo: brokenRepo, backends },
       ),
     ).rejects.toThrow(/no id/);

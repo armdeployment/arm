@@ -5,7 +5,14 @@ describe("reconcile", () => {
   const providerResult: ProviderUsageResult = {
     provider: "anthropic",
     days: [
-      { date: "2026-07-01", model: "claude", inputTokens: 1000000, outputTokens: 50000, costUsd: 15, requests: 200 },
+      {
+        date: "2026-07-01",
+        model: "claude",
+        inputTokens: 1000000,
+        outputTokens: 50000,
+        costUsd: 15,
+        requests: 200,
+      },
     ],
     totalCostUsd: 15,
     totalInputTokens: 1000000,
@@ -15,13 +22,13 @@ describe("reconcile", () => {
   };
 
   it("reports ok when drift is within 5%", () => {
-    const r = reconcile(providerResult, 14.50, { claude: 14.50 });
+    const r = reconcile(providerResult, 14.5, { claude: 14.5 });
     expect(r.status).toBe("ok");
     expect(r.driftPct).toBeLessThan(5);
   });
 
   it("reports drift_warning when drift > 5%", () => {
-    const r = reconcile(providerResult, 14.00, { claude: 14.00 });
+    const r = reconcile(providerResult, 14.0, { claude: 14.0 });
     expect(r.status).toBe("drift_warning");
   });
 

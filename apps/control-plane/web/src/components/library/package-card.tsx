@@ -51,40 +51,70 @@ export function PackageCard({ pkg }: { pkg: PackageCardData }) {
 
   function onRequest() {
     if (!latestVersionId) return;
-    request.mutate({ packageVersionId: latestVersionId, assigneeType: "user", assigneeId: DEV_USER_ID });
+    request.mutate({
+      packageVersionId: latestVersionId,
+      assigneeType: "user",
+      assigneeId: DEV_USER_ID,
+    });
   }
 
   return (
     <div
       className="flex flex-col rounded-lg border p-5"
-      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", boxShadow: "var(--shadow-sm)" }}
+      style={{
+        borderColor: "var(--border)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "var(--shadow-sm)",
+      }}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{pkg.name}</div>
-          <div className="mt-0.5 font-mono text-[11px]" style={{ color: "var(--gold)" }}>{pkg.roleKey}</div>
+          <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            {pkg.name}
+          </div>
+          <div className="mt-0.5 font-mono text-[11px]" style={{ color: "var(--gold)" }}>
+            {pkg.roleKey}
+          </div>
         </div>
-        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${MODE_STYLES[pkg.mode] ?? ""}`}>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${MODE_STYLES[pkg.mode] ?? ""}`}
+        >
           {pkg.mode}
         </span>
       </div>
 
-      <div className="mt-1 text-[11px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{pkg.family}</div>
+      <div
+        className="mt-1 text-[11px] uppercase tracking-wider"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {pkg.family}
+      </div>
 
-      <p className="mt-3 flex-1 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>{pkg.description}</p>
+      <p className="mt-3 flex-1 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+        {pkg.description}
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-1">
-        <span className="rounded bg-[var(--navy-light)] px-1.5 py-0.5 text-[10px] font-semibold" style={{ color: "var(--navy)" }}>
+        <span
+          className="rounded bg-[var(--navy-light)] px-1.5 py-0.5 text-[10px] font-semibold"
+          style={{ color: "var(--navy)" }}
+        >
           {pkg.componentCount} component{pkg.componentCount === 1 ? "" : "s"}
         </span>
         {pkg.monthlyUsdCap != null && (
-          <span className="rounded bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px]" style={{ color: "var(--text-secondary)" }}>
+          <span
+            className="rounded bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px]"
+            style={{ color: "var(--text-secondary)" }}
+          >
             ${pkg.monthlyUsdCap}/mo cap
           </span>
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--border)" }}>
+      <div
+        className="mt-4 flex items-center justify-between border-t pt-3"
+        style={{ borderColor: "var(--border)" }}
+      >
         <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
           {pkg.mode === "copilot" ? "human-in-the-loop" : "runs unattended"}
         </div>
@@ -98,7 +128,9 @@ export function PackageCard({ pkg }: { pkg: PackageCardData }) {
         </button>
       </div>
       {request.isError && (
-        <p className="mt-2 text-[11px]" style={{ color: "var(--danger)" }}>{request.error.message}</p>
+        <p className="mt-2 text-[11px]" style={{ color: "var(--danger)" }}>
+          {request.error.message}
+        </p>
       )}
     </div>
   );

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { TimeToValuePanelView, type TTVBucket } from "../../src/components/adoption/time-to-value-panel";
+import {
+  TimeToValuePanelView,
+  type TTVBucket,
+} from "../../src/components/adoption/time-to-value-panel";
 
 const BUCKETS: TTVBucket[] = [
   { ltMinutes: 5, count: 10 },
@@ -28,7 +31,16 @@ describe("TimeToValuePanelView", () => {
   });
 
   it("populated: shows p50/p90/target and the 10-minute target subtitle", () => {
-    render(<TimeToValuePanelView status="ready" buckets={BUCKETS} p50={8.2} p90={34.5} targetMinutes={10} sampleCount={40} />);
+    render(
+      <TimeToValuePanelView
+        status="ready"
+        buckets={BUCKETS}
+        p50={8.2}
+        p90={34.5}
+        targetMinutes={10}
+        sampleCount={40}
+      />,
+    );
     expect(screen.getByText(/target 10 min/i)).toBeInTheDocument();
     // p50/p90 appear both in the stat strip and the sr-only table fallback.
     expect(screen.getAllByText("8.2m").length).toBeGreaterThanOrEqual(1);

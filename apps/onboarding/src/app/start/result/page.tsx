@@ -42,14 +42,20 @@ export default function ResultPage() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-card">
-          <div className="onboarding-prompt">We don&apos;t have a standard package for that yet</div>
+          <div className="onboarding-prompt">
+            We don&apos;t have a standard package for that yet
+          </div>
           <p className="onboarding-help">
-            Your answers didn&apos;t match one of our standard roles. We&apos;ve flagged this as a coverage gap for
-            the library team — no free text was recorded, just a structured marker. Ask your admin for a manual
-            setup in the meantime.
+            Your answers didn&apos;t match one of our standard roles. We&apos;ve flagged this as a
+            coverage gap for the library team — no free text was recorded, just a structured marker.
+            Ask your admin for a manual setup in the meantime.
           </p>
           <div className="onboarding-nav">
-            <button type="button" className="onboarding-button onboarding-button-secondary" onClick={() => router.push("/start")}>
+            <button
+              type="button"
+              className="onboarding-button onboarding-button-secondary"
+              onClick={() => router.push("/start")}
+            >
               Retake the questionnaire
             </button>
           </div>
@@ -61,7 +67,11 @@ export default function ResultPage() {
   function choosePackage(pkg: Recommendation) {
     sessionStorage.setItem(
       "arm_onboarding_selected_package",
-      JSON.stringify({ packageVersionId: pkg.packageVersionId, name: pkg.name, approvalRequired: pkg.approvalRequired }),
+      JSON.stringify({
+        packageVersionId: pkg.packageVersionId,
+        name: pkg.name,
+        approvalRequired: pkg.approvalRequired,
+      }),
     );
     router.push("/download");
   }
@@ -78,10 +88,18 @@ export default function ResultPage() {
             : "This package auto-approves — you'll have full tool access as soon as it installs."}
         </p>
         <div className="onboarding-nav" style={{ justifyContent: "flex-start", gap: "0.75rem" }}>
-          <button type="button" className="onboarding-button onboarding-button-primary" onClick={() => choosePackage(top)}>
+          <button
+            type="button"
+            className="onboarding-button onboarding-button-primary"
+            onClick={() => choosePackage(top)}
+          >
             Get {top.name}
           </button>
-          <button type="button" className="onboarding-button onboarding-button-secondary" onClick={() => setShowAll((v) => !v)}>
+          <button
+            type="button"
+            className="onboarding-button onboarding-button-secondary"
+            onClick={() => setShowAll((v) => !v)}
+          >
             Something else
           </button>
         </div>
@@ -91,7 +109,12 @@ export default function ResultPage() {
             <div className="onboarding-help">Other packages you're eligible for:</div>
             <div className="onboarding-options">
               {result.recommendations.slice(1).map((pkg) => (
-                <button key={pkg.packageVersionId} type="button" className="onboarding-option" onClick={() => choosePackage(pkg)}>
+                <button
+                  key={pkg.packageVersionId}
+                  type="button"
+                  className="onboarding-option"
+                  onClick={() => choosePackage(pkg)}
+                >
                   {pkg.name}
                 </button>
               ))}

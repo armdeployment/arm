@@ -10,7 +10,12 @@ const BODY = new TextEncoder().encode("artifact bytes for the http layer");
 const DIGEST = digestOf(BODY);
 
 function sourcesWith(body: Uint8Array): ArtifactSource[] {
-  return [{ name: "fake", fetchBlob: async (digest) => (digest === DIGEST ? { body, mediaType: "text/plain" } : null) }];
+  return [
+    {
+      name: "fake",
+      fetchBlob: async (digest) => (digest === DIGEST ? { body, mediaType: "text/plain" } : null),
+    },
+  ];
 }
 
 describe("GET /health", () => {
@@ -73,7 +78,9 @@ describe("GET /artifacts/:digest", () => {
 
   it("emits a component_pull_event per served request, carrying metadata query params through", async () => {
     const app = createApp(sourcesWith(BODY));
-    const res = await app.request(`/artifacts/${DIGEST}?tenant_id=tn-1&component_id=c1&version=1.0.0`);
+    const res = await app.request(
+      `/artifacts/${DIGEST}?tenant_id=tn-1&component_id=c1&version=1.0.0`,
+    );
     expect(res.status).toBe(200);
     const eventsRes = await app.request("/events");
     const eventsBody = await eventsRes.json();

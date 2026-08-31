@@ -20,14 +20,20 @@ const authedClaims: ARMClaims = { sub: "user_01", tenant_id: "tn_01", email: "en
 // publishComponentVersion validates tenant_id as a UUID (componentVersionSchema,
 // @arm/proto) — the shipped fixtures all belong to FIXTURE_TENANT_ID, so
 // publish-path tests authenticate as that tenant specifically.
-const fixtureTenantClaims: ARMClaims = { sub: "user_01", tenant_id: FIXTURE_TENANT_ID, email: "eng@acme.com" };
+const fixtureTenantClaims: ARMClaims = {
+  sub: "user_01",
+  tenant_id: FIXTURE_TENANT_ID,
+  email: "eng@acme.com",
+};
 function caller(claims: ARMClaims | null) {
   return appRouter.createCaller(createContext({ claims }));
 }
 
 describe("library tenant middleware", () => {
   it("rejects unauthenticated calls", async () => {
-    await expect(caller(null).library.search({})).rejects.toThrowError(/No authenticated tenant context/);
+    await expect(caller(null).library.search({})).rejects.toThrowError(
+      /No authenticated tenant context/,
+    );
   });
 });
 
@@ -66,7 +72,9 @@ describe("library.getComponent / library.listVersions", () => {
   });
 
   it("getComponent 404s on an unknown slug", async () => {
-    await expect(caller(authedClaims).library.getComponent({ slug: "does-not-exist" })).rejects.toThrow(/not found/i);
+    await expect(
+      caller(authedClaims).library.getComponent({ slug: "does-not-exist" }),
+    ).rejects.toThrow(/not found/i);
   });
 
   it("listVersions returns newest-first with yanked flagged", async () => {
@@ -92,14 +100,20 @@ describe("library.publishVersion", () => {
     expect(r.audit.action).toBe("publish_version");
 
     // The new version is now visible via listVersions.
-    const versions = await caller(fixtureTenantClaims).library.listVersions({ componentId: jira.id });
+    const versions = await caller(fixtureTenantClaims).library.listVersions({
+      componentId: jira.id,
+    });
     expect(versions.versions.some((v) => v.version === "1.1.0")).toBe(true);
   });
 
   it("rejects publishing a version that already exists (immutability)", async () => {
     const github = componentFixturesBySlug["github"]!;
     await expect(
-      caller(fixtureTenantClaims).library.publishVersion({ componentId: github.id, version: "1.0.0", manifest: {} }),
+      caller(fixtureTenantClaims).library.publishVersion({
+        componentId: github.id,
+        version: "1.0.0",
+        manifest: {},
+      }),
     ).rejects.toThrow(/already exists/);
   });
 });
@@ -131,7 +145,9 @@ describe("library discovery admin surfaces", () => {
     expect(r.audit.action).toBe("promote_candidate");
 
     // Promoted component now resolves via getComponent.
-    const fetched = await caller(authedClaims).library.getComponent({ slug: "promoted-test-component" });
+    const fetched = await caller(authedClaims).library.getComponent({
+      slug: "promoted-test-component",
+    });
     expect(fetched.component.review_status).toBe("draft");
   });
 
@@ -140,9 +156,14 @@ describe("library discovery admin surfaces", () => {
     const sources = await caller(authedClaims).library.listSources();
     expect(sources.sources.length).toBeGreaterThan(0);
     const candidates = await caller(authedClaims).library.listCandidates({});
-    const rejectable = candidates.candidates.find((c) => c.status === "new" || c.status === "triaged");
+    const rejectable = candidates.candidates.find(
+      (c) => c.status === "new" || c.status === "triaged",
+    );
     if (rejectable) {
-      const r = await caller(authedClaims).library.rejectCandidate({ candidateId: rejectable.id, reason: "not needed" });
+      const r = await caller(authedClaims).library.rejectCandidate({
+        candidateId: rejectable.id,
+        reason: "not needed",
+      });
       expect(r.candidate.status).toBe("rejected");
       expect(r.audit.detail).toBe("not needed");
     }
@@ -150,7 +171,10 @@ describe("library discovery admin surfaces", () => {
 
   it("promoteCandidate 404s on an unknown candidate id", async () => {
     await expect(
-      caller(authedClaims).library.promoteCandidate({ candidateId: "99999999-9999-4999-8999-999999999999", slug: "x" }),
+      caller(authedClaims).library.promoteCandidate({
+        candidateId: "99999999-9999-4999-8999-999999999999",
+        slug: "x",
+      }),
     ).rejects.toThrow(/not found/i);
   });
 });
@@ -170,7 +194,9 @@ describe("library job-function surfaces", () => {
   });
 
   it("recommendForJobFunction ranks components and packages for a real job function key", async () => {
-    const r = await caller(authedClaims).library.recommendForJobFunction({ key: "product_quality_engineer_pqe" });
+    const r = await caller(authedClaims).library.recommendForJobFunction({
+      key: "product_quality_engineer_pqe",
+    });
     expect(Array.isArray(r.components)).toBe(true);
     expect(Array.isArray(r.packages)).toBe(true);
     expect(r.packages.length).toBe(packageVersionFixtures.length);
@@ -197,7 +223,11 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
   // columns with no shim for a human-readable sub like fixtureTenantClaims'
   // "user_01" — fixture mode never re-parses through componentSchema so it
   // silently accepts non-UUID subs; Postgres correctly rejects them.
-  const realUserClaims: ARMClaims = { sub: "70000000-0000-4000-8000-000000000001", tenant_id: FIXTURE_TENANT_ID, email: "eng@acme.com" };
+  const realUserClaims: ARMClaims = {
+    sub: "70000000-0000-4000-8000-000000000001",
+    tenant_id: FIXTURE_TENANT_ID,
+    email: "eng@acme.com",
+  };
 
   afterEach(() => {
     delete process.env.ARM_FIXTURE_MODE;
@@ -267,7 +297,9 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
     expect(after.candidates.find((c) => c.id === target!.id)?.status).toBe("promoted");
 
     // The new component is real and searchable.
-    const found = await caller(fixtureTenantClaims).library.getComponent({ slug: promoted.component.slug });
+    const found = await caller(fixtureTenantClaims).library.getComponent({
+      slug: promoted.component.slug,
+    });
     expect(found.component.id).toBe(promoted.component.id);
 
     // Restore state — the dev DB is persistent across test runs, and only
@@ -290,7 +322,9 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
     // wraps eventually and yields a LOWER version than a previous run, which
     // publishComponentVersion correctly rejects. Read the current maximum and
     // bump it instead: self-healing whatever state the DB is already in.
-    const before = await caller(fixtureTenantClaims).library.listVersions({ componentId: jira.component.id });
+    const before = await caller(fixtureTenantClaims).library.listVersions({
+      componentId: jira.component.id,
+    });
     const highestMajor = before.versions.reduce(
       (max, v) => Math.max(max, Number.parseInt(v.version.split(".")[0] ?? "0", 10) || 0),
       0,
@@ -304,7 +338,9 @@ describe.skipIf(!process.env.DATABASE_URL)("library router — live Postgres rea
     });
     expect(result.version).toBe(nextVersion);
 
-    const versions = await caller(fixtureTenantClaims).library.listVersions({ componentId: jira.component.id });
+    const versions = await caller(fixtureTenantClaims).library.listVersions({
+      componentId: jira.component.id,
+    });
     expect(versions.versions.some((v) => v.version === nextVersion)).toBe(true);
   });
 });

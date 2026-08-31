@@ -17,26 +17,26 @@
  * `digest.ts` instead of imported (see that file's header for why).
  */
 
-import { Hono } from 'hono';
-import { DIGEST_RE, verifyDigest } from './digest.js';
-import { LocalArtifactCache } from './cache.js';
-import { httpSource, fetchFromSources, type ArtifactSource } from './sources.js';
-import { recordPull, getPullEventBuffer } from './events.js';
+import { Hono } from "hono";
+import { DIGEST_RE, verifyDigest } from "./digest.js";
+import { LocalArtifactCache } from "./cache.js";
+import { httpSource, fetchFromSources, type ArtifactSource } from "./sources.js";
+import { recordPull, getPullEventBuffer } from "./events.js";
 
 // ── Config (env-driven, mirrors the plugin-ingest/proxy pattern of local
 //    process.env reads for app-specific settings not in the shared @arm/config
 //    schema) ───────────────────────────────────────────────────────────────
 
 const TENANT_BACKEND_URL =
-  process.env['ARM_TENANT_BLOB_BACKEND_URL'] ?? 'http://localhost:8791/blobs';
+  process.env["ARM_TENANT_BLOB_BACKEND_URL"] ?? "http://localhost:8791/blobs";
 const CONTROL_PLANE_CDN_URL =
-  process.env['ARM_CONTROL_PLANE_CDN_URL'] ?? 'http://localhost:8792/cdn';
-const CACHE_MAX_BYTES = Number(process.env['ARM_ARTIFACT_CACHE_MAX_BYTES'] ?? 100 * 1024 * 1024); // 100 MiB default
+  process.env["ARM_CONTROL_PLANE_CDN_URL"] ?? "http://localhost:8792/cdn";
+const CACHE_MAX_BYTES = Number(process.env["ARM_ARTIFACT_CACHE_MAX_BYTES"] ?? 100 * 1024 * 1024); // 100 MiB default
 
 function defaultSources(): ArtifactSource[] {
   return [
-    httpSource('tenant-backend', { baseUrl: TENANT_BACKEND_URL }),
-    httpSource('control-plane-cdn', { baseUrl: CONTROL_PLANE_CDN_URL }),
+    httpSource("tenant-backend", { baseUrl: TENANT_BACKEND_URL }),
+    httpSource("control-plane-cdn", { baseUrl: CONTROL_PLANE_CDN_URL }),
   ];
 }
 
@@ -49,17 +49,17 @@ export function createApp(sources: readonly ArtifactSource[] = defaultSources())
   const app = new Hono();
   const cache = new LocalArtifactCache(CACHE_MAX_BYTES);
 
-  app.get('/health', (c) =>
+  app.get("/health", (c) =>
     c.json({
-      status: 'ok',
-      service: 'artifact-cache',
-      version: '0.0.0',
+      status: "ok",
+      service: "artifact-cache",
+      version: "0.0.0",
       cacheBytesUsed: cache.bytesUsed(),
     }),
   );
 
   /** Debug/observability surface — mirrors open-gateway's /metering. */
-  app.get('/events', (c) =>
+  app.get("/events", (c) =>
     c.json({ events: getPullEventBuffer().length, buffer: getPullEventBuffer().slice(-20) }),
   );
 
@@ -84,8 +84,8 @@ export function createApp(sources: readonly ArtifactSource[] = defaultSources())
     return { ...fetched, cacheHit: false };
   }
 
-  app.get('/artifacts/:digest', async (c) => {
-    const digest = c.req.param('digest');
+  app.get("/artifacts/:digest", async (c) => {
+    const digest = c.req.param("digest");
     if (!DIGEST_RE.test(digest)) {
       return c.json({ error: `malformed digest "${digest}" — expected sha256:<hex>` }, 400);
     }
@@ -101,27 +101,27 @@ export function createApp(sources: readonly ArtifactSource[] = defaultSources())
     }
 
     recordPull({
-      tenantId: c.req.query('tenant_id') ?? 'unknown',
-      componentId: c.req.query('component_id') ?? 'unknown',
-      version: c.req.query('version') ?? 'unknown',
+      tenantId: c.req.query("tenant_id") ?? "unknown",
+      componentId: c.req.query("component_id") ?? "unknown",
+      version: c.req.query("version") ?? "unknown",
       blobDigest: digest,
       bytes: resolved.body.byteLength,
       cacheHit: resolved.cacheHit,
-      clientVersion: c.req.query('client_version') ?? '',
+      clientVersion: c.req.query("client_version") ?? "",
     });
 
     return new Response(resolved.body, {
       status: 200,
       headers: {
-        'content-type': resolved.mediaType,
-        'content-length': String(resolved.body.byteLength),
-        'x-arm-cache': resolved.cacheHit ? 'HIT' : 'MISS',
+        "content-type": resolved.mediaType,
+        "content-length": String(resolved.body.byteLength),
+        "x-arm-cache": resolved.cacheHit ? "HIT" : "MISS",
       },
     });
   });
 
-  app.on('HEAD', '/artifacts/:digest', async (c) => {
-    const digest = c.req.param('digest');
+  app.on("HEAD", "/artifacts/:digest", async (c) => {
+    const digest = c.req.param("digest");
     if (!DIGEST_RE.test(digest)) {
       return c.body(null, 400);
     }
@@ -135,9 +135,9 @@ export function createApp(sources: readonly ArtifactSource[] = defaultSources())
       return c.body(null, 404);
     }
     return c.body(null, 200, {
-      'content-type': resolved.mediaType,
-      'content-length': String(resolved.body.byteLength),
-      'x-arm-cache': resolved.cacheHit ? 'HIT' : 'MISS',
+      "content-type": resolved.mediaType,
+      "content-length": String(resolved.body.byteLength),
+      "x-arm-cache": resolved.cacheHit ? "HIT" : "MISS",
     });
   });
 
@@ -158,10 +158,10 @@ export default app;
 // would corrupt anything that isn't valid UTF-8 — and the listener only
 // runs when this module IS the process entrypoint, so importing
 // `createApp` from a test never binds a port.
-import { createServer } from 'node:http';
-import { pathToFileURL } from 'node:url';
+import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 
-const PORT = Number.parseInt(process.env.ARTIFACT_CACHE_PORT ?? '8788', 10);
+const PORT = Number.parseInt(process.env.ARTIFACT_CACHE_PORT ?? "8788", 10);
 
 const isEntrypoint =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
@@ -169,16 +169,16 @@ const isEntrypoint =
 if (isEntrypoint) {
   createServer(async (req, res) => {
     try {
-      const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
+      const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
       const headers = new Headers();
       for (const [k, v] of Object.entries(req.headers)) {
-        if (v) headers.set(k, Array.isArray(v) ? v.join(', ') : v);
+        if (v) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
       }
 
       // `exactOptionalPropertyTypes` is on, so `body` is attached only when
       // there is one rather than passed as an explicit undefined.
-      const init: RequestInit = { method: req.method ?? 'GET', headers };
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
+      const init: RequestInit = { method: req.method ?? "GET", headers };
+      if (req.method !== "GET" && req.method !== "HEAD") {
         const chunks: Buffer[] = [];
         for await (const chunk of req) {
           chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
@@ -189,15 +189,15 @@ if (isEntrypoint) {
       const resp = await app.fetch(new Request(url, init));
       res.writeHead(resp.status, Object.fromEntries(resp.headers));
       // HEAD carries the headers but must not carry bytes.
-      if (req.method === 'HEAD') {
+      if (req.method === "HEAD") {
         res.end();
         return;
       }
       res.end(Buffer.from(await resp.arrayBuffer()));
     } catch (err) {
-      console.error('[artifact-cache-error]', err);
-      res.writeHead(500, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'artifact_cache_internal_error' }));
+      console.error("[artifact-cache-error]", err);
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "artifact_cache_internal_error" }));
     }
   }).listen(PORT, () => console.log(`[artifact-cache] http://localhost:${PORT}`));
 }

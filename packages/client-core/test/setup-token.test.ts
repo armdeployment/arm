@@ -155,7 +155,10 @@ describe("resolveFromSetupToken", () => {
         return {
           status: 200,
           body: okResponse({
-            manifest: { ...manifest, version: { ...manifest.version, manifest_sha256: "0".repeat(64) } },
+            manifest: {
+              ...manifest,
+              version: { ...manifest.version, manifest_sha256: "0".repeat(64) },
+            },
           }),
         };
       },

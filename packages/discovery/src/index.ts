@@ -30,9 +30,18 @@ export {
   type RankedCandidate,
 } from "./recommend.js";
 
-export { computeGaps, type JobFunctionCoverage, type PackageJobFunctionRow, type CoverageGap } from "./gaps.js";
+export {
+  computeGaps,
+  type JobFunctionCoverage,
+  type PackageJobFunctionRow,
+  type CoverageGap,
+} from "./gaps.js";
 
-export type { DiscoveredCandidate, DiscoverySourceAdapter, DiscoverySourceRef } from "./sources/types.js";
+export type {
+  DiscoveredCandidate,
+  DiscoverySourceAdapter,
+  DiscoverySourceRef,
+} from "./sources/types.js";
 export { fetchJsonSameOrigin } from "./sources/types.js";
 export { mcpRegistryAdapter } from "./sources/mcp-registry.js";
 export { gitOrgScannerAdapter } from "./sources/git.js";

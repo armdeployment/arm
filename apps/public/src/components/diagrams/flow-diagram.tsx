@@ -75,11 +75,24 @@ export function FlowDiagram({
             stroke="var(--border-strong)"
             strokeWidth={1.5}
           />
-          <text x={node.centerX} y={node.y + 30} textAnchor="middle" fontSize={19} fontWeight={600} fill="var(--text-primary)">
+          <text
+            x={node.centerX}
+            y={node.y + 30}
+            textAnchor="middle"
+            fontSize={19}
+            fontWeight={600}
+            fill="var(--text-primary)"
+          >
             {node.label}
           </text>
           {node.sublabel && (
-            <text x={node.centerX} y={node.y + 54} textAnchor="middle" fontSize={12.5} fill="var(--text-secondary)">
+            <text
+              x={node.centerX}
+              y={node.y + 54}
+              textAnchor="middle"
+              fontSize={12.5}
+              fill="var(--text-secondary)"
+            >
               {node.sublabel}
             </text>
           )}
@@ -100,8 +113,20 @@ export function FlowDiagram({
           />
           {edge.label && (
             <g>
-              <rect x={edge.labelX - edge.labelWidth / 2} y={edge.labelY - 14} width={edge.labelWidth} height={20} fill="var(--bg-surface)" />
-              <text x={edge.labelX} y={edge.labelY} textAnchor="middle" fontSize={11.5} fill={edge.isBoundary ? "var(--navy)" : "var(--text-muted)"}>
+              <rect
+                x={edge.labelX - edge.labelWidth / 2}
+                y={edge.labelY - 14}
+                width={edge.labelWidth}
+                height={20}
+                fill="var(--bg-surface)"
+              />
+              <text
+                x={edge.labelX}
+                y={edge.labelY}
+                textAnchor="middle"
+                fontSize={11.5}
+                fill={edge.isBoundary ? "var(--navy)" : "var(--text-muted)"}
+              >
                 {edge.label}
               </text>
             </g>

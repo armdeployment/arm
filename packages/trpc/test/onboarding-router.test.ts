@@ -36,10 +36,12 @@ const MAINTENANCE_ANSWERS = {
 
 describe("onboarding tenant middleware", () => {
   it("REJECTS unauthenticated getQuestionnaire/submitResponse/recommend/issueSetupToken", async () => {
-    await expect(caller(null).onboarding.getQuestionnaire()).rejects.toThrow(/No authenticated tenant context/);
-    await expect(
-      caller(null).onboarding.submitResponse({ answers: {} }),
-    ).rejects.toThrow(/No authenticated tenant context/);
+    await expect(caller(null).onboarding.getQuestionnaire()).rejects.toThrow(
+      /No authenticated tenant context/,
+    );
+    await expect(caller(null).onboarding.submitResponse({ answers: {} })).rejects.toThrow(
+      /No authenticated tenant context/,
+    );
     await expect(caller(null).onboarding.recommend({ answers: {} })).rejects.toThrow(
       /No authenticated tenant context/,
     );
@@ -79,7 +81,9 @@ describe("submitResponse — structured answers only (A5)", () => {
 
   it("resolves maintenance_technician for a maintenance-heavy answer set and recommends the matching package", async () => {
     const before = __test.responseStore.length;
-    const r = await caller(authedClaims).onboarding.submitResponse({ answers: MAINTENANCE_ANSWERS });
+    const r = await caller(authedClaims).onboarding.submitResponse({
+      answers: MAINTENANCE_ANSWERS,
+    });
     expect(r.resolvedJobFunctionKey).toBe("maintenance_technician");
     expect(r.recommendations[0]?.slug).toBe("maintenance_technician");
     expect(r.recommendations[0]?.exactMatch).toBe(true);
@@ -126,7 +130,10 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
     const issued = await caller(authedClaims).onboarding.issueSetupToken({
       packageVersionIds: [OFFICE_VERSION_ID],
     });
-    const redeemed = await caller(null).onboarding.redeemSetupToken({ token: issued.token, clientVersion: "1.0.0" });
+    const redeemed = await caller(null).onboarding.redeemSetupToken({
+      token: issued.token,
+      clientVersion: "1.0.0",
+    });
 
     expect(redeemed.status).toBe("ok");
     expect(redeemed.pending_approval).toBe(false);
@@ -137,7 +144,9 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
     // manifest_sha256 fresh (module doc header).
     expect(verifyManifestIntegrity(redeemed.manifest!.version)).toBe(true);
 
-    const assignment = __test.assignmentStore.find((a) => a.package_version_id === redeemed.manifest!.version.id);
+    const assignment = __test.assignmentStore.find(
+      (a) => a.package_version_id === redeemed.manifest!.version.id,
+    );
     expect(assignment?.status).toBe("approved");
   });
 
@@ -170,7 +179,9 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
 
     expect(redeemed.status).toBe("ok");
     expect(redeemed.pending_approval).toBe(true);
-    const assignment = __test.assignmentStore.find((a) => a.package_version_id === redeemed.manifest!.version.id);
+    const assignment = __test.assignmentStore.find(
+      (a) => a.package_version_id === redeemed.manifest!.version.id,
+    );
     expect(assignment?.status).toBe("requested");
   });
 
@@ -190,7 +201,10 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
       packageVersionIds: [OFFICE_VERSION_ID],
     });
     // Force expiry directly on the store (avoids a real 15-minute sleep).
-    const jti = issued.token.split(".")[1] ? JSON.parse(Buffer.from(issued.token.split(".")[1]!, "base64url").toString("utf8")).jti as string : "";
+    const jti = issued.token.split(".")[1]
+      ? (JSON.parse(Buffer.from(issued.token.split(".")[1]!, "base64url").toString("utf8"))
+          .jti as string)
+      : "";
     const stored = __test.setupTokenStore.get(jti)!;
     stored.expiresAt = Date.now() - 1;
 
@@ -202,7 +216,9 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
     const issued = await caller(authedClaims).onboarding.issueSetupToken({
       packageVersionIds: [OFFICE_VERSION_ID],
     });
-    const redeemed = await caller(null).onboarding.resolveActivationCode({ code: issued.activationCode });
+    const redeemed = await caller(null).onboarding.resolveActivationCode({
+      code: issued.activationCode,
+    });
     expect(redeemed.status).toBe("ok");
     expect(redeemed.manifest?.package.role_key).toBe("office_worker_general");
 
@@ -230,7 +246,9 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
     const issued = await caller(authedClaims).onboarding.issueSetupToken({
       packageVersionIds: [OFFICE_VERSION_ID],
     });
-    const payload = JSON.parse(Buffer.from(issued.token.split(".")[1]!, "base64url").toString("utf8"));
+    const payload = JSON.parse(
+      Buffer.from(issued.token.split(".")[1]!, "base64url").toString("utf8"),
+    );
     const forbidden = /secret|token|password|key|answer|text/i;
     for (const field of Object.keys(payload)) {
       expect(field).not.toMatch(forbidden);

@@ -45,7 +45,10 @@ describe("buildComponentSearchSql", () => {
 
 describe("buildWorkPackageSearchSql", () => {
   it("scopes by tenant_id and supports mode + jobFunction filters", () => {
-    const { sql, params } = buildWorkPackageSearchSql(TENANT, { mode: "copilot", jobFunction: "quality_engineer" });
+    const { sql, params } = buildWorkPackageSearchSql(TENANT, {
+      mode: "copilot",
+      jobFunction: "quality_engineer",
+    });
     expect(sql).toContain("tenant_id = $1");
     expect(sql).toContain("mode = $");
     expect(sql).toContain("work_package_job_function");
@@ -90,7 +93,10 @@ describe("searchInMemory", () => {
   });
 
   it("filters by query against name/slug/description (case-insensitive)", () => {
-    const rows = [comp({ slug: "jira" }), comp({ slug: "github", name: "GitHub", description: "Code hosting" })];
+    const rows = [
+      comp({ slug: "jira" }),
+      comp({ slug: "github", name: "GitHub", description: "Code hosting" }),
+    ];
     const r = searchInMemory(rows, [], { q: "CODE" });
     expect(r.items.map((i) => i.slug)).toEqual(["github"]);
   });
@@ -102,20 +108,32 @@ describe("searchInMemory", () => {
   });
 
   it("filters by classification", () => {
-    const rows = [comp({ slug: "public-x", dataClassification: "public" }), comp({ slug: "internal-x", dataClassification: "internal" })];
+    const rows = [
+      comp({ slug: "public-x", dataClassification: "public" }),
+      comp({ slug: "internal-x", dataClassification: "internal" }),
+    ];
     const r = searchInMemory(rows, [], { classification: "public" });
     expect(r.items.map((i) => i.slug)).toEqual(["public-x"]);
   });
 
   it("filters by jobFunction across both components and work packages", () => {
-    const comps = [comp({ slug: "jira", jobFunctions: ["quality_engineer"] }), comp({ slug: "github", jobFunctions: [] })];
-    const wps = [wp({ roleKey: "quality_engineer", jobFunctions: ["quality_engineer"] }), wp({ roleKey: "other", jobFunctions: [] })];
+    const comps = [
+      comp({ slug: "jira", jobFunctions: ["quality_engineer"] }),
+      comp({ slug: "github", jobFunctions: [] }),
+    ];
+    const wps = [
+      wp({ roleKey: "quality_engineer", jobFunctions: ["quality_engineer"] }),
+      wp({ roleKey: "other", jobFunctions: [] }),
+    ];
     const r = searchInMemory(comps, wps, { jobFunction: "quality_engineer" });
     expect(r.items.map((i) => i.slug).sort()).toEqual(["jira", "quality_engineer"]);
   });
 
   it("filters work packages by mode", () => {
-    const wps = [wp({ roleKey: "copilot-role", mode: "copilot" }), wp({ roleKey: "auto-role", mode: "automated" })];
+    const wps = [
+      wp({ roleKey: "copilot-role", mode: "copilot" }),
+      wp({ roleKey: "auto-role", mode: "automated" }),
+    ];
     const r = searchInMemory([], wps, { mode: "automated" });
     expect(r.items.map((i) => i.slug)).toEqual(["auto-role"]);
   });

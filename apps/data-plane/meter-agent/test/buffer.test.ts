@@ -4,16 +4,25 @@ import { ingestEvent, getBufferHealth, flushToControlPlane } from "../src/index.
 describe("meter-agent buffer", () => {
   it("accepts a valid metering event", () => {
     const r = ingestEvent({
-      subAccountId: "sa_01", agentId: "agt_01", tenantId: "tn_01",
-      priorityTier: "standard", model: "claude", inputTokens: 1000,
-      outputTokens: 500, costUsd: 0.015, source: "proxy",
+      subAccountId: "sa_01",
+      agentId: "agt_01",
+      tenantId: "tn_01",
+      priorityTier: "standard",
+      model: "claude",
+      inputTokens: 1000,
+      outputTokens: 500,
+      costUsd: 0.015,
+      source: "proxy",
       ts: new Date().toISOString(),
     });
     expect(r.accepted).toBe(true);
   });
 
   it("rejects invalid events", () => {
-    expect(ingestEvent({})).toEqual({ accepted: false, reason: expect.stringContaining("validation_failed") });
+    expect(ingestEvent({})).toEqual({
+      accepted: false,
+      reason: expect.stringContaining("validation_failed"),
+    });
   });
 
   it("health reports ok when buffer is empty", () => {
@@ -24,9 +33,15 @@ describe("meter-agent buffer", () => {
 
   it("flush clears buffer", async () => {
     ingestEvent({
-      subAccountId: "sa_01", agentId: "agt_01", tenantId: "tn_01",
-      priorityTier: "standard", model: "gpt", inputTokens: 100,
-      outputTokens: 50, costUsd: 0.001, source: "proxy",
+      subAccountId: "sa_01",
+      agentId: "agt_01",
+      tenantId: "tn_01",
+      priorityTier: "standard",
+      model: "gpt",
+      inputTokens: 100,
+      outputTokens: 50,
+      costUsd: 0.001,
+      source: "proxy",
       ts: new Date().toISOString(),
     });
     const { flushed } = await flushToControlPlane();

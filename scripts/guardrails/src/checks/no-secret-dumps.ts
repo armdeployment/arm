@@ -57,7 +57,17 @@ register({
   run: async () => {
     const { readdirSync, readFileSync, statSync } = await import("node:fs");
     const { join, extname } = await import("node:path");
-    const SCAN_EXT = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".env", ".sh", ".yml", ".yaml"]);
+    const SCAN_EXT = new Set([
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".json",
+      ".env",
+      ".sh",
+      ".yml",
+      ".yaml",
+    ]);
     const SKIP = new Set(["node_modules", ".git", "dist", ".turbo", ".next", "coverage"]);
     const files: { path: string; content: string }[] = [];
     const walk = (dir: string): void => {

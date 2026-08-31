@@ -14,7 +14,8 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return Response.json({ status: "invalid", message: "malformed request body" });
   }
-  const code = typeof (body as { code?: unknown })?.code === "string" ? (body as { code: string }).code : "";
+  const code =
+    typeof (body as { code?: unknown })?.code === "string" ? (body as { code: string }).code : "";
   if (code.length !== 6) {
     return Response.json({ status: "invalid", message: "activation code must be 6 characters" });
   }

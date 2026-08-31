@@ -151,9 +151,7 @@ describe("Finance profile", () => {
 
   it("has financial regulatory flags (SOX/GLBA/PCI)", () => {
     expect(financeProfile.classification.axes).toContain("regulatory");
-    const restricted = financeProfile.classification.levels.find(
-      (l) => l.name === "restricted",
-    );
+    const restricted = financeProfile.classification.levels.find((l) => l.name === "restricted");
     expect(restricted?.regulatoryFlags).toContain("SOX");
     expect(restricted?.regulatoryFlags).toContain("GLBA");
     expect(restricted?.regulatoryFlags).toContain("PCI-DSS");
@@ -216,9 +214,7 @@ describe("Holding company profile", () => {
   });
 
   it("has cross-entity regulatory flags", () => {
-    const restricted = holdingProfile.classification.levels.find(
-      (l) => l.name === "restricted",
-    );
+    const restricted = holdingProfile.classification.levels.find((l) => l.name === "restricted");
     expect(restricted?.regulatoryFlags).toContain("SOX");
     expect(restricted?.regulatoryFlags).toContain("ITAR");
     expect(restricted?.regulatoryFlags).toContain("GLBA");
@@ -323,7 +319,12 @@ describe("Role presets (D8 — org-tree mutation authority)", () => {
       expect(admin).toBeDefined();
       expect(admin!.scopeType).toBe("org");
       expect(admin!.singleton).toBe(true);
-      for (const verb of ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete"]) {
+      for (const verb of [
+        "org_node:create",
+        "org_node:rename",
+        "org_node:reparent",
+        "org_node:delete",
+      ]) {
         expect(admin!.permissions).toContain(verb);
       }
     }
@@ -442,7 +443,9 @@ describe("Org tree structure (D6/D7 restructure)", () => {
   it("countOrgNodesByType counts correctly", () => {
     expect(countOrgNodesByType(manufacturingProfile.orgTree.nodes, "plant")).toBe(3);
     expect(countOrgNodesByType(manufacturingProfile.orgTree.nodes, "hq")).toBe(1);
-    expect(countOrgNodesByType(holdingProfile.orgTree.nodes, "organization")).toBeGreaterThanOrEqual(3);
+    expect(
+      countOrgNodesByType(holdingProfile.orgTree.nodes, "organization"),
+    ).toBeGreaterThanOrEqual(3);
   });
 
   it("countOrgNodes counts all nodes recursively", () => {
@@ -523,9 +526,7 @@ describe("Work packages (D9 — role-scoped tool bundles)", () => {
     for (const profile of PROFILES) {
       for (const pkg of profile.workPackages) {
         const hasContent =
-          pkg.tools.length > 0 ||
-          pkg.skills.length > 0 ||
-          pkg.subagentConfigs.length > 0;
+          pkg.tools.length > 0 || pkg.skills.length > 0 || pkg.subagentConfigs.length > 0;
         expect(hasContent).toBe(true);
       }
     }
@@ -565,9 +566,7 @@ describe("Work packages (D9 — role-scoped tool bundles)", () => {
   });
 
   it("manufacturing material_planner is the automated-mode package", () => {
-    const planner = manufacturingProfile.workPackages.find(
-      (p) => p.roleKey === "material_planner",
-    );
+    const planner = manufacturingProfile.workPackages.find((p) => p.roleKey === "material_planner");
     expect(planner?.mode).toBe("automated");
   });
 
@@ -605,36 +604,72 @@ describe("Work packages (D9 — automotive OEM toolchain expansion)", () => {
   // Canonical slug list from the Aug 2026 automotive tool landscape survey
   // (registry fixtures not landed yet — this is the cross-package guard).
   const SURVEY_TOOL_SLUGS = [
-    "cad.nx", "cad.catia", "cad.alias",
-    "ee.capital", "ee.e3-series", "ee.preevision",
-    "plm.teamcenter", "plm.windchill",
-    "sim.ansa", "sim.gt-suite", "sim.star-ccm", "sim.ls-dyna", "sim.abaqus",
+    "cad.nx",
+    "cad.catia",
+    "cad.alias",
+    "ee.capital",
+    "ee.e3-series",
+    "ee.preevision",
+    "plm.teamcenter",
+    "plm.windchill",
+    "sim.ansa",
+    "sim.gt-suite",
+    "sim.star-ccm",
+    "sim.ls-dyna",
+    "sim.abaqus",
     "mdl.matlab-simulink",
-    "test.canoe", "test.dspace",
+    "test.canoe",
+    "test.dspace",
     "cal.inca",
-    "autosar.tresos", "autosar.davinci",
-    "rm.jama", "rm.polarion", "rm.codebeamer", "rm.doors", "rm.valispace",
+    "autosar.tresos",
+    "autosar.davinci",
+    "rm.jama",
+    "rm.polarion",
+    "rm.codebeamer",
+    "rm.doors",
+    "rm.valispace",
     "docs.confluence",
     "pm.cplace",
-    "vcs.gitlab", "vcs.azure-devops",
+    "vcs.gitlab",
+    "vcs.azure-devops",
     "spc.minitab",
-    "qms.aqua-pro", "qms.net-inspect", "qms.sap-qm",
-    "mfg.tecnomatix", "mfg.delmia",
+    "qms.aqua-pro",
+    "qms.net-inspect",
+    "qms.sap-qm",
+    "mfg.tecnomatix",
+    "mfg.delmia",
     "dt.omniverse",
     "rt.qnx",
   ];
 
   // Existing slugs already in use by the presets.
   const EXISTING_TOOL_SLUGS = [
-    "git.repo", "web.search", "code.search",
-    "spc.cmm-connector", "mes.defect-feed", "ticketing.jira",
-    "supplier.portal", "ppap.inbox", "opcua.diagnostics",
-    "io.table", "cmms.sap-pm", "fault.kb", "spares.catalog",
-    "mrp.erp", "supplier.edi", "mes.andon",
-    "warranty.dwh", "claims.api",
-    "historian.pi", "lakehouse.sql", "bi.dashboards",
-    "sharepoint.docs", "email.outlook", "dashboards.api",
-    "approvals.inbox", "crm.salesforce",
+    "git.repo",
+    "web.search",
+    "code.search",
+    "spc.cmm-connector",
+    "mes.defect-feed",
+    "ticketing.jira",
+    "supplier.portal",
+    "ppap.inbox",
+    "opcua.diagnostics",
+    "io.table",
+    "cmms.sap-pm",
+    "fault.kb",
+    "spares.catalog",
+    "mrp.erp",
+    "supplier.edi",
+    "mes.andon",
+    "warranty.dwh",
+    "claims.api",
+    "historian.pi",
+    "lakehouse.sql",
+    "bi.dashboards",
+    "sharepoint.docs",
+    "email.outlook",
+    "dashboards.api",
+    "approvals.inbox",
+    "crm.salesforce",
   ];
 
   const CANONICAL_TOOL_SLUGS = new Set([...SURVEY_TOOL_SLUGS, ...EXISTING_TOOL_SLUGS]);
@@ -660,9 +695,9 @@ describe("Work packages (D9 — automotive OEM toolchain expansion)", () => {
   it("new packages introduce no duplicate roleKeys across profiles", () => {
     const newKeys = NEW_PACKAGES.map((p) => p.roleKey);
     expect(new Set(newKeys).size).toBe(newKeys.length);
-    const preExistingKeys = PROFILES.flatMap((p) =>
-      p.workPackages.map((w) => w.roleKey),
-    ).filter((k) => !NEW_PACKAGE_ROLE_KEYS.includes(k));
+    const preExistingKeys = PROFILES.flatMap((p) => p.workPackages.map((w) => w.roleKey)).filter(
+      (k) => !NEW_PACKAGE_ROLE_KEYS.includes(k),
+    );
     for (const key of NEW_PACKAGE_ROLE_KEYS) {
       expect(preExistingKeys).not.toContain(key);
     }
@@ -713,7 +748,10 @@ describe("Job-function taxonomy (D10 — docs/guides/01-library-artifactory.md �
       for (const pkg of profile.workPackages) {
         expect(pkg.jobFunctions.length).toBeGreaterThan(0);
         for (const key of pkg.jobFunctions) {
-          expect(knownKeys.has(key), `${profile.id}/${pkg.roleKey}: unknown job function "${key}"`).toBe(true);
+          expect(
+            knownKeys.has(key),
+            `${profile.id}/${pkg.roleKey}: unknown job function "${key}"`,
+          ).toBe(true);
         }
       }
     }

@@ -91,7 +91,9 @@ export function buildCanonicalManifest(version: WorkPackageVersion): PackageMani
       kind: ref.kind,
       scopes: [...ref.scopes],
     }))
-    .sort((a, b) => (a.component_id < b.component_id ? -1 : a.component_id > b.component_id ? 1 : 0));
+    .sort((a, b) =>
+      a.component_id < b.component_id ? -1 : a.component_id > b.component_id ? 1 : 0,
+    );
 
   return {
     manifest_version: 2,

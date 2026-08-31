@@ -21,25 +21,26 @@
 
 40 tools seeded into `packages/catalog/src/fixtures.ts`. Naming convention: `<domain>.<tool>` slugs. Kinds: `cli` (desktop engineering app, local process invocation — no credential-bearing endpoint), `http_api` (REST/API), `connector` (VPC-internal system).
 
-| Domain | Tools (slugs) | Kind | Auth | Classification |
-|---|---|---|---|---|
-| CAD | cad.nx, cad.catia, cad.alias | cli | none (local) | confidential |
-| E/E + harness | ee.capital, ee.e3-series, ee.preevision | cli | none | confidential |
-| PLM | plm.teamcenter, plm.windchill | http_api | pat | confidential |
-| CAE | sim.ansa, sim.gt-suite, sim.star-ccm, sim.ls-dyna, sim.abaqus | cli | none | confidential |
-| Model-based | mdl.matlab-simulink | cli | none | confidential |
-| Test | test.canoe, test.dspace | cli | none | confidential |
-| Calibration | cal.inca | cli | none | confidential |
-| AUTOSAR | autosar.tresos, autosar.davinci | cli | none | confidential |
-| Requirements | rm.jama, rm.polarion, rm.codebeamer, rm.valispace (pat) · rm.doors (oauth) | http_api | pat/oauth | internal |
-| Collab | almjira (jira), docs.confluence, pm.cplace | http_api | oauth/pat | internal |
-| VCS | vcs.github, vcs.gitlab (pat) · vcs.azure-devops (oauth) | http_api | pat/oauth | internal |
-| Quality | spc.minitab (cli) · qms.aqua-pro (oauth) · qms.net-inspect (pat) · qms.sap-qm (service_account) | mixed | mixed | internal |
-| Mfg sim | mfg.tecnomatix, mfg.delmia (cli) · dt.omniverse (oauth) | mixed | mixed | confidential/internal |
-| RTOS | rt.qnx | cli | none | confidential |
-| Plant OT (existing) | cmms.sap-pm, historian.pi, mrp.erp, mes.andon, … | connector | pat | internal/restricted |
+| Domain              | Tools (slugs)                                                                                   | Kind      | Auth         | Classification        |
+| ------------------- | ----------------------------------------------------------------------------------------------- | --------- | ------------ | --------------------- |
+| CAD                 | cad.nx, cad.catia, cad.alias                                                                    | cli       | none (local) | confidential          |
+| E/E + harness       | ee.capital, ee.e3-series, ee.preevision                                                         | cli       | none         | confidential          |
+| PLM                 | plm.teamcenter, plm.windchill                                                                   | http_api  | pat          | confidential          |
+| CAE                 | sim.ansa, sim.gt-suite, sim.star-ccm, sim.ls-dyna, sim.abaqus                                   | cli       | none         | confidential          |
+| Model-based         | mdl.matlab-simulink                                                                             | cli       | none         | confidential          |
+| Test                | test.canoe, test.dspace                                                                         | cli       | none         | confidential          |
+| Calibration         | cal.inca                                                                                        | cli       | none         | confidential          |
+| AUTOSAR             | autosar.tresos, autosar.davinci                                                                 | cli       | none         | confidential          |
+| Requirements        | rm.jama, rm.polarion, rm.codebeamer, rm.valispace (pat) · rm.doors (oauth)                      | http_api  | pat/oauth    | internal              |
+| Collab              | almjira (jira), docs.confluence, pm.cplace                                                      | http_api  | oauth/pat    | internal              |
+| VCS                 | vcs.github, vcs.gitlab (pat) · vcs.azure-devops (oauth)                                         | http_api  | pat/oauth    | internal              |
+| Quality             | spc.minitab (cli) · qms.aqua-pro (oauth) · qms.net-inspect (pat) · qms.sap-qm (service_account) | mixed     | mixed        | internal              |
+| Mfg sim             | mfg.tecnomatix, mfg.delmia (cli) · dt.omniverse (oauth)                                         | mixed     | mixed        | confidential/internal |
+| RTOS                | rt.qnx                                                                                          | cli       | none         | confidential          |
+| Plant OT (existing) | cmms.sap-pm, historian.pi, mrp.erp, mes.andon, …                                                | connector | pat          | internal/restricted   |
 
 **Design decisions encoded in the guardrail** (`tool-endpoint-scope`):
+
 - Endpoint schemes allowed: `https://`, `internal://`, `mcp://`, **`cli://`** (new — local desktop apps).
 - `confidential`/`restricted` tools may not use `auth_strategy: none` **except `kind: cli`** — desktop engineering apps (NX, ANSA, CANoe…) are local-process invocations with no credential-bearing endpoint; their data protection comes from the D2 classification gate on whatever they touch, not from an auth header.
 

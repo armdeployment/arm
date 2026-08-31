@@ -28,7 +28,9 @@ const rawUrl = process.env.CLICKHOUSE_URL ?? "http://arm:arm_dev_password@localh
 const parsedUrl = new URL(rawUrl);
 const authHeader =
   parsedUrl.username || parsedUrl.password
-    ? { Authorization: `Basic ${Buffer.from(`${parsedUrl.username}:${parsedUrl.password}`).toString("base64")}` }
+    ? {
+        Authorization: `Basic ${Buffer.from(`${parsedUrl.username}:${parsedUrl.password}`).toString("base64")}`,
+      }
     : {};
 parsedUrl.username = "";
 parsedUrl.password = "";
@@ -103,14 +105,19 @@ function eventsForUser(user) {
 }
 
 const allEvents = FIXTURE_POPULATION.flatMap(eventsForUser);
-console.log(`Generated ${allEvents.length} events for ${FIXTURE_POPULATION.length} users (tenant ${TENANT_ID}).`);
+console.log(
+  `Generated ${allEvents.length} events for ${FIXTURE_POPULATION.length} users (tenant ${TENANT_ID}).`,
+);
 
 const body = allEvents.map((e) => JSON.stringify(e)).join("\n");
-const res = await fetch(`${clickhouseUrl}?query=${encodeURIComponent("INSERT INTO activation_event FORMAT JSONEachRow")}`, {
-  method: "POST",
-  body,
-  headers: authHeader,
-});
+const res = await fetch(
+  `${clickhouseUrl}?query=${encodeURIComponent("INSERT INTO activation_event FORMAT JSONEachRow")}`,
+  {
+    method: "POST",
+    body,
+    headers: authHeader,
+  },
+);
 if (!res.ok) {
   throw new Error(`ClickHouse insert failed (${res.status}): ${await res.text()}`);
 }

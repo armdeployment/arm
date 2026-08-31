@@ -76,7 +76,14 @@ const EXTENSION_TAGS: Record<string, string> = {
 const TAG_THRESHOLD = 3;
 
 /** Directories never descended into — noise, not signal, and often huge. */
-const IGNORED_DIR_NAMES = new Set(["node_modules", "dist", "build", "__pycache__", ".cache", ".venv"]);
+const IGNORED_DIR_NAMES = new Set([
+  "node_modules",
+  "dist",
+  "build",
+  "__pycache__",
+  ".cache",
+  ".venv",
+]);
 
 export async function scanWorkFolder(
   rootPath: string,

@@ -70,7 +70,9 @@ describe("pinImportedVersion / assertExactUpstreamPin (rule 3: exact version + d
 
   it("rejects a malformed digest even with a valid version", () => {
     expect(() => assertExactUpstreamPin("1.0.0", "not-a-digest")).toThrow(/not a well-formed/);
-    expect(() => assertExactUpstreamPin("1.0.0", "https://example.com/artifact.tar")).toThrow(/not a well-formed/);
+    expect(() => assertExactUpstreamPin("1.0.0", "https://example.com/artifact.tar")).toThrow(
+      /not a well-formed/,
+    );
   });
 
   it("pinImportedVersion returns a pinned row on valid input", () => {

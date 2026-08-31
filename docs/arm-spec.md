@@ -1,7 +1,9 @@
 # ARM — Agent Resource Management Platform
+
 ## Specification v0.5
 
 ### Document Status
+
 - **Drafted**: 2026-07-26 (v0.1)
 - **v0.2** (2026-07-26): review patches applied (diagram fixes, UserRole junction, AssumeRoleWithWebIdentity, risk rows); scope-owned (auto-spawned) agents + priority tiers + stakeholder governance (§4, §6.6, §8.5); engineering guardrails as code (§14) adopted from worldmonitor review; agent-onboarding CLI + `/.well-known/arm-agent` discovery (§8.1, §5.2); repo layout expanded (§15)
 - **v0.3** (2026-07-26): open decisions locked — D1-b (Tenant above Organization; dual delivery: SaaS + self-hosted enterprise, §3.4); D2-a (classification gate via context tagging at vend/return, §6.5); D5 (pull-based policy distribution with version watermark, push deferred to Phase 2+, §5.1)
@@ -23,11 +25,11 @@
 
 ARM is an HR-style platform for AI agents — a centralized plane for **identity, metering, routing, budgeting, policy enforcement, and resource-access control** of every LLM agent an organization spawns. An agent is treated as a "digital employee": it has an identity, a manager (a human **stakeholder** plus its team/workstream), a salary (token cost), a budget, an assigned tool (LLM model), a priority tier, and scoped permissions to organizational resources.
 
-**Why ARM, not a gateway + OPA**: LLM gateways (LiteLLM, Portkey, Helicone, OpenRouter, TrueFoundry Agent Gateway) meter and route traffic; policy engines (OPA) evaluate rules — but none models the *agent as a governed employee*. TrueFoundry offers per-agent quotas and RBAC; ARM's differentiators center on **management visibility and accountability at enterprise scale**:
+**Why ARM, not a gateway + OPA**: LLM gateways (LiteLLM, Portkey, Helicone, OpenRouter, TrueFoundry Agent Gateway) meter and route traffic; policy engines (OPA) evaluate rules — but none models the _agent as a governed employee_. TrueFoundry offers per-agent quotas and RBAC; ARM's differentiators center on **management visibility and accountability at enterprise scale**:
 
 (1) **Hierarchical org-tree budgeting** — spend flows through Org → Dept → Group → Team → Agent with inheritance, rollups, and priority tiers. A CEO sees $16,170/mo across 60 agents in 10 departments; a department head sees their teams; a team lead sees their agents. Every level has budget caps, utilization bars, and automatic enforcement (downgrade → throttle → queue).
 
-(2) **Department-level work-type classification** — every agent has a `taskType` describing what it *does* (e.g. "CNC toolpath optimization", "Cash flow forecasting"). ARM classifies prompt domains and work categories per department, giving management a complete picture of how agents are being used — not just how much they cost. Classification gates LLM routing: confidential manufacturing specs cannot reach public models.
+(2) **Department-level work-type classification** — every agent has a `taskType` describing what it _does_ (e.g. "CNC toolpath optimization", "Cash flow forecasting"). ARM classifies prompt domains and work categories per department, giving management a complete picture of how agents are being used — not just how much they cost. Classification gates LLM routing: confidential manufacturing specs cannot reach public models.
 
 (3) **Stakeholder accountability** — every agent has exactly one accountable human stakeholder who receives budget alerts, JIT approval requests, and compliance notifications. No anonymous automation.
 
@@ -38,6 +40,7 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 (6) **Work Packages (D9)** — versioned, role-scoped bundles of tools (pinned MCP servers), skills, sub-agent configs, permissions, routing, budget templates, and starter prompts, provisioned from industry profiles and installed by employees with one command (`arm setup`) in < 5 minutes with zero config files. The package is the governance unit: per-package budgets, `tool:*` authorization, approvals, and **cost-per-work-product** telemetry (`$/8D`, `$/PPAP`, `$/PLC routine`) — the metric no LLM gateway can offer.
 
 ### 1.1 Problem statements addressed
+
 1. Management cannot see how many agents are spawned per department/group/team/workstream, what LLMs they use, or what they cost.
 2. Management cannot steer spend from expensive closed models (Claude, GPT) to cheaper self-hosted open models (GLM-5.2, DeepSeek, Kimi K3).
 3. Engineers/marketers/sales/CS have no clean way to authenticate local coding agents (opencode, claude code, copilot, Pi) against org policy and quota.
@@ -45,6 +48,7 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 5. Agents are not all equal: business-critical agents (hot-issue resolvers, incident response) must take precedence over background agents (UX optimization, upgrades) when budget/quota is constrained — and automatically-spawned agents (running on behalf of a dept/team/workstream) need an accountable human, not anonymous automation.
 
 ### 1.2 Goals
+
 - Single source of truth for **agent identity**, **LLM spend**, and **resource access** across the org tree.
 - Live, exact metering with real-time enforcement, not lagging monthly bills.
 - Privacy-by-design: prompt bodies and resource content never leave the tenant VPC.
@@ -52,6 +56,7 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 - Priority-aware enforcement with accountability: scope-owned agents (auto-spawned at dept/team/workstream level) and user-owned agents share one identity/quota model; every agent has exactly one human stakeholder; critical agents preempt background agents under budget pressure.
 
 ### 1.3 Non-goals (Phase 1)
+
 - ML-driven anomaly detection and forecasting (Phase 5).
 - Multi-region active-active HA for the proxy (Phase 5).
 - Custom model fine-tuning / hosting beyond inference (out of scope).
@@ -62,13 +67,13 @@ ARM is an HR-style platform for AI agents — a centralized plane for **identity
 
 ## 2. Stakeholders & Personas
 
-| Persona | Surface | Key workflows |
-|---|---|---|
-| **Org admin** | Control plane web | Configure org tree, IdP federation, master provider keys, global policy defaults. |
-| **Department manager** | Control plane web | View dept spend, set dept budgets/model allowlists, approve critical-tier designation, act as stakeholder for dept-owned agents, receive switch recommendations, approve elevated access. |
-| **Team lead** | Control plane web | Allocate per-agent quotas, spawn/manage team-owned agents (as stakeholder), set agent priorities, request/grant resource access within team subtree. |
-| **Engineer / Marketer / Sales / CS** | Control plane web + local agent | SSO login, register agent, copy config snippet, view personal spend/quota, request JIT data access. |
-| **InfoSec / Compliance** | Control plane web (read + audit) | Inspect access audit, deny-overrides, classification gates, prompt-content retention posture. |
+| Persona                              | Surface                          | Key workflows                                                                                                                                                                             |
+| ------------------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Org admin**                        | Control plane web                | Configure org tree, IdP federation, master provider keys, global policy defaults.                                                                                                         |
+| **Department manager**               | Control plane web                | View dept spend, set dept budgets/model allowlists, approve critical-tier designation, act as stakeholder for dept-owned agents, receive switch recommendations, approve elevated access. |
+| **Team lead**                        | Control plane web                | Allocate per-agent quotas, spawn/manage team-owned agents (as stakeholder), set agent priorities, request/grant resource access within team subtree.                                      |
+| **Engineer / Marketer / Sales / CS** | Control plane web + local agent  | SSO login, register agent, copy config snippet, view personal spend/quota, request JIT data access.                                                                                       |
+| **InfoSec / Compliance**             | Control plane web (read + audit) | Inspect access audit, deny-overrides, classification gates, prompt-content retention posture.                                                                                             |
 
 ---
 
@@ -215,25 +220,25 @@ flowchart LR
   C -->|delegate keys + policy| Tenant
 ```
 
-| Boundary | What crosses | What never crosses |
-|---|---|---|
-| Agent → Data plane | Wire-protocol LLM calls; resource access calls with scoped tokens | — |
-| Data plane → External providers | LLM requests (closed) or GPU inference (open); resource IO with minted creds | — |
-| Data plane → Control plane | Metadata-only events: tokens, $, audit decisions, agent id, ts | **Prompt bodies, resource content, raw credentials** |
-| Control plane → Data plane | Delegate keys (rotating, short-lived), policy cache | Resource content, prompts |
-| Control plane → Dashboard viewer | Aggregates, per-agent/per-team rollups | Prompts, content, secrets |
+| Boundary                         | What crosses                                                                 | What never crosses                                   |
+| -------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Agent → Data plane               | Wire-protocol LLM calls; resource access calls with scoped tokens            | —                                                    |
+| Data plane → External providers  | LLM requests (closed) or GPU inference (open); resource IO with minted creds | —                                                    |
+| Data plane → Control plane       | Metadata-only events: tokens, $, audit decisions, agent id, ts               | **Prompt bodies, resource content, raw credentials** |
+| Control plane → Data plane       | Delegate keys (rotating, short-lived), policy cache                          | Resource content, prompts                            |
+| Control plane → Dashboard viewer | Aggregates, per-agent/per-team rollups                                       | Prompts, content, secrets                            |
 
 ### 3.4 Delivery models
 
 One codebase, two delivery models — the multi-tenant schema (D1-b) serves both; self-hosted is the degenerate single-tenant case, not a fork:
 
-| | **SaaS tier** (default) | **Self-hosted enterprise tier** |
-|---|---|---|
-| Control plane | ARM-operated, multi-tenant (shared) | Customer-operated, single-tenant (one `Tenant` row) |
-| Data plane | Per-tenant, in customer VPC | Customer VPC (same packaging) |
-| Master provider keys | ARM brokers (§7.2) | Pass-through: customer's own keys, never leave their environment (§13 Open Item 2) |
-| Target | Small/mid companies | Big enterprise, regulated industries |
-| Packaging | Helm/Terraform for data plane (1.2) | + control-plane packaging (post-Phase 1) |
+|                      | **SaaS tier** (default)             | **Self-hosted enterprise tier**                                                    |
+| -------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
+| Control plane        | ARM-operated, multi-tenant (shared) | Customer-operated, single-tenant (one `Tenant` row)                                |
+| Data plane           | Per-tenant, in customer VPC         | Customer VPC (same packaging)                                                      |
+| Master provider keys | ARM brokers (§7.2)                  | Pass-through: customer's own keys, never leave their environment (§13 Open Item 2) |
+| Target               | Small/mid companies                 | Big enterprise, regulated industries                                               |
+| Packaging            | Helm/Terraform for data plane (1.2) | + control-plane packaging (post-Phase 1)                                           |
 
 An ARM-managed dedicated control plane per enterprise (private SaaS) is a future middle option; it needs no schema change.
 
@@ -491,25 +496,29 @@ erDiagram
 ### 5.1 Control Plane
 
 **Auth & OIDC Issuer** (`packages/auth` extended)
+
 - Consumes SSO (Google/Okta via OIDC; SAML deferred to Phase 2).
 - **Issues** OIDC tokens for agents — federated into corporate IdP (Entra/Okta) so resources see "ARM on behalf of agent X in team Y", not "eric's laptop".
 - Mints per-tenant **delegate keys** for providers (Anthropic/OpenAI) and rotates them on short TTL.
 
 **Policy Engine**
+
 - Two policy domains, one resolver:
-  - *LLM routing*: allowed models per scope, auto-downgrade rules, spend caps.
+  - _LLM routing_: allowed models per scope, auto-downgrade rules, spend caps.
     - **Auto-downgrade contract**: whenever `auto_downgrade_to` fires, the response surfaces the actually-served model in the `model` field (per OpenAI/Anthropic convention); silent semantic drift is forbidden.
-  - *Access grants*: tiered inheritance, deny-overrides, classification gates.
+  - _Access grants_: tiered inheritance, deny-overrides, classification gates.
 - **Priority-aware budget enforcement** (tiers `critical` > `standard` > `background`): on budget pressure the resolver degrades lower tiers first — `background` agents are (1) auto-downgraded to open models, (2) throttled, (3) queued/blocked; `standard` throttles only after `critical_reserve` is exhausted; `critical` draws on the reserve until hard cap. Tier assignment and stakeholder governance in §6.6.
 - **Cross-link**: classification tag on a resource restricts which LLM may receive that resource's content (e.g. `confidential` content cannot be sent to closed external models).
 - **Policy distribution (decided — D5)**: data-plane components pull their policy bundle from the control plane every 10 s over the existing outbound mTLS channel (no inbound surface into customer VPCs), keyed by a monotonic `policy_version`. Propagation SLA: DENY-class rules ≤15 s, ALLOW/quota ≤60 s. A cache older than SLA with the control plane unreachable fails closed for DENY-class (Open Item 3). Push-based invalidation is a Phase 2+ latency optimization layered on the same channel — it never replaces the pull, which bounds worst-case staleness by construction.
 
 **Savings Estimator**
+
 - Per-workstream comparison: current closed-model spend vs projected self-host cost for GLM-5.2 / DeepSeek / Kimi K3.
 - Internal price model: `GPU_class $/hr × hours × concurrency → $/M-tokens`.
 - Drafts "switch" reminders to dept managers with $ delta + migration effort estimate + one-click policy change.
 
 **Component Registry / Artifactory** (`packages/artifactory`, D10 — docs/guides/01-library-artifactory.md)
+
 - Immutable, content-addressed artifact repository (A2): `Component` (identity/kind/owner/review-status) → `ComponentVersion` (immutable manifest + optional `sha256:<hex>` blob digest) → `ComponentBlob` (content-addressed bytes, pluggable backend). `tool` generalizes to `component` (A3) — one registry entity, `kind` discriminator, no parallel skill/plugin tables.
 - **Publish pipeline**: validate manifest → reject unless `component.review_status = approved` → reject if the version already exists (immutability) or isn't strictly semver-greater than the latest → verify blob digest → store transactionally. A published `ComponentVersion` row is never updated; corrections ship as a new version.
 - **Residency rule (Invariant 1)**: tenant-authored component blobs live at `residency = 'tenant'`; only `source_kind = 'first_party'` artifacts may sit at `residency = 'control_plane'` — enforced by the `blob-residency` guardrail.
@@ -522,6 +531,7 @@ erDiagram
 ### 5.2 Data Plane
 
 **Closed-Proxy** (Hono, OpenAI + Anthropic wire-compatible)
+
 - Validates sub-account credential → fetches rotating delegate key from tenant vault → routes to provider.
 - Reads response `usage` block for exact metering; **prompt bodies never persisted**.
 - Enforces quota locally. Quota/routing decisions **fail-closed** if the control plane is unreachable (agent blocked); metering **event emission** fails-open (best-effort buffer + retry, never blocks the call). See §13 Open Item 3.
@@ -530,34 +540,40 @@ erDiagram
 - Quota accounting is **eventual, not transactional** (Phase 1): concurrent calls from one agent may overshoot a day-cap by one in-flight window before enforcement catches up; overshoot is metered, attributed, and surfaced — never hidden. Strong reservation semantics are a Phase 2+ option if field data demands it.
 
 **Open-Gateway** (vLLM + TS shim, OpenAI-compat)
+
 - Hosts GLM-5.2, DeepSeek, Kimi K3.
 - Native metering at serving layer → emits events to meter-agent.
 - Computes live internal $/M-token from GPU amortization → feeds savings estimator.
 
 **Plugin-Ingest** (fallback path)
+
 - OAuth issuer + webhook for agent-native plugins (opencode hooks, claude code MCP, copilot extensions).
 - Receives metadata events from plugins that report directly rather than going through the proxy.
 - Serves machine-readable agent discovery (`/.well-known/arm-agent`) so supported agents can self-configure against the tenant data plane.
 
 **Artifact Cache** (`apps/data-plane/artifact-cache`, Hono, D10 — docs/guides/01-library-artifactory.md §5)
+
 - Tenant-VPC pull-through cache for component blobs: `GET`/`HEAD /artifacts/:digest`, checking local cache → tenant blob backend → (first-party only) upstream control-plane CDN.
 - Digest-keyed, **no TTL** (content-addressed artifacts can't go stale) — LRU eviction on a size cap. Verifies sha256 on every cache fill before serving or storing; never re-signs, never rewrites.
 - Emits `component_pull_event` (metadata only) per served request.
 - Imports `@arm/proto`/`@arm/config` only — the data-plane boundary rule; digest verification is a small, independently-copied module rather than an import of `@arm/artifactory` (control-plane-only).
 
 **Resource Connectors** (per-type strategy)
-- **S3 connector** — *mint strategy*: STS AssumeRoleWithWebIdentity (federated OIDC), IAM policy templated from grant actions + tags.
-- **GCS connector** — *mint strategy*: Workload Identity + scoped OAuth / signed URLs.
-- **DB connector** — *proxy strategy*: holds master conn string in tenant vault, per-call policy + query audit. Postgres, MySQL, Snowflake.
-- **SharePoint/OneDrive connector** — *mint+sync hybrid*: Graph API scoped tokens via ARM-OIDC-issuer; reconcile site/doc permissions as sync grants.
+
+- **S3 connector** — _mint strategy_: STS AssumeRoleWithWebIdentity (federated OIDC), IAM policy templated from grant actions + tags.
+- **GCS connector** — _mint strategy_: Workload Identity + scoped OAuth / signed URLs.
+- **DB connector** — _proxy strategy_: holds master conn string in tenant vault, per-call policy + query audit. Postgres, MySQL, Snowflake.
+- **SharePoint/OneDrive connector** — _mint+sync hybrid_: Graph API scoped tokens via ARM-OIDC-issuer; reconcile site/doc permissions as sync grants.
 
 **Meter-Agent**
+
 - Consolidates events from proxy / gateway / plugins / connectors.
 - Dedupes concurrent agents.
 - Pushes metadata-only events to control plane over mTLS.
 - Event buffer is **disk-backed and bounded** (WAL-style; default cap 1 GB / 24 h): a data-plane restart never silently loses metering. Buffer depth, oldest-event age, and drop counters are exported as metrics; sustained drops page the tenant admin.
 
 **Tenant Vault**
+
 - Sealed storage for secrets (legacy DB creds where OIDC not supported).
 - Short-lived delegate key cache.
 
@@ -565,6 +581,7 @@ erDiagram
 layer, importable by data-plane apps (boundaries guardrail rank 1, alongside
 `config`); talks to the control plane and data plane over plain HTTP, never
 imports `@arm/trpc`/`@arm/db` directly.
+
 - One engine, every shape: `arm` CLI (`apps/cli`) and future platform
   installers (`packaging/`) all run this code — never a per-user compiled
   binary (A4).
@@ -629,10 +646,12 @@ Admin       /admin/roles /provisioning /agents
 ### 6.1 Resolution model
 
 **RBAC + ABAC hybrid.**
+
 - RBAC: agent has resource roles ("db-reader", "sharepoint-contributor", "s3-readonly-with-prefix").
 - ABAC: agent's `workstream` ∈ resource's `allowed_workstreams` AND agent's `classification_clearance` ≥ resource's `classification.rank`.
 
 **Inheritance chain**: Org default → Dept → Group → Team → Workstream → Agent.
+
 - Each level can **narrow** (deny) within its authority.
 - Per-resource explicit grants refine defaults.
 - **Higher-level deny always wins**, even against a lower-level explicit allow. "Higher" = closer to the Org root (most authoritative); Workstream/Agent are the lowest authority.
@@ -655,14 +674,14 @@ flowchart TB
   Files[Files laptop-local]
 ```
 
-| Resource type | Strategy | Mechanism |
-|---|---|---|
-| S3 | mint | STS AssumeRoleWithWebIdentity (OIDC federation) + templated inline IAM policy |
-| GCS | mint | Workload Identity + scoped OAuth |
-| DB (Postgres/MySQL/Snowflake) | proxy | ARM data-plane brokers every query |
-| SharePoint / OneDrive | mint + sync | Graph API scoped tokens + permission sync |
-| Internal systems | proxy | ARM data-plane brokers |
-| Files (laptop-local) | n/a (agent-side) | Out of ARM scope; classification tag still gates LLM routing |
+| Resource type                 | Strategy         | Mechanism                                                                     |
+| ----------------------------- | ---------------- | ----------------------------------------------------------------------------- |
+| S3                            | mint             | STS AssumeRoleWithWebIdentity (OIDC federation) + templated inline IAM policy |
+| GCS                           | mint             | Workload Identity + scoped OAuth                                              |
+| DB (Postgres/MySQL/Snowflake) | proxy            | ARM data-plane brokers every query                                            |
+| SharePoint / OneDrive         | mint + sync      | Graph API scoped tokens + permission sync                                     |
+| Internal systems              | proxy            | ARM data-plane brokers                                                        |
+| Files (laptop-local)          | n/a (agent-side) | Out of ARM scope; classification tag still gates LLM routing                  |
 
 **Tool authorization (D9).** Tools (MCP servers, APIs, connectors) are first-class registry entities with their own grant verbs — `tool:<tool_key>:invoke|configure|publish` (grammar: key-then-verb). Tool grants resolve with the same deny-override algorithm as resource grants (§6.1) against the shared scope rank (`packages/policy/src/scope-rank.ts`). Every tool carries a `data_classification`; the **tool gate** extends the §6.5 classification gate to tools — a tool touching `confidential`/`restricted` data is never callable from a closed external model, and `restricted` connectors must resolve inside the tenant VPC (`guardrails/tool-endpoint-scope`). Package versions pin exact tool versions (`tool_version.manifest_sha256`), and `guardrails/package-integrity` re-verifies hashes over shipped fixtures.
 
@@ -672,13 +691,15 @@ flowchart TB
 - **Secrets vault where not**: legacy DBs, internal systems — ARM stores sealed creds in tenant vault; access-logged per call.
 
 ### 6.4 Approval workflow (JIT)
+
 - Agent owner requests elevated access; request routed to scope-appropriate approver (team lead / dept manager). For scope-owned agents the **stakeholder** is the requester-of-record and first-line contact.
 - Approver grants short-TTL permission (15–60 min) via minted credential or proxy session.
 - All decisions logged to `access_audit_event`.
 
 ### 6.5 DLP & cross-domain gates
+
 - Classification tag on a resource **gates LLM model routing** — confidential+ content cannot be sent to closed external models. This is the single bidirectional link between the LLM-policy and access-policy domains.
-- **Phase 1 enforcement (decided — D2-a): context tagging at vend/return.** The data plane maintains a per-agent `classification_context` — the max classification of content the agent has obtained — with a sliding TTL (~30 min). It is session metadata, not content, and lives entirely in the data plane. Tagging fires at the strategy-appropriate point (§6.2): *mint* connectors (S3/GCS/SharePoint) tag at **credential-vending** time (the grant implies imminent access — ARM never sees the agent→S3 bytes); *proxy* connectors (DB/internal) tag at **response** time (actual content return).
+- **Phase 1 enforcement (decided — D2-a): context tagging at vend/return.** The data plane maintains a per-agent `classification_context` — the max classification of content the agent has obtained — with a sliding TTL (~30 min). It is session metadata, not content, and lives entirely in the data plane. Tagging fires at the strategy-appropriate point (§6.2): _mint_ connectors (S3/GCS/SharePoint) tag at **credential-vending** time (the grant implies imminent access — ARM never sees the agent→S3 bytes); _proxy_ connectors (DB/internal) tag at **response** time (actual content return).
 - On every call the Closed-Proxy/Open-Gateway checks the context: if `classification_context ≥ confidential` and the requested model is closed-external, the call is denied with a typed error (retry with a self-hosted model, or wait for context expiry / explicit session reset). Gate decisions emit `access_audit_event(decision=deny, reason="classification_gate")` — a decision record, not content.
 - **Write-path hardening**: only resource connectors may write `classification_context` (internal data-plane API, never agent-callable). Session reset is authenticated, policy-gated (scope-admin or stakeholder + recorded reason), and itself audited — an agent can never clear its own context to outrun the gate.
 - Phase 2 reserves hook points for content-pattern DLP at the proxy; Phase 1 ships metadata-only audit by default.
@@ -704,11 +725,13 @@ flowchart TB
 4. **Provider billing-API aggregator** (lagging, coarse) — backstop for agents you genuinely cannot intercept; attributes cost by delegate-key tag.
 
 ### 7.2 Brokerage model
+
 - ARM holds master Anthropic/OpenAI keys, negotiates volume discounts centrally.
 - Issues per-tenant **delegate keys**; tags traffic by key → attribute monthly bill back to tenant.
 - Resells at negotiated rate; per-tenant delegate keys enable enforcement without exposing prompts to ARM.
 
 ### 7.3 Reconciliation
+
 - Daily job: provider master bill → delegate key → tenant. Surfaces drift >5% between billing-API $$ and proxy $$ as alerts.
 
 ---
@@ -885,6 +908,7 @@ Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.
 ## 9. Phase Plan
 
 ### 1.0 — Foundation
+
 - Monorepo (pnpm + Turborepo); strict TS, ESLint, Prettier.
 - Repo governance from day one: `AGENTS.md`, `docs/CONCEPTS.md`, Makefile (pinned tool versions), tiered pre-push gate, CI skeleton (typecheck + guardrails + contract freshness), executable guardrails for §11 invariants per §14.1 — each mutation-proofed.
 - Postgres schema: org tree, users/roles, agents (user-owned **and scope-owned**, with priority tiers + stakeholders), sub-accounts, models, budgets (with priority reservations), LLM policy, **resources, grants, classifications, connectors, access audit**.
@@ -895,12 +919,14 @@ Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.
 - Own-telemetry baseline: OTel instrumentation (traces/metrics/logs) for all services; control plane exposes service-health + event-pipeline-lag metrics from day one.
 
 ### 1.1 — LLM Metering & Dashboards
+
 - Anthropic + OpenAI admin-API connectors (Resolution D backstop).
 - Delegate-key minting + per-tenant attribution.
 - Workers: daily usage pull, reconciliation, drift alerts.
 - Dashboards per §5.3 IA: org-tree explorer, cost rollups (incl. per-priority-tier + per-stakeholder), savings estimator (one-click switch with impact preview), hosting-cost model, alerts + notification center, model-mix; realtime via tRPC/SSE.
 
 ### 1.2 — Closed-Proxy + Open-Gateway Data Plane
+
 - Hono closed-proxy (OpenAI/Anthropic wire), delegate-key rotation, local quota, **priority-aware budget enforcement (tier ladder)**, metadata-only metering.
 - vLLM open-gateway (GLM-5.2 / DeepSeek / Kimi K3) + OpenAI-compat shim + native metering.
 - meter-agent consolidation → control plane over mTLS.
@@ -911,6 +937,7 @@ Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.
 - **Exit gate (1.2)**: vertical slice green — one engineer, one registered agent, one metered LLM call through closed-proxy → meter-agent → ClickHouse → dashboard, running E2E in CI; load test meets the §5.2 performance budget.
 
 ### 1.3 — Resource Access: Cloud-Native Connectors
+
 - Permission engine: RBAC + ABAC, inheritance, deny-overrides, JIT approval skeleton, audit emit.
 - **S3 connector** (mint strategy): STS AssumeRoleWithWebIdentity (OIDC federation) with IAM policy templated from grants + tags.
 - **GCS connector** (mint strategy): Workload Identity + scoped OAuth / signed URLs.
@@ -918,12 +945,14 @@ Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.
 - Real Okta/Entra federation integration test (live IdP verification).
 
 ### 1.4 — Resource Access: Data + Collaboration Connectors
+
 - **DB connector** (proxy strategy): master conn string in tenant vault, per-call policy + query audit. Postgres, MySQL, Snowflake.
 - **SharePoint/OneDrive connector** (mint+sync hybrid): Graph API via ARM-OIDC-issuer for scoped tokens; site/doc permission **sync grants** + **drift detection job from day one**.
 - Approval workflow for JIT requests (in-app approvals inbox + email/webhook outbound); classification tag enforcement on LLM routing.
 - Access audit dashboards rolled into the management surface (§5.3 `/audit`).
 
 ### 1.5 — Work Packages: foundation (landed 2026-08-13, D9 part 1)
+
 - Tool Registry + WorkPackage/Version/Assignment + BudgetReservation schema (§4.1) with unique indexes; drizzle migration `0002_sparkling_stingray.sql`.
 - `packages/catalog`: registry service primitives — canonical-manifest sha256, version validation, assignment state machine (requested → approved → active → revoked), slug→toolId seed provisioning, real integrity-hashed fixtures.
 - Pilot packages seeded in profiles: 10 Manufacturing, 5 Tech, 2 Finance, 2 Holding (`workPackages` in every preset; presets set defaults, never gate capabilities — D6).
@@ -933,11 +962,13 @@ Full decision record: `docs/solutions/2026-08-21-d11-questionnaire-provisioning.
 - **Exit gate:** publish/approve/assign/budget a package end-to-end via API + UI in CI; guardrails mutation-proofed.
 
 ### 1.6 — Work Packages: one-click provisioning + copilot mode
+
 - `packages/client-core` (SSO → role → runtime → package apply → connections → verify) + `arm setup` CLI + plugin-ingest opencode config writer with integrity re-verification — all landed in the 1.5 PR series as the client foundation.
 - Remaining: Desktop client shells (`arm_client.exe`/`.app`/`.deb`, MDM packages, code signing), live OAuth connection wizard against vendor apps, tool gate + per-package quota enforcement inside closed-proxy/open-gateway.
 - **Exit gate:** non-technical employee → first metered package-attributed call < 5 min, unassisted; zero secrets in agent config files; tool-gate deny emits `access_audit_event(decision=deny, reason="tool_gate")`.
 
 ### 1.7 — Work Packages: governance loop & moat metrics
+
 - Per-package + per-work-type budget reservations and alerts; plain-language policy editor; one-tap approvals inbox.
 - `$/work-product` dashboards with rework-rate counterweight; causally-attributed savings ledger; monthly exec digest; cross-tenant anonymized benchmarks (aggregates only).
 - Fine-tuned small-model pilot for one volume task (e.g. MRP exception triage); re-attestation cadence.
@@ -967,21 +998,22 @@ gantt
 
 Phase 1 is measured on outcomes, not feature completion. **Updated D10** (docs/guides/README.md A1, docs/solutions/2026-08-21-d10-adoption-first-restructure.md §8): adoption-first means the top-line metric changed — agent adoption at scale is now the primary success signal, cost is secondary, on-prem model share is tracked, not targeted:
 
-| Metric | Target | Measured by |
-|---|---|---|
-| Activated seats / eligible seats (per tenant, 90 days) | primary top-line | `adoption.coverage`, `adoption.activeUsers` |
-| Time-to-first-value (questionnaire start → first metered call) | < 10 min, unassisted | `adoption.timeToValue` |
-| Questionnaire → download → install completion | ≥ 70% | `adoption.funnel` |
-| Job functions with ≥ 1 published package | ≥ 60% of the tenant's headcount-weighted functions | `adoption.coverage` / `library.gaps` |
-| Weekly active agent users / activated seats | ≥ 50% | `adoption.activeUsers` |
-| *(secondary)* cost per active seat, `$/work-product` | trending down | `/spend` (guide 02 §1 reframe) |
-| *(nice-to-have)* share of traffic on self-hosted models | tracked, not targeted | `/spend` model-mix panel (secondary) |
+| Metric                                                         | Target                                             | Measured by                                 |
+| -------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------- |
+| Activated seats / eligible seats (per tenant, 90 days)         | primary top-line                                   | `adoption.coverage`, `adoption.activeUsers` |
+| Time-to-first-value (questionnaire start → first metered call) | < 10 min, unassisted                               | `adoption.timeToValue`                      |
+| Questionnaire → download → install completion                  | ≥ 70%                                              | `adoption.funnel`                           |
+| Job functions with ≥ 1 published package                       | ≥ 60% of the tenant's headcount-weighted functions | `adoption.coverage` / `library.gaps`        |
+| Weekly active agent users / activated seats                    | ≥ 50%                                              | `adoption.activeUsers`                      |
+| _(secondary)_ cost per active seat, `$/work-product`           | trending down                                      | `/spend` (guide 02 §1 reframe)              |
+| _(nice-to-have)_ share of traffic on self-hosted models        | tracked, not targeted                              | `/spend` model-mix panel (secondary)        |
 
 Superseded (pre-D10) targets — proxied-traffic share, metering accuracy, enforcement latency, policy propagation, JIT audit coverage — remain live operational SLOs (spec §7, §6) but are no longer the Phase-1 headline; see `/governance`, `/access`, `/audit` for their dashboards.
 
 Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrails mutation-proofed; **1.1** = dashboards live on real metering for ≥ 1 internal tenant; **1.2** = vertical slice E2E + performance budget; **1.3** = live Okta/Entra federation test passing + policy simulator shipped; **1.4** = JIT approval round-trip + SharePoint drift detection running 7 days clean; **D10 Wave 1** (docs/guides/README.md) = `pnpm typecheck && pnpm test && pnpm guardrails` green per module, `/adoption` live on the fixture-mode activation funnel with real deferred-shell states.
 
 ### Phases 2–5 (deferred)
+
 - **Phase 2**: SAML/SCIM, DLP content hooks, full approval workflow UX.
 - **Phase 3**: GPU capacity brokering across tenants; complete open-model fleet.
 - **Phase 4**: first-party agent plugins (opencode hooks, claude code MCP, copilot extensions) + OAuth flow.
@@ -991,19 +1023,19 @@ Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrail
 
 ## 10. Tech Stack
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Monorepo | pnpm + Turborepo | Fast TS workspace, incremental builds |
-| Control-plane web | Next.js 15 (App Router) | Modern admin UI, SSR dashboards |
-| Web UI libs | Tailwind + shadcn/ui + TanStack Table + Recharts | Data-dense admin surfaces; pinned in 1.0 (§5.3) |
-| API | tRPC v11 | End-to-end TS types, no codegen |
-| OLTP | Postgres + Drizzle | Migration story, strong types |
-| Event store | ClickHouse | High-volume ledger + analytics |
-| Data-plane proxy | Hono | Edge-friendly, fast, wire-protocol simple |
-| Open-gateway | vLLM + TS shim | Best-in-class open inference + OpenAI-compat |
-| Auth | Auth.js / Ory + custom OIDC issuer | SSO consumer + issuer in one package |
-| Validation | zod | Shared contracts across services |
-| Infra | Terraform + Helm + Docker Compose | Multi-target packaging |
+| Layer             | Choice                                           | Rationale                                       |
+| ----------------- | ------------------------------------------------ | ----------------------------------------------- |
+| Monorepo          | pnpm + Turborepo                                 | Fast TS workspace, incremental builds           |
+| Control-plane web | Next.js 15 (App Router)                          | Modern admin UI, SSR dashboards                 |
+| Web UI libs       | Tailwind + shadcn/ui + TanStack Table + Recharts | Data-dense admin surfaces; pinned in 1.0 (§5.3) |
+| API               | tRPC v11                                         | End-to-end TS types, no codegen                 |
+| OLTP              | Postgres + Drizzle                               | Migration story, strong types                   |
+| Event store       | ClickHouse                                       | High-volume ledger + analytics                  |
+| Data-plane proxy  | Hono                                             | Edge-friendly, fast, wire-protocol simple       |
+| Open-gateway      | vLLM + TS shim                                   | Best-in-class open inference + OpenAI-compat    |
+| Auth              | Auth.js / Ory + custom OIDC issuer               | SSO consumer + issuer in one package            |
+| Validation        | zod                                              | Shared contracts across services                |
+| Infra             | Terraform + Helm + Docker Compose                | Multi-target packaging                          |
 
 ---
 
@@ -1022,23 +1054,23 @@ Sub-release exit gates: **1.0** = schema + auth + routers green in CI, guardrail
 
 ## 12. Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Anthropic/OpenAI wire-protocol drift | Proxy breaks | Version-sniff in proxy, pin behavior, track provider changelogs |
-| Delegate-key rotation vs proxy uptime | Brief auth gaps | Short TTL + warm refresh, overlap window |
-| ClickHouse event volume at scale | Query slowdown | Partition by tenant+month from day 1; aggregates materialized |
-| Hybrid reconciliation gap (billing $$ vs proxy $$) | Wrong cost attribution | Alert on >5% drift; investigate root cause before close |
-| OIDC issuer misconfig with corporate IdP | Agents impersonate wrongly | Live Okta/Entra integration test in 1.3, not deferred |
-| SharePoint/Graph perm sync drift | Stale grants left active | Drift detection job from day one in 1.4 |
-| Cross-tenant resource leakage | Security incident | Partition aggregations by `tenant_id`; mandatory tenant filter on all queries |
-| Phase 1 size has grown ~2× | Timeline pressure | Sub-release as 1.0–1.4; revisit splitting 1.4 to Phase 2 if needed |
-| Prompt privacy backslide | InfoSec block | Default no-content retention; DLP hook points reserved in 1.4, shipped in Phase 2 |
-| Master provider-key compromise | Unlimited cross-tenant spend, impersonation | HSM/KMS-wrapped master keys, tight rotation, per-tenant spend anomaly alerts, blast-radius containment |
-| GCS signed-URL bearer-token leak | Unauthorized object access until TTL | Short TTL, scope-by-prefix, issuance logged to `access_audit_event` |
-| Bypass-agent live enforcement gap | Quota caps applied only after the fact (billing reconciliation) | Phase 1: require bypass paths to opt into provider-side delegate-key spend caps; default-block bypass by policy where unsupported |
-| Priority-tier abuse (self-marked critical) | Budget bypass, critical-tier crowding | Tier assignment is policy (§6.6); `critical` requires scope-admin approval; tier changes audited |
-| Background-tier starvation under chronic budget pressure | Optimization/upgrade work never runs | Minimum floor / scheduled windows per scope; starvation metric in dashboards |
-| Orphaned scope-owned agents (scope deleted/reorged, stakeholder departs) | Zombie spend, dangling access, no accountable human | Cascade-disable on scope delete; stakeholder re-attestation on departure (transfer or retire); TTL for automation-spawned agents |
+| Risk                                                                              | Impact                                                                                                                                                                                                                                                                   | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anthropic/OpenAI wire-protocol drift                                              | Proxy breaks                                                                                                                                                                                                                                                             | Version-sniff in proxy, pin behavior, track provider changelogs                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Delegate-key rotation vs proxy uptime                                             | Brief auth gaps                                                                                                                                                                                                                                                          | Short TTL + warm refresh, overlap window                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ClickHouse event volume at scale                                                  | Query slowdown                                                                                                                                                                                                                                                           | Partition by tenant+month from day 1; aggregates materialized                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Hybrid reconciliation gap (billing $$ vs proxy $$)                                | Wrong cost attribution                                                                                                                                                                                                                                                   | Alert on >5% drift; investigate root cause before close                                                                                                                                                                                                                                                                                                                                                                                                         |
+| OIDC issuer misconfig with corporate IdP                                          | Agents impersonate wrongly                                                                                                                                                                                                                                               | Live Okta/Entra integration test in 1.3, not deferred                                                                                                                                                                                                                                                                                                                                                                                                           |
+| SharePoint/Graph perm sync drift                                                  | Stale grants left active                                                                                                                                                                                                                                                 | Drift detection job from day one in 1.4                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Cross-tenant resource leakage                                                     | Security incident                                                                                                                                                                                                                                                        | Partition aggregations by `tenant_id`; mandatory tenant filter on all queries                                                                                                                                                                                                                                                                                                                                                                                   |
+| Phase 1 size has grown ~2×                                                        | Timeline pressure                                                                                                                                                                                                                                                        | Sub-release as 1.0–1.4; revisit splitting 1.4 to Phase 2 if needed                                                                                                                                                                                                                                                                                                                                                                                              |
+| Prompt privacy backslide                                                          | InfoSec block                                                                                                                                                                                                                                                            | Default no-content retention; DLP hook points reserved in 1.4, shipped in Phase 2                                                                                                                                                                                                                                                                                                                                                                               |
+| Master provider-key compromise                                                    | Unlimited cross-tenant spend, impersonation                                                                                                                                                                                                                              | HSM/KMS-wrapped master keys, tight rotation, per-tenant spend anomaly alerts, blast-radius containment                                                                                                                                                                                                                                                                                                                                                          |
+| GCS signed-URL bearer-token leak                                                  | Unauthorized object access until TTL                                                                                                                                                                                                                                     | Short TTL, scope-by-prefix, issuance logged to `access_audit_event`                                                                                                                                                                                                                                                                                                                                                                                             |
+| Bypass-agent live enforcement gap                                                 | Quota caps applied only after the fact (billing reconciliation)                                                                                                                                                                                                          | Phase 1: require bypass paths to opt into provider-side delegate-key spend caps; default-block bypass by policy where unsupported                                                                                                                                                                                                                                                                                                                               |
+| Priority-tier abuse (self-marked critical)                                        | Budget bypass, critical-tier crowding                                                                                                                                                                                                                                    | Tier assignment is policy (§6.6); `critical` requires scope-admin approval; tier changes audited                                                                                                                                                                                                                                                                                                                                                                |
+| Background-tier starvation under chronic budget pressure                          | Optimization/upgrade work never runs                                                                                                                                                                                                                                     | Minimum floor / scheduled windows per scope; starvation metric in dashboards                                                                                                                                                                                                                                                                                                                                                                                    |
+| Orphaned scope-owned agents (scope deleted/reorged, stakeholder departs)          | Zombie spend, dangling access, no accountable human                                                                                                                                                                                                                      | Cascade-disable on scope delete; stakeholder re-attestation on departure (transfer or retire); TTL for automation-spawned agents                                                                                                                                                                                                                                                                                                                                |
 | **Agent adoption failure** (employees never activate, or activate and go dormant) | **This is now the thesis-level risk (D10, §9/1.y), not a secondary one** — if adoption stalls, the metering backbone still collapses to the lagging billing-API path AND the primary success metric (activated/eligible seats) misses regardless of platform correctness | `/adoption` (docs/guides/02-server-panels.md) makes stall points visible by construction — funnel + stall-breakdown + time-to-value + coverage panels surface WHERE and WHY adoption fails (not just that spend is low); `arm agent init` + `/.well-known/arm-agent` discovery minimize onboarding friction; plugin fallback for non-proxy agents; bypass spend capped provider-side; proxied-traffic share remains a secondary operational SLO (§9 exit gates) |
 
 ---
@@ -1059,26 +1091,26 @@ The invariants in §11 are enforced as **executable guardrails**, not prose. Eve
 
 ### 14.1 Invariants-as-code
 
-| Invariant / rule | Guardrail (lands 1.0–1.3) |
-|---|---|
+| Invariant / rule                           | Guardrail (lands 1.0–1.3)                                                                                                                                                                                                                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | §11.1 prompt bodies never leave tenant VPC | `guardrails/no-content-egress`: event zod schemas carry no content fields (schema test); data-plane egress allowlist lint (control-plane write endpoints accept the metadata schema only); proxy bundle test asserting request bodies are never persisted/logged |
-| §11.3 higher-level deny always wins | Property-based tests on the policy resolver: randomized scope trees with deny injection, assert deny-wins on every path |
-| §11.6 + D1 tenant isolation | `guardrails/tenant-isolation`: every non-global Drizzle table must declare `tenant_id` (schema lint); tRPC tenant-scope middleware tested with cross-tenant fixtures |
-| §11.7 accountable stakeholder | DB constraint `stakeholder_user_id NOT NULL` + API validation test |
-| Event-shape stability (§4.2) | zod contract tests on `packages/proto` event schemas; CI freshness check on generated types |
-| LLM trust boundary (dashboard) | `guardrails/safe-render`: no unescaped rendering of agent/resource/model string fields in the web app (XSS via LLM-adjacent strings) |
-| Master-key custody (§12) | `guardrails/no-secret-dumps`: blocks `.env` dumps and hardcoded provider-key patterns; pre-push secret scan |
-| Policy-cache freshness (D5) | Data plane reports `policy_version` + `last_refresh` on every pull; control-plane health surface flags caches stale beyond SLA (seed-metadata freshness pattern) |
-| Work-package integrity (D9/D10) | `guardrails/package-integrity`: `manifest_sha256` non-null on `componentVersionTable` (D10, replaces `toolVersionTable`) + `workPackageVersionTable`; profile `workPackages` blocks pin semver-ish versions |
-| Work-package least privilege (D9) | `guardrails/package-least-privilege`: package permissions must be well-formed `resource|org_node:<key>:<verb>` / `tool:<key>:invoke|configure|publish`; bare wildcards (`resource:*`, `tool:*`) and duplicates are violations |
-| Component endpoint scope (D9/D10, §11.1) | `guardrails/tool-endpoint-scope`: component endpoints must be tenant-VPC or approved SaaS; `confidential`/`restricted` components may not use `none` auth; `restricted` connectors must resolve inside the VPC |
-| Package drift (D9, mirrors D5) | `guardrails/package-drift`: installed package versions must trail the preset release channel by ≤ N versions or surface a guided upgrade; `min_agent_version` substrate asserted in presets |
-| Component review gate (D10) | `guardrails/component-review`: no `work_package_version.components` entry may reference a component whose `review_status ≠ approved` |
-| Artifact integrity (D10, A2) | `guardrails/artifact-integrity`: every `component_version` with a blob carries a well-formed `sha256:<hex>` digest; no manifest carries a mutable URL where a digest belongs |
-| Blob residency (D10, §11.1) | `guardrails/blob-residency`: no `component_blob` sourced from a `tenant_authored` component may sit at `control_plane` residency |
-| Questionnaire determinism (D10) | `guardrails/questionnaire-determinism`: the questionnaire→job-function mapping module imports only `proto`/`config` and calls no `fetch`/`Date.now`/`Math.random`/`crypto.randomUUID` — reproducible, auditable recommendations |
-| No content in activation (D10, §11.1/A5) | `guardrails/no-content-in-activation`: `activationEventSchema` carries no content-bearing field name; `questionNodeSchema.kind` never re-admits a free-text question kind — extends `no-content-egress` |
-| Dependency security | `pnpm audit` gate with **baselined advisories** — each entry carries written justification; stale entries fail the gate |
+| §11.3 higher-level deny always wins        | Property-based tests on the policy resolver: randomized scope trees with deny injection, assert deny-wins on every path                                                                                                                                          |
+| §11.6 + D1 tenant isolation                | `guardrails/tenant-isolation`: every non-global Drizzle table must declare `tenant_id` (schema lint); tRPC tenant-scope middleware tested with cross-tenant fixtures                                                                                             |
+| §11.7 accountable stakeholder              | DB constraint `stakeholder_user_id NOT NULL` + API validation test                                                                                                                                                                                               |
+| Event-shape stability (§4.2)               | zod contract tests on `packages/proto` event schemas; CI freshness check on generated types                                                                                                                                                                      |
+| LLM trust boundary (dashboard)             | `guardrails/safe-render`: no unescaped rendering of agent/resource/model string fields in the web app (XSS via LLM-adjacent strings)                                                                                                                             |
+| Master-key custody (§12)                   | `guardrails/no-secret-dumps`: blocks `.env` dumps and hardcoded provider-key patterns; pre-push secret scan                                                                                                                                                      |
+| Policy-cache freshness (D5)                | Data plane reports `policy_version` + `last_refresh` on every pull; control-plane health surface flags caches stale beyond SLA (seed-metadata freshness pattern)                                                                                                 |
+| Work-package integrity (D9/D10)            | `guardrails/package-integrity`: `manifest_sha256` non-null on `componentVersionTable` (D10, replaces `toolVersionTable`) + `workPackageVersionTable`; profile `workPackages` blocks pin semver-ish versions                                                      |
+| Work-package least privilege (D9)          | `guardrails/package-least-privilege`: package permissions must be well-formed `resource                                                                                                                                                                          | org_node:<key>:<verb>`/`tool:<key>:invoke | configure | publish`; bare wildcards (`resource:_`, `tool:_`) and duplicates are violations |
+| Component endpoint scope (D9/D10, §11.1)   | `guardrails/tool-endpoint-scope`: component endpoints must be tenant-VPC or approved SaaS; `confidential`/`restricted` components may not use `none` auth; `restricted` connectors must resolve inside the VPC                                                   |
+| Package drift (D9, mirrors D5)             | `guardrails/package-drift`: installed package versions must trail the preset release channel by ≤ N versions or surface a guided upgrade; `min_agent_version` substrate asserted in presets                                                                      |
+| Component review gate (D10)                | `guardrails/component-review`: no `work_package_version.components` entry may reference a component whose `review_status ≠ approved`                                                                                                                             |
+| Artifact integrity (D10, A2)               | `guardrails/artifact-integrity`: every `component_version` with a blob carries a well-formed `sha256:<hex>` digest; no manifest carries a mutable URL where a digest belongs                                                                                     |
+| Blob residency (D10, §11.1)                | `guardrails/blob-residency`: no `component_blob` sourced from a `tenant_authored` component may sit at `control_plane` residency                                                                                                                                 |
+| Questionnaire determinism (D10)            | `guardrails/questionnaire-determinism`: the questionnaire→job-function mapping module imports only `proto`/`config` and calls no `fetch`/`Date.now`/`Math.random`/`crypto.randomUUID` — reproducible, auditable recommendations                                  |
+| No content in activation (D10, §11.1/A5)   | `guardrails/no-content-in-activation`: `activationEventSchema` carries no content-bearing field name; `questionNodeSchema.kind` never re-admits a free-text question kind — extends `no-content-egress`                                                          |
+| Dependency security                        | `pnpm audit` gate with **baselined advisories** — each entry carries written justification; stale entries fail the gate                                                                                                                                          |
 
 ### 14.2 Guard quality standards
 
@@ -1163,4 +1195,4 @@ arm/
 
 ---
 
-*End of spec v0.5. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5).*
+_End of spec v0.5. Figures use Mermaid (renders natively on GitHub) and ASCII where Mermaid is unsuitable. Companion documents: `docs/permission-rules.md` (tiered-delegation contract, finalized against the 1.3 schema), `docs/CONCEPTS.md` (domain vocabulary), `docs/open-decisions.md` (decisions to lock: D1/D2/D5)._

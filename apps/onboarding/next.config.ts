@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 
 const config: NextConfig = {
   // Transpile all workspace packages (they export raw .ts).
-  transpilePackages: ["@arm/proto", "@arm/config", "@arm/trpc", "@arm/questionnaire", "@arm/client-core"],
+  transpilePackages: [
+    "@arm/proto",
+    "@arm/config",
+    "@arm/trpc",
+    "@arm/questionnaire",
+    "@arm/client-core",
+  ],
   // TypeScript 7 requires the CLI mode (Next.js's compiler API integration is TS ≤6).
   experimental: { useTypeScriptCli: true },
   // Pin the workspace root to THIS app's own pnpm-workspace.yaml — when this

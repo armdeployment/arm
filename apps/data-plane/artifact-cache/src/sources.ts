@@ -33,7 +33,9 @@ export function httpSource(name: string, opts: HttpSourceOptions): ArtifactSourc
   return {
     name,
     async fetchBlob(digest: string): Promise<FetchedBlob | null> {
-      const res = await fetchImpl(`${opts.baseUrl}/${encodeURIComponent(digest)}`, { redirect: "manual" });
+      const res = await fetchImpl(`${opts.baseUrl}/${encodeURIComponent(digest)}`, {
+        redirect: "manual",
+      });
       if (res.status === 404) return null;
       if (!res.ok) {
         throw new Error(`${name}: fetching ${digest} failed with HTTP ${res.status}`);
@@ -47,7 +49,10 @@ export function httpSource(name: string, opts: HttpSourceOptions): ArtifactSourc
 
 /** Try each source in order; the first non-null hit wins. Never re-signs or
  *  rewrites the bytes it gets back — callers verify sha256 before caching. */
-export async function fetchFromSources(digest: string, sources: readonly ArtifactSource[]): Promise<FetchedBlob | null> {
+export async function fetchFromSources(
+  digest: string,
+  sources: readonly ArtifactSource[],
+): Promise<FetchedBlob | null> {
   for (const source of sources) {
     const found = await source.fetchBlob(digest);
     if (found !== null) return found;

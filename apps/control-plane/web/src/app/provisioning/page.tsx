@@ -43,12 +43,19 @@ export default function ProvisioningPage() {
           <div className="flex items-center gap-3">
             <div
               className="flex h-10 w-10 items-center justify-center text-[18px] font-bold"
-              style={{ backgroundColor: "var(--navy)", color: "#fff", borderRadius: "var(--radius)" }}
+              style={{
+                backgroundColor: "var(--navy)",
+                color: "#fff",
+                borderRadius: "var(--radius)",
+              }}
             >
               A
             </div>
             <div>
-              <h1 className="text-[20px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+              <h1
+                className="text-[20px] font-semibold tracking-tight"
+                style={{ color: "var(--text-primary)" }}
+              >
                 Tenant Provisioning
               </h1>
               <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>
@@ -67,7 +74,8 @@ export default function ProvisioningPage() {
               <div
                 className="flex h-7 w-7 items-center justify-center text-[12px] font-semibold"
                 style={{
-                  backgroundColor: step === s ? "var(--navy)" : s < step ? "var(--green)" : "var(--bg)",
+                  backgroundColor:
+                    step === s ? "var(--navy)" : s < step ? "var(--green)" : "var(--bg)",
                   color: step === s || s < step ? "#fff" : "var(--text-secondary)",
                   borderRadius: "50%",
                   border: `1px solid ${step === s ? "var(--navy)" : "var(--border)"}`,
@@ -79,9 +87,15 @@ export default function ProvisioningPage() {
                 className="text-[13px] font-medium"
                 style={{ color: step === s ? "var(--text-primary)" : "var(--text-secondary)" }}
               >
-                {s === "select" ? "Select Profile" : s === "review" ? "Review Defaults" : "Provisioned"}
+                {s === "select"
+                  ? "Select Profile"
+                  : s === "review"
+                    ? "Review Defaults"
+                    : "Provisioned"}
               </span>
-              {i < 2 && <div className="mx-2 h-px w-12" style={{ backgroundColor: "var(--border)" }} />}
+              {i < 2 && (
+                <div className="mx-2 h-px w-12" style={{ backgroundColor: "var(--border)" }} />
+              )}
             </div>
           ))}
         </div>
@@ -105,9 +119,7 @@ export default function ProvisioningPage() {
           />
         )}
 
-        {step === "provisioned" && (
-          <ProvisionedSummary profile={profile} tenantName={tenantName} />
-        )}
+        {step === "provisioned" && <ProvisionedSummary profile={profile} tenantName={tenantName} />}
       </div>
     </div>
   );
@@ -131,7 +143,10 @@ function ProfileSelector({
   return (
     <div className="space-y-6">
       {/* Tenant name */}
-      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}>
+      <div
+        className="rounded-lg border p-5"
+        style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}
+      >
         <label className="mb-2 block label-meta">Tenant Name</label>
         <input
           value={tenantName}
@@ -166,7 +181,9 @@ function ProfileSelector({
                 </div>
               </div>
               {selected === id && (
-                <span className="ml-auto text-[14px]" style={{ color: "var(--navy)" }}>✓</span>
+                <span className="ml-auto text-[14px]" style={{ color: "var(--navy)" }}>
+                  ✓
+                </span>
               )}
             </div>
             <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
@@ -189,8 +206,9 @@ function ProfileSelector({
       {/* Custom note */}
       <div className="rounded-lg border border-dashed p-4" style={{ borderColor: "var(--border)" }}>
         <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>
-          <strong style={{ color: "var(--text-primary)" }}>Custom</strong> — Start empty and configure every
-          capability individually. Any tenant can enable any capability regardless of profile (D6 governing rule).
+          <strong style={{ color: "var(--text-primary)" }}>Custom</strong> — Start empty and
+          configure every capability individually. Any tenant can enable any capability regardless
+          of profile (D6 governing rule).
         </p>
       </div>
 
@@ -223,13 +241,19 @@ function ProfileReview({
 }) {
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}>
+      <div
+        className="rounded-lg border p-5"
+        style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}
+      >
         <h2 className="mb-1 text-[16px] font-semibold" style={{ color: "var(--text-primary)" }}>
           What gets provisioned for {tenantName}
         </h2>
         <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>
-          Profile: <span className="font-mono" style={{ color: "var(--gold)" }}>{profile.id}</span> — These are
-          defaults. Everything can be changed after provisioning.
+          Profile:{" "}
+          <span className="font-mono" style={{ color: "var(--gold)" }}>
+            {profile.id}
+          </span>{" "}
+          — These are defaults. Everything can be changed after provisioning.
         </p>
       </div>
 
@@ -246,19 +270,27 @@ function ProfileReview({
               <span>📍 {countOrgNodesByType(profile.orgTree.nodes, "plant")} plants</span>
             )}
             {countOrgNodesByType(profile.orgTree.nodes, "organization") > 0 && (
-              <span>🏛️ {countOrgNodesByType(profile.orgTree.nodes, "organization")} subsidiaries</span>
+              <span>
+                🏛️ {countOrgNodesByType(profile.orgTree.nodes, "organization")} subsidiaries
+              </span>
             )}
             <span>📊 {countOrgNodes(profile.orgTree.nodes)} total nodes</span>
           </div>
         </Section>
 
         {/* Classification */}
-        <Section title="Classification Taxonomy" subtitle={`${profile.classification.axes.length === 2 ? "Dual-axis" : "Single-axis"} — sensitivity${profile.classification.axes.includes("regulatory") ? " + regulatory" : ""}`}>
+        <Section
+          title="Classification Taxonomy"
+          subtitle={`${profile.classification.axes.length === 2 ? "Dual-axis" : "Single-axis"} — sensitivity${profile.classification.axes.includes("regulatory") ? " + regulatory" : ""}`}
+        >
           <div className="space-y-1.5">
             {profile.classification.levels.map((l) => (
               <div key={l.name} className="flex items-center justify-between text-[13px]">
                 <span style={{ color: "var(--text-primary)" }}>
-                  <span className="font-mono text-[11px] mr-2" style={{ color: "var(--text-secondary)" }}>
+                  <span
+                    className="font-mono text-[11px] mr-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     L{l.rank}
                   </span>
                   {l.name}
@@ -282,7 +314,10 @@ function ProfileReview({
         </Section>
 
         {/* DLP Patterns */}
-        <Section title="DLP Patterns" subtitle={`${profile.dlpPatterns.length} patterns by category`}>
+        <Section
+          title="DLP Patterns"
+          subtitle={`${profile.dlpPatterns.length} patterns by category`}
+        >
           <div className="flex flex-wrap gap-1.5">
             {profile.dlpPatterns.map((p) => (
               <span
@@ -310,7 +345,10 @@ function ProfileReview({
         </Section>
 
         {/* Resource Types */}
-        <Section title="Resource Types" subtitle={`${profile.resourceTypes.enabled.length} types enabled`}>
+        <Section
+          title="Resource Types"
+          subtitle={`${profile.resourceTypes.enabled.length} types enabled`}
+        >
           <div className="flex flex-wrap gap-1.5">
             {profile.resourceTypes.enabled.map((r) => (
               <span
@@ -325,7 +363,10 @@ function ProfileReview({
         </Section>
 
         {/* Seed Agents */}
-        <Section title="Seed Agents" subtitle={`${profile.seedAgents.length} agents provisioned across departments`}>
+        <Section
+          title="Seed Agents"
+          subtitle={`${profile.seedAgents.length} agents provisioned across departments`}
+        >
           <div className="space-y-1">
             {profile.seedAgents.slice(0, 6).map((a) => (
               <div key={a.name} className="flex items-center justify-between text-[12px]">
@@ -344,7 +385,10 @@ function ProfileReview({
         </Section>
 
         {/* UI Panels */}
-        <Section title="Dashboard Panels" subtitle={`${profile.uiPanels.length} panels (registry-driven, not hardcoded)`}>
+        <Section
+          title="Dashboard Panels"
+          subtitle={`${profile.uiPanels.length} panels (registry-driven, not hardcoded)`}
+        >
           <div className="flex flex-wrap gap-1.5">
             {profile.uiPanels.map((p) => (
               <span
@@ -405,7 +449,13 @@ function ProfileReview({
 
 // ── Step 3: Provisioned Summary ─────────────────────────────────────────────
 
-function ProvisionedSummary({ profile, tenantName }: { profile: IndustryProfilePreset; tenantName: string }) {
+function ProvisionedSummary({
+  profile,
+  tenantName,
+}: {
+  profile: IndustryProfilePreset;
+  tenantName: string;
+}) {
   return (
     <div className="space-y-5">
       <div
@@ -417,7 +467,10 @@ function ProvisionedSummary({ profile, tenantName }: { profile: IndustryProfileP
           {tenantName} provisioned
         </h2>
         <p className="mt-1 text-[13px]" style={{ color: "var(--text-secondary)" }}>
-          Industry Profile: <span className="font-mono" style={{ color: "var(--gold)" }}>{profile.id}</span>
+          Industry Profile:{" "}
+          <span className="font-mono" style={{ color: "var(--gold)" }}>
+            {profile.id}
+          </span>
         </p>
       </div>
 
@@ -428,11 +481,17 @@ function ProvisionedSummary({ profile, tenantName }: { profile: IndustryProfileP
         <StatBox value={profile.resourceTypes.enabled.length} label="Resource Types" />
       </div>
 
-      <div className="rounded-lg border p-5" style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}>
+      <div
+        className="rounded-lg border p-5"
+        style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}
+      >
         <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          All defaults have been materialized as per-tenant config rows. Runtime enforcement code reads
-          config — never the profile id. The{" "}
-          <code className="rounded px-1 py-0.5 text-[12px]" style={{ backgroundColor: "var(--bg)" }}>
+          All defaults have been materialized as per-tenant config rows. Runtime enforcement code
+          reads config — never the profile id. The{" "}
+          <code
+            className="rounded px-1 py-0.5 text-[12px]"
+            style={{ backgroundColor: "var(--bg)" }}
+          >
             no-profile-branching
           </code>{" "}
           guardrail ensures this stays true.
@@ -476,7 +535,9 @@ function OrgTreeNode({ node, depth }: { node: OrgNodeSeed; depth: number }) {
   const icon = NODE_ICONS[node.type] ?? "·";
   const color = NODE_COLORS[node.type] ?? "var(--text-primary)";
   const isContainer = node.type === "organization" || node.type === "hq" || node.type === "plant";
-  const budget = node.budgetMonthlyCents ? `$${(node.budgetMonthlyCents / 100).toLocaleString()}/mo` : "";
+  const budget = node.budgetMonthlyCents
+    ? `$${(node.budgetMonthlyCents / 100).toLocaleString()}/mo`
+    : "";
 
   return (
     <>
@@ -514,9 +575,20 @@ function OrgTreeNode({ node, depth }: { node: OrgNodeSeed; depth: number }) {
   );
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border p-4" style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}
+    >
       <h3 className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
         {title}
       </h3>
@@ -543,7 +615,10 @@ function Tag({ children }: { children: React.ReactNode }) {
 
 function StatBox({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-lg border p-4 text-center" style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}>
+    <div
+      className="rounded-lg border p-4 text-center"
+      style={{ borderColor: "var(--border)", backgroundColor: "#fff" }}
+    >
       <div className="text-[28px] font-semibold" style={{ color: "var(--navy)" }}>
         {value}
       </div>

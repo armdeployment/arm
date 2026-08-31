@@ -13,7 +13,11 @@
  */
 
 import type { DiscoveryCandidateStatus, ComponentKind } from "@arm/proto";
-import type { DiscoveredCandidate, DiscoverySourceAdapter, DiscoverySourceRef } from "./sources/types.js";
+import type {
+  DiscoveredCandidate,
+  DiscoverySourceAdapter,
+  DiscoverySourceRef,
+} from "./sources/types.js";
 
 export interface ExistingCandidateRow {
   id: string;
@@ -56,7 +60,9 @@ export async function syncSource(
   deps?: { fetchImpl?: typeof fetch },
 ): Promise<SyncResult> {
   const fetched: DiscoveredCandidate[] = await adapter.fetchCandidates(source, deps);
-  const existingByRef = new Map(existing.filter((e) => e.sourceId === source.id).map((e) => [e.externalRef, e]));
+  const existingByRef = new Map(
+    existing.filter((e) => e.sourceId === source.id).map((e) => [e.externalRef, e]),
+  );
 
   const upserts: DiscoveryCandidateUpsert[] = [];
   let newCount = 0;

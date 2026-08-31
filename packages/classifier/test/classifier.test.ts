@@ -29,9 +29,16 @@ const ENG_TAXONOMY: WorkTypeTaxonomy = {
   name: "Engineering",
   classifierVersion: "1",
   labels: [
-    "code_review", "code_generation", "test_generation", "hot_issue_resolution",
-    "incident_triage", "architecture_design", "devops_automation",
-    "dependency_upgrade", "pipeline_monitoring", "documentation",
+    "code_review",
+    "code_generation",
+    "test_generation",
+    "hot_issue_resolution",
+    "incident_triage",
+    "architecture_design",
+    "devops_automation",
+    "dependency_upgrade",
+    "pipeline_monitoring",
+    "documentation",
   ],
 };
 
@@ -41,8 +48,12 @@ const MFG_TAXONOMY: WorkTypeTaxonomy = {
   name: "Manufacturing",
   classifierVersion: "1",
   labels: [
-    "cnc_toolpath_optimization", "defect_analysis", "process_recipe_optimization",
-    "predictive_maintenance", "spc_analysis", "quality_inspection",
+    "cnc_toolpath_optimization",
+    "defect_analysis",
+    "process_recipe_optimization",
+    "predictive_maintenance",
+    "spc_analysis",
+    "quality_inspection",
   ],
 };
 
@@ -171,7 +182,10 @@ describe("Stage 3 — linear keyword classifier", () => {
 
   it("classifies hot issue / bug fix intent", async () => {
     const result = await classifyPrompt(
-      { ...baseFeatures, promptText: "there is a bug causing a crash, fix the error in the traceback" },
+      {
+        ...baseFeatures,
+        promptText: "there is a bug causing a crash, fix the error in the traceback",
+      },
       ENG_TAXONOMY,
     );
     expect(result.workType).toBe("hot_issue_resolution");
@@ -187,7 +201,9 @@ describe("Stage 4 — embedding centroid fallback", () => {
       ENG_TAXONOMY,
     );
     // Either embedding or unknown — never a low-confidence guess.
-    expect(["embedding", "unknown"].includes(result.stage!) || result.stage === "linear").toBe(true);
+    expect(["embedding", "unknown"].includes(result.stage!) || result.stage === "linear").toBe(
+      true,
+    );
     if (result.stage === "embedding") {
       expect(result.confidence).toBeGreaterThan(0);
     }
@@ -206,10 +222,7 @@ describe("`unknown` is first-class — never guessed", () => {
   });
 
   it("returns unknown for empty prompt", async () => {
-    const result = await classifyPrompt(
-      { ...baseFeatures, promptText: "" },
-      ENG_TAXONOMY,
-    );
+    const result = await classifyPrompt({ ...baseFeatures, promptText: "" }, ENG_TAXONOMY);
     expect(result.workType).toBe("unknown");
   });
 
@@ -248,7 +261,10 @@ describe("Fail-open — classifier never throws", () => {
 describe("Per-taxonomy selection (D7 lock #1)", () => {
   it("manufacturing taxonomy classifies CNC toolpath prompts", async () => {
     const result = await classifyPrompt(
-      { ...baseFeatures, promptText: "optimize the CNC toolpath g-code for feed rate and spindle speed" },
+      {
+        ...baseFeatures,
+        promptText: "optimize the CNC toolpath g-code for feed rate and spindle speed",
+      },
       MFG_TAXONOMY,
     );
     expect(result.workType).toBe("cnc_toolpath_optimization");
@@ -256,7 +272,10 @@ describe("Per-taxonomy selection (D7 lock #1)", () => {
 
   it("manufacturing taxonomy classifies defect analysis prompts", async () => {
     const result = await classifyPrompt(
-      { ...baseFeatures, promptText: "analyze the SPC defect data from quality inspection and check tolerance" },
+      {
+        ...baseFeatures,
+        promptText: "analyze the SPC defect data from quality inspection and check tolerance",
+      },
       MFG_TAXONOMY,
     );
     expect(result.workType).toBe("defect_analysis");

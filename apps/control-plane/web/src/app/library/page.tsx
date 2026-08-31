@@ -24,7 +24,14 @@ type Tab = "packages" | "components" | "discovery";
 
 export default function LibraryPage() {
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />}>
+    <Suspense
+      fallback={
+        <div
+          className="h-64 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+          style={{ borderColor: "var(--border)" }}
+        />
+      }
+    >
       <LibraryPageContent />
     </Suspense>
   );
@@ -37,9 +44,12 @@ function LibraryPageContent() {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Library</h1>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          Library
+        </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-          Search packages and components — the real artifactory (A2): immutable, versioned, signed manifests
+          Search packages and components — the real artifactory (A2): immutable, versioned, signed
+          manifests
         </p>
       </div>
 
@@ -52,17 +62,23 @@ function LibraryPageContent() {
           placeholder="Search packages and components…"
           aria-label="Search library"
           className="w-full max-w-md rounded-md border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)" }}
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)",
+          }}
         />
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b" style={{ borderColor: "var(--border)" }} role="tablist">
-        {([
-          ["packages", "Packages"],
-          ["components", "Components"],
-          ["discovery", "Discovery"],
-        ] as const).map(([key, label]) => (
+        {(
+          [
+            ["packages", "Packages"],
+            ["components", "Components"],
+            ["discovery", "Discovery"],
+          ] as const
+        ).map(([key, label]) => (
           <button
             key={key}
             role="tab"
@@ -136,14 +152,22 @@ function FacetRail({ tab }: { tab: Tab }) {
             {group && group.entries.length > 0 ? (
               <ul className="space-y-1">
                 {group.entries.map(([value, count]) => (
-                  <li key={value} className="flex items-center justify-between text-[12px]" style={{ color: "var(--text-secondary)" }}>
+                  <li
+                    key={value}
+                    className="flex items-center justify-between text-[12px]"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     <span className="capitalize">{value}</span>
-                    <span className="tabular" style={{ color: "var(--text-muted)" }}>{count}</span>
+                    <span className="tabular" style={{ color: "var(--text-muted)" }}>
+                      {count}
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>No facets yet</p>
+              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                No facets yet
+              </p>
             )}
           </div>
         );
@@ -161,21 +185,37 @@ function PackagesTab({ query }: { query: string }) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-48 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }} />
+          <div
+            key={i}
+            className="h-48 animate-pulse rounded-lg border"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}
+          />
         ))}
       </div>
     );
   }
   if (packages.isError) {
-    return <div role="alert" className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>Couldn&apos;t load packages.</div>;
+    return (
+      <div role="alert" className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>
+        Couldn&apos;t load packages.
+      </div>
+    );
   }
 
-  const filtered = packages.data!.packages.filter((p) =>
-    query.trim() === "" || `${p.name} ${p.roleKey} ${p.family} ${p.description}`.toLowerCase().includes(query.toLowerCase()),
+  const filtered = packages.data!.packages.filter(
+    (p) =>
+      query.trim() === "" ||
+      `${p.name} ${p.roleKey} ${p.family} ${p.description}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
   );
 
   if (filtered.length === 0) {
-    return <div className="py-12 text-center text-sm" style={{ color: "var(--text-muted)" }}>No packages match &ldquo;{query}&rdquo;.</div>;
+    return (
+      <div className="py-12 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+        No packages match &ldquo;{query}&rdquo;.
+      </div>
+    );
   }
 
   return (
@@ -205,21 +245,36 @@ function ComponentsTab({ query }: { query: string }) {
   const search = trpc.library.search.useQuery({ q: query || undefined });
 
   if (search.isLoading) {
-    return <div className="h-48 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }} />;
+    return (
+      <div
+        className="h-48 animate-pulse rounded-lg border"
+        style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}
+      />
+    );
   }
   if (search.isError) {
-    return <div role="alert" className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>Couldn&apos;t load components.</div>;
+    return (
+      <div role="alert" className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>
+        Couldn&apos;t load components.
+      </div>
+    );
   }
 
   const results = search.data!.items;
 
   if (results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-center" style={{ borderColor: "var(--border)" }}>
-        <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>No components published yet</span>
+      <div
+        className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-center"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+          No components published yet
+        </span>
         <span className="max-w-sm text-[12px]" style={{ color: "var(--text-muted)" }}>
-          The Component Registry (MCPs, skills, plugins, templates) lands with docs/guides/01-library-artifactory.md.
-          This tab is wired to <code>library.search</code> and will populate automatically once that ships.
+          The Component Registry (MCPs, skills, plugins, templates) lands with
+          docs/guides/01-library-artifactory.md. This tab is wired to <code>library.search</code>{" "}
+          and will populate automatically once that ships.
         </span>
       </div>
     );
@@ -229,7 +284,10 @@ function ComponentsTab({ query }: { query: string }) {
     <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {results.map((c) => (
         <li key={c.id} className="rounded-lg border p-4" style={{ borderColor: "var(--border)" }}>
-          {c.name} <span className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>{c.type}</span>
+          {c.name}{" "}
+          <span className="text-[10px] uppercase" style={{ color: "var(--text-muted)" }}>
+            {c.type}
+          </span>
         </li>
       ))}
     </ul>
@@ -242,29 +300,47 @@ function DiscoveryTab() {
   const candidates = trpc.library.listCandidates.useQuery();
   const sources = trpc.library.listSources.useQuery();
   const utils = trpc.useUtils();
-  const promote = trpc.library.promoteCandidate.useMutation({ onSuccess: () => void utils.library.listCandidates.invalidate() });
-  const reject = trpc.library.rejectCandidate.useMutation({ onSuccess: () => void utils.library.listCandidates.invalidate() });
+  const promote = trpc.library.promoteCandidate.useMutation({
+    onSuccess: () => void utils.library.listCandidates.invalidate(),
+  });
+  const reject = trpc.library.rejectCandidate.useMutation({
+    onSuccess: () => void utils.library.listCandidates.invalidate(),
+  });
 
   const rows = candidates.data?.candidates ?? [];
   const srcCount = sources.data?.sources.length ?? 0;
 
   const slugify = (name: string) =>
-    name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
   return (
     <div className="space-y-4">
       <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
-        {srcCount} discovery source{srcCount === 1 ? "" : "s"} configured · candidates awaiting triage
+        {srcCount} discovery source{srcCount === 1 ? "" : "s"} configured · candidates awaiting
+        triage
       </p>
 
       {candidates.isLoading ? (
-        <div className="h-32 animate-pulse rounded-lg border" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }} />
+        <div
+          className="h-32 animate-pulse rounded-lg border"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}
+        />
       ) : rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-center" style={{ borderColor: "var(--border)" }}>
-          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>No discovery candidates pending triage</span>
+        <div
+          className="flex flex-col items-center justify-center gap-2 rounded-lg border py-16 text-center"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+            No discovery candidates pending triage
+          </span>
           <span className="max-w-sm text-[12px]" style={{ color: "var(--text-muted)" }}>
-            Wired to <code>library.listCandidates</code> / <code>promoteCandidate</code> / <code>rejectCandidate</code> —
-            populates once docs/guides/01-library-artifactory.md lands discovery sources.
+            Wired to <code>library.listCandidates</code> / <code>promoteCandidate</code> /{" "}
+            <code>rejectCandidate</code> — populates once docs/guides/01-library-artifactory.md
+            lands discovery sources.
           </span>
         </div>
       ) : (
@@ -272,8 +348,12 @@ function DiscoveryTab() {
           {rows.map((c) => (
             <li key={c.id} className="flex items-center justify-between px-4 py-3">
               <div>
-                <div className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>{c.name}</div>
-                <div className="text-[11px] uppercase" style={{ color: "var(--text-muted)" }}>{c.proposed_kind}</div>
+                <div className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
+                  {c.name}
+                </div>
+                <div className="text-[11px] uppercase" style={{ color: "var(--text-muted)" }}>
+                  {c.proposed_kind}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button

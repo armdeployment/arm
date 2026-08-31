@@ -5,8 +5,15 @@ import { useMemo } from "react";
 
 /** All scope types matching the DB enum (D6/D7/D8 widening). */
 export const SCOPE_TYPES = [
-  "org", "organization", "hq", "plant",
-  "department", "group", "line", "cell", "team",
+  "org",
+  "organization",
+  "hq",
+  "plant",
+  "department",
+  "group",
+  "line",
+  "cell",
+  "team",
 ] as const;
 export type ScopeType = (typeof SCOPE_TYPES)[number];
 

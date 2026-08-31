@@ -207,7 +207,9 @@ export function collectConnectionsNeeded(
   );
 
   return manifest.components
-    .filter(({ component }) => component.auth_strategy !== null && component.auth_strategy !== "none")
+    .filter(
+      ({ component }) => component.auth_strategy !== null && component.auth_strategy !== "none",
+    )
     .map(({ component }) => {
       const authMethod = component.auth_strategy as ConnectionMethod;
       const hint = VENDOR_GUIDE_HINTS.find((candidate) =>
@@ -245,7 +247,8 @@ export function budgetHint(budgetTemplate: Record<string, unknown>): string {
  * `${ARM_AGENT_TOKEN}`.
  */
 export async function runSetup(args: SetupArgs): Promise<SetupResult> {
-  const manifest = args.manifest ?? (await fetchManifest(args.controlPlaneUrl, args.token, args.roleKey));
+  const manifest =
+    args.manifest ?? (await fetchManifest(args.controlPlaneUrl, args.token, args.roleKey));
 
   if (!verifyManifestIntegrity(manifest.version)) {
     throw new ArmClientError(

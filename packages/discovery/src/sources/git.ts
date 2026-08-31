@@ -40,16 +40,23 @@ export const gitOrgScannerAdapter: DiscoverySourceAdapter = {
   async fetchCandidates(source: DiscoverySourceRef, deps): Promise<DiscoveredCandidate[]> {
     const body = await fetchJsonSameOrigin(source.endpoint, deps?.fetchImpl);
     if (!Array.isArray(body)) {
-      throw new Error(`git adapter: expected a JSON array of repo listings from ${source.endpoint}`);
+      throw new Error(
+        `git adapter: expected a JSON array of repo listings from ${source.endpoint}`,
+      );
     }
-    const optedIn = (body as GitRepoListing[]).filter((repo) => (repo.topics ?? []).includes(OPT_IN_TOPIC));
+    const optedIn = (body as GitRepoListing[]).filter((repo) =>
+      (repo.topics ?? []).includes(OPT_IN_TOPIC),
+    );
 
     const candidates: DiscoveredCandidate[] = [];
     for (const repo of optedIn) {
       if (!repo.manifest_url) {
         continue; // opted in via topic but no manifest published yet — not a candidate
       }
-      const manifest = (await fetchJsonSameOrigin(repo.manifest_url, deps?.fetchImpl)) as ArmComponentManifest;
+      const manifest = (await fetchJsonSameOrigin(
+        repo.manifest_url,
+        deps?.fetchImpl,
+      )) as ArmComponentManifest;
       const kindParse = componentKindSchema.safeParse(manifest.kind);
       candidates.push({
         externalRef: repo.full_name ?? repo.name,

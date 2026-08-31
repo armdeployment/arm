@@ -98,9 +98,7 @@ function isAllowed(filePath: string): boolean {
 }
 
 /** Pure function form — used by mutation proofs. */
-export function checkNoProfileBranching(
-  files: { path: string; content: string }[],
-): CheckResult {
+export function checkNoProfileBranching(files: { path: string; content: string }[]): CheckResult {
   const violations: Violation[] = [];
 
   for (const f of files) {
@@ -135,9 +133,7 @@ export function checkNoProfileBranching(
     return {
       id: "no-profile-branching",
       status: "fail",
-      detail: violations
-        .map((v) => `${v.file}:${v.line} — "${v.match}"`)
-        .join("\n"),
+      detail: violations.map((v) => `${v.file}:${v.line} — "${v.match}"`).join("\n"),
       scanned,
       assertsNegative: true,
     };

@@ -42,9 +42,9 @@ The order of the argument is the order of the value prop. Do not lead with cost;
 cost is the second beat, and on-prem is a line in the deployment table.
 
 **Above the fold.** One sentence on the problem, one on what ARM does, one CTA to
-the demo. The problem, stated plainly: *companies buy AI seats and a small technical
+the demo. The problem, stated plainly: _companies buy AI seats and a small technical
 minority uses them; everyone else never gets a correctly configured agent, so
-adoption stalls and nobody can see it.*
+adoption stalls and nobody can see it._
 
 **Then, in order:**
 
@@ -58,8 +58,8 @@ adoption stalls and nobody can see it.*
    never leave the customer's network.
 3. **Cost control** — cost per active seat and cost per work product; budgets and
    priority tiers; the savings ledger. Secondary beat, one screen.
-4. **Deployment** — SaaS or self-hosted, and *"bring your own models, including
-   self-hosted open models, if you want them"*. One row in a table. Do not build a
+4. **Deployment** — SaaS or self-hosted, and _"bring your own models, including
+   self-hosted open models, if you want them"_. One row in a table. Do not build a
    page around on-prem LLMs.
 
 **Honesty constraints — non-negotiable:**

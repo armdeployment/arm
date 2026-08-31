@@ -65,12 +65,8 @@
           "name": "department_org_id_organization_id_fk",
           "tableFrom": "department",
           "tableTo": "organization",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -78,12 +74,8 @@
           "name": "department_tenant_id_tenant_id_fk",
           "tableFrom": "department",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -137,12 +129,8 @@
           "name": "group_dept_id_department_id_fk",
           "tableFrom": "group",
           "tableTo": "department",
-          "columnsFrom": [
-            "dept_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dept_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -150,12 +138,8 @@
           "name": "group_tenant_id_tenant_id_fk",
           "tableFrom": "group",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -209,12 +193,8 @@
           "name": "organization_tenant_id_tenant_id_fk",
           "tableFrom": "organization",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -268,12 +248,8 @@
           "name": "team_group_id_group_id_fk",
           "tableFrom": "team",
           "tableTo": "group",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -281,12 +257,8 @@
           "name": "team_tenant_id_tenant_id_fk",
           "tableFrom": "team",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -407,12 +379,8 @@
           "name": "workstream_team_id_team_id_fk",
           "tableFrom": "workstream",
           "tableTo": "team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -420,12 +388,8 @@
           "name": "workstream_tenant_id_tenant_id_fk",
           "tableFrom": "workstream",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -533,12 +497,8 @@
           "name": "agent_tenant_id_tenant_id_fk",
           "tableFrom": "agent",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -546,12 +506,8 @@
           "name": "agent_owner_user_id_user_id_fk",
           "tableFrom": "agent",
           "tableTo": "user",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -559,12 +515,8 @@
           "name": "agent_stakeholder_user_id_user_id_fk",
           "tableFrom": "agent",
           "tableTo": "user",
-          "columnsFrom": [
-            "stakeholder_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stakeholder_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -574,9 +526,7 @@
         "agent_sub_account_id_unique": {
           "name": "agent_sub_account_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "sub_account_id"
-          ]
+          "columns": ["sub_account_id"]
         }
       },
       "policies": {},
@@ -632,12 +582,8 @@
           "name": "delegate_key_tenant_id_tenant_id_fk",
           "tableFrom": "delegate_key",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -717,12 +663,8 @@
           "name": "role_tenant_id_tenant_id_fk",
           "tableFrom": "role",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -795,12 +737,8 @@
           "name": "sub_account_tenant_id_tenant_id_fk",
           "tableFrom": "sub_account",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -808,12 +746,8 @@
           "name": "sub_account_user_id_user_id_fk",
           "tableFrom": "sub_account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -821,12 +755,8 @@
           "name": "sub_account_agent_id_agent_id_fk",
           "tableFrom": "sub_account",
           "tableTo": "agent",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -895,12 +825,8 @@
           "name": "user_role_user_id_user_id_fk",
           "tableFrom": "user_role",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -908,12 +834,8 @@
           "name": "user_role_role_id_role_id_fk",
           "tableFrom": "user_role",
           "tableTo": "role",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -921,12 +843,8 @@
           "name": "user_role_tenant_id_tenant_id_fk",
           "tableFrom": "user_role",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -980,12 +898,8 @@
           "name": "user_tenant_id_tenant_id_fk",
           "tableFrom": "user",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -993,12 +907,8 @@
           "name": "user_org_id_organization_id_fk",
           "tableFrom": "user",
           "tableTo": "organization",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1077,12 +987,8 @@
           "name": "budget_tenant_id_tenant_id_fk",
           "tableFrom": "budget",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1176,12 +1082,8 @@
           "name": "llm_policy_tenant_id_tenant_id_fk",
           "tableFrom": "llm_policy",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1278,12 +1180,8 @@
           "name": "model_tenant_id_tenant_id_fk",
           "tableFrom": "model",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1350,12 +1248,8 @@
           "name": "access_approval_tenant_id_tenant_id_fk",
           "tableFrom": "access_approval",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1363,12 +1257,8 @@
           "name": "access_approval_request_id_access_request_id_fk",
           "tableFrom": "access_approval",
           "tableTo": "access_request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1376,12 +1266,8 @@
           "name": "access_approval_approver_id_user_id_fk",
           "tableFrom": "access_approval",
           "tableTo": "user",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1468,12 +1354,8 @@
           "name": "access_request_tenant_id_tenant_id_fk",
           "tableFrom": "access_request",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1481,12 +1363,8 @@
           "name": "access_request_requester_agent_id_agent_id_fk",
           "tableFrom": "access_request",
           "tableTo": "agent",
-          "columnsFrom": [
-            "requester_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1494,12 +1372,8 @@
           "name": "access_request_resource_id_resource_id_fk",
           "tableFrom": "access_request",
           "tableTo": "resource",
-          "columnsFrom": [
-            "resource_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["resource_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1507,12 +1381,8 @@
           "name": "access_request_approver_id_user_id_fk",
           "tableFrom": "access_request",
           "tableTo": "user",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1566,12 +1436,8 @@
           "name": "classification_level_tenant_id_tenant_id_fk",
           "tableFrom": "classification_level",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1581,9 +1447,7 @@
         "classification_level_name_unique": {
           "name": "classification_level_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -1685,12 +1549,8 @@
           "name": "permission_grant_tenant_id_tenant_id_fk",
           "tableFrom": "permission_grant",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1698,12 +1558,8 @@
           "name": "permission_grant_resource_id_resource_id_fk",
           "tableFrom": "permission_grant",
           "tableTo": "resource",
-          "columnsFrom": [
-            "resource_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["resource_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1711,12 +1567,8 @@
           "name": "permission_grant_granted_by_user_id_fk",
           "tableFrom": "permission_grant",
           "tableTo": "user",
-          "columnsFrom": [
-            "granted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["granted_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1778,12 +1630,8 @@
           "name": "resource_connector_tenant_id_tenant_id_fk",
           "tableFrom": "resource_connector",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1838,12 +1686,8 @@
           "name": "resource_role_tenant_id_tenant_id_fk",
           "tableFrom": "resource_role",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1917,12 +1761,8 @@
           "name": "resource_tenant_id_tenant_id_fk",
           "tableFrom": "resource",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1930,12 +1770,8 @@
           "name": "resource_connector_id_resource_connector_id_fk",
           "tableFrom": "resource",
           "tableTo": "resource_connector",
-          "columnsFrom": [
-            "connector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connector_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2024,12 +1860,8 @@
           "name": "work_type_taxonomy_tenant_id_tenant_id_fk",
           "tableFrom": "work_type_taxonomy",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2131,12 +1963,8 @@
           "name": "org_mutation_log_tenant_id_tenant_id_fk",
           "tableFrom": "org_mutation_log",
           "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2144,12 +1972,8 @@
           "name": "org_mutation_log_actor_user_id_user_id_fk",
           "tableFrom": "org_mutation_log",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2165,78 +1989,42 @@
     "public.access_request_status": {
       "name": "access_request_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "denied",
-        "expired",
-        "revoked"
-      ]
+      "values": ["pending", "approved", "denied", "expired", "revoked"]
     },
     "public.agent_status": {
       "name": "agent_status",
       "schema": "public",
-      "values": [
-        "active",
-        "disabled",
-        "retired",
-        "throttled"
-      ]
+      "values": ["active", "disabled", "retired", "throttled"]
     },
     "public.approval_decision": {
       "name": "approval_decision",
       "schema": "public",
-      "values": [
-        "approved",
-        "denied"
-      ]
+      "values": ["approved", "denied"]
     },
     "public.deployment": {
       "name": "deployment",
       "schema": "public",
-      "values": [
-        "saas",
-        "self_hosted"
-      ]
+      "values": ["saas", "self_hosted"]
     },
     "public.industry_profile": {
       "name": "industry_profile",
       "schema": "public",
-      "values": [
-        "tech",
-        "manufacturing",
-        "finance",
-        "holding",
-        "custom"
-      ]
+      "values": ["tech", "manufacturing", "finance", "holding", "custom"]
     },
     "public.model_kind": {
       "name": "model_kind",
       "schema": "public",
-      "values": [
-        "closed",
-        "self_hosted"
-      ]
+      "values": ["closed", "self_hosted"]
     },
     "public.principal_type": {
       "name": "principal_type",
       "schema": "public",
-      "values": [
-        "role",
-        "agent",
-        "team",
-        "workstream",
-        "dept"
-      ]
+      "values": ["role", "agent", "team", "workstream", "dept"]
     },
     "public.priority_tier": {
       "name": "priority_tier",
       "schema": "public",
-      "values": [
-        "critical",
-        "standard",
-        "background"
-      ]
+      "values": ["critical", "standard", "background"]
     },
     "public.resource_type": {
       "name": "resource_type",
@@ -2276,31 +2064,17 @@
     "public.spawned_by": {
       "name": "spawned_by",
       "schema": "public",
-      "values": [
-        "user",
-        "automation",
-        "template"
-      ]
+      "values": ["user", "automation", "template"]
     },
     "public.vending_strategy": {
       "name": "vending_strategy",
       "schema": "public",
-      "values": [
-        "proxy",
-        "mint",
-        "sync"
-      ]
+      "values": ["proxy", "mint", "sync"]
     },
     "public.work_type_stage": {
       "name": "work_type_stage",
       "schema": "public",
-      "values": [
-        "structural",
-        "cache",
-        "linear",
-        "embedding",
-        "unknown"
-      ]
+      "values": ["structural", "cache", "linear", "embedding", "unknown"]
     }
   },
   "schemas": {},

@@ -30,7 +30,10 @@ describe("D10 pilot work package fixtures", () => {
     const knownIds = new Set(Object.values(componentFixturesBySlug).map((c) => c.id));
     for (const v of packageVersionFixtures) {
       for (const ref of v.components) {
-        expect(knownIds.has(ref.component_id), `dangling component_id ${ref.component_id} on ${v.id}`).toBe(true);
+        expect(
+          knownIds.has(ref.component_id),
+          `dangling component_id ${ref.component_id} on ${v.id}`,
+        ).toBe(true);
       }
     }
   });
@@ -84,7 +87,9 @@ describe("D10 pilot work package fixtures", () => {
   });
 
   it("material_planner is the only automated-mode pilot package (cross-checked via its budget/model routing shape)", () => {
-    const materialPlanner = packageVersionFixtures.find((v) => v.id === "40000000-0000-4000-8000-000000000006")!;
+    const materialPlanner = packageVersionFixtures.find(
+      (v) => v.id === "40000000-0000-4000-8000-000000000006",
+    )!;
     expect(materialPlanner.model_routing["batch_window"]).toBe("nightly");
   });
 });

@@ -47,7 +47,11 @@ const OUTCOME_STYLE: Record<string, { bg: string; fg: string }> = {
 };
 
 const columns: ColumnDef<ActivationRow>[] = [
-  { accessorKey: "ts", header: "When", cell: (c) => new Date(c.getValue<string>()).toLocaleString() },
+  {
+    accessorKey: "ts",
+    header: "When",
+    cell: (c) => new Date(c.getValue<string>()).toLocaleString(),
+  },
   { accessorKey: "userRef", header: "User" },
   { accessorKey: "jobFunctionKey", header: "Job function" },
   { accessorKey: "step", header: "Step" },
@@ -58,7 +62,10 @@ const columns: ColumnDef<ActivationRow>[] = [
       const v = c.getValue<string>();
       const style = OUTCOME_STYLE[v] ?? OUTCOME_STYLE.ok!;
       return (
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" style={{ backgroundColor: style.bg, color: style.fg }}>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+          style={{ backgroundColor: style.bg, color: style.fg }}
+        >
           {v}
         </span>
       );
@@ -66,7 +73,13 @@ const columns: ColumnDef<ActivationRow>[] = [
   },
 ];
 
-export function RecentActivationsPanelView({ status, activations, freshnessMs, sampleData, errorMessage }: RecentActivationsPanelViewProps) {
+export function RecentActivationsPanelView({
+  status,
+  activations,
+  freshnessMs,
+  sampleData,
+  errorMessage,
+}: RecentActivationsPanelViewProps) {
   const isEmpty = status === "ready" && (!activations || activations.length === 0);
   const effectiveStatus: PanelStatus = status === "ready" && isEmpty ? "empty" : status;
   const data = useMemo(() => activations ?? [], [activations]);
@@ -84,7 +97,12 @@ export function RecentActivationsPanelView({ status, activations, freshnessMs, s
       sampleData={sampleData}
     >
       {activations && (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Recent activations table, scrollable">
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Recent activations table, scrollable"
+        >
           <table className="w-full text-left text-[12px]">
             <thead>
               {table.getHeaderGroups().map((hg) => (
@@ -135,9 +153,12 @@ export function RecentActivationsPanel({
   );
 
   if (q.isLoading) return <RecentActivationsPanelView status="loading" />;
-  if (q.isError) return <RecentActivationsPanelView status="error" errorMessage={q.error?.message} />;
+  if (q.isError)
+    return <RecentActivationsPanelView status="error" errorMessage={q.error?.message} />;
 
-  const activations = step ? q.data!.activations.filter((a) => a.step === step) : q.data!.activations;
+  const activations = step
+    ? q.data!.activations.filter((a) => a.step === step)
+    : q.data!.activations;
 
   return (
     <RecentActivationsPanelView

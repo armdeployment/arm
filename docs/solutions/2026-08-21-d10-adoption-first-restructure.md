@@ -13,14 +13,14 @@ Travel Rule (§14.3).
 
 Three decisions came in:
 
-| | Decision |
-|---|---|
-| **Value prop** | (1) agent adoption at scale in the corporate, (2) cost saving, (3) on-prem LLM (nice-to-have) |
+|                  | Decision                                                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Value prop**   | (1) agent adoption at scale in the corporate, (2) cost saving, (3) on-prem LLM (nice-to-have)                                                             |
 | **Deliverables** | Server side: management panels · Client side: custom downloader driven by a questionnaire · Library: plugins/MCPs/skills per job function, with discovery |
 
 The short version: **ARM already has most of the machinery, but it is ordered
 around the wrong headline.** The repo is built cost-and-governance-first with the
-adoption work (D9 Work Packages, `arm setup`, client-core) sitting at the *end* of
+adoption work (D9 Work Packages, `arm setup`, client-core) sitting at the _end_ of
 the phase plan (1.5–1.7, still PROPOSED). The three decisions invert that order.
 Two of the three deliverables exist in skeleton form; the third (library +
 discovery) is the largest genuinely new build.
@@ -74,13 +74,13 @@ metering share and `$/work-product`.
 
 ## 2. Where the decisions collide with what's there
 
-| Decision | Collision |
-|---|---|
-| Adoption is primary | Adoption work is last in the phase plan; there is **no adoption metric and no adoption panel anywhere** in the product. §12 already carries an "agent adoption failure" risk row — under the new value prop that is no longer a risk, it is the thesis. |
-| Cost saving secondary | Cost is currently the loudest surface (`/spend` as a Platform-level route, savings estimator, GPU brokering, hosting-cost model, "closed vs self-hosted" as the framing). Needs demotion, not deletion. |
-| On-prem LLM nice-to-have | `apps/data-plane/open-gateway` is described as **backbone** ("self-hosted open gateway + closed-proxy as backbone", §Decisions locked) and problem statement #2 is open-model migration. That is a headline-level claim for something now labelled nice-to-have. |
-| Server panels | Exist, but organised around cost/governance and running on fixtures. No adoption funnel, no library browser, no rollout surface. |
-| Questionnaire downloader | Conflicts with the roadmap's stated "the client asks exactly two questions" principle (§3.1 of the roadmap). Resolvable — see §5 — but it must be written down, not left as two contradictory docs. |
+| Decision                             | Collision                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adoption is primary                  | Adoption work is last in the phase plan; there is **no adoption metric and no adoption panel anywhere** in the product. §12 already carries an "agent adoption failure" risk row — under the new value prop that is no longer a risk, it is the thesis.                                                                                                                                                         |
+| Cost saving secondary                | Cost is currently the loudest surface (`/spend` as a Platform-level route, savings estimator, GPU brokering, hosting-cost model, "closed vs self-hosted" as the framing). Needs demotion, not deletion.                                                                                                                                                                                                         |
+| On-prem LLM nice-to-have             | `apps/data-plane/open-gateway` is described as **backbone** ("self-hosted open gateway + closed-proxy as backbone", §Decisions locked) and problem statement #2 is open-model migration. That is a headline-level claim for something now labelled nice-to-have.                                                                                                                                                |
+| Server panels                        | Exist, but organised around cost/governance and running on fixtures. No adoption funnel, no library browser, no rollout surface.                                                                                                                                                                                                                                                                                |
+| Questionnaire downloader             | Conflicts with the roadmap's stated "the client asks exactly two questions" principle (§3.1 of the roadmap). Resolvable — see §5 — but it must be written down, not left as two contradictory docs.                                                                                                                                                                                                             |
 | Library per job function + discovery | `skills`, `subagent_configs`, `permissions`, `starter_prompts`, `template_refs` are **bare `string[]`** inside the package manifest — no entity, no version, no owner, no review status, no search. "Discovery" in the codebase today means `/.well-known/arm-agent` self-config, **not** package search. Job functions exist only as prose in `docs/research/oem-job-taxonomy.md` (~250 roles / 20 functions). |
 
 One process blocker worth naming first: **D6, D7 and D9 are all still `PROPOSED`,
@@ -179,16 +179,16 @@ questions.** Worth stating in D11 in those words.
 
 ### 5.2 New/changed components
 
-| Component | Change |
-|---|---|
-| `apps/public` (currently **empty**) | Becomes the unauthenticated/tenant-scoped landing + questionnaire + download flow (`/start`). Natural home; no new app needed. |
-| `packages/questionnaire` (new) | Declarative question graph (JSON per industry profile — D6 rule: presets set defaults, never gate) + a **pure, deterministic** answers→ranked-packages mapping engine. Zero-LLM on the mapping path, mirroring D7's cascade philosophy, so recommendations are reproducible and auditable. Optional LLM assist confined to free-text "describe your job" → candidate job functions, never to the final mapping. |
-| `packages/client-core` | `runSetup` gains a `setupToken` path beside the existing `roleKey` path; new `resolveFromSetupToken()`. The roleKey/flags path stays for power users and CI. |
-| `apps/cli` | `arm setup --token <code>`; bare `arm setup` opens the browser flow. |
-| `packages/db` | `questionnaire_definition` (tenant-scoped, versioned), `questionnaire_response`, `setup_token` (short-lived, single-use). Responses feed the adoption funnel and the discovery gap list. |
-| `packages/trpc` | New `onboarding` router: `getQuestionnaire`, `submitResponse`, `recommend`, `issueSetupToken`, `redeemSetupToken`. |
-| `apps/control-plane/web` | `/rollout` — questionnaire designer + campaign links + activation codes. |
-| Installers | msi / pkg / deb wrapping the CLI, code-signed + notarized, shipped **before** any GUI. A Desktop GUI (Tauri vs Electron, roadmap open question #4) is deferrable if the web questionnaire carries the UX. |
+| Component                           | Change                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/public` (currently **empty**) | Becomes the unauthenticated/tenant-scoped landing + questionnaire + download flow (`/start`). Natural home; no new app needed.                                                                                                                                                                                                                                                                                  |
+| `packages/questionnaire` (new)      | Declarative question graph (JSON per industry profile — D6 rule: presets set defaults, never gate) + a **pure, deterministic** answers→ranked-packages mapping engine. Zero-LLM on the mapping path, mirroring D7's cascade philosophy, so recommendations are reproducible and auditable. Optional LLM assist confined to free-text "describe your job" → candidate job functions, never to the final mapping. |
+| `packages/client-core`              | `runSetup` gains a `setupToken` path beside the existing `roleKey` path; new `resolveFromSetupToken()`. The roleKey/flags path stays for power users and CI.                                                                                                                                                                                                                                                    |
+| `apps/cli`                          | `arm setup --token <code>`; bare `arm setup` opens the browser flow.                                                                                                                                                                                                                                                                                                                                            |
+| `packages/db`                       | `questionnaire_definition` (tenant-scoped, versioned), `questionnaire_response`, `setup_token` (short-lived, single-use). Responses feed the adoption funnel and the discovery gap list.                                                                                                                                                                                                                        |
+| `packages/trpc`                     | New `onboarding` router: `getQuestionnaire`, `submitResponse`, `recommend`, `issueSetupToken`, `redeemSetupToken`.                                                                                                                                                                                                                                                                                              |
+| `apps/control-plane/web`            | `/rollout` — questionnaire designer + campaign links + activation codes.                                                                                                                                                                                                                                                                                                                                        |
+| Installers                          | msi / pkg / deb wrapping the CLI, code-signed + notarized, shipped **before** any GUI. A Desktop GUI (Tauri vs Electron, roadmap open question #4) is deferrable if the web questionnaire carries the UX.                                                                                                                                                                                                       |
 
 ### 5.3 Two things to decide before building
 
@@ -196,7 +196,7 @@ questions.** Worth stating in D11 in those words.
   it auto-approve for low-risk packages, or always route to an approver? Auto-
   approve is the adoption-first answer; a per-package `approval_required` flag with
   a tenant default is the compromise.
-- **Free-text and Invariant 1.** "Describe what you do all day" is *content*. If
+- **Free-text and Invariant 1.** "Describe what you do all day" is _content_. If
   the questionnaire is served by the SaaS control plane, free-text answers are
   content leaving the tenant boundary. Options: keep free-text tenant-side only,
   hash/structure it client-side before submission, or carve out an explicit
@@ -282,12 +282,12 @@ questionnaire free-text vs Invariant 1 (§5.3 above).
 
 ### 7.2 New guardrails (mutation-proofed per §14.2)
 
-| Guard | Asserts |
-|---|---|
-| `component-review` | No package version pins a component whose `review_status ≠ approved`. |
-| `questionnaire-determinism` | The answers→packages mapping path is pure; no LLM/network call reachable from it. |
-| `no-content-in-activation` | `activation_event` + questionnaire telemetry schemas carry no free-text/content fields (extension of the existing `no-content-egress` guard). |
-| `package-integrity` (amend) | Extend to component refs after the wire change. |
+| Guard                       | Asserts                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `component-review`          | No package version pins a component whose `review_status ≠ approved`.                                                                         |
+| `questionnaire-determinism` | The answers→packages mapping path is pure; no LLM/network call reachable from it.                                                             |
+| `no-content-in-activation`  | `activation_event` + questionnaire telemetry schemas carry no free-text/content fields (extension of the existing `no-content-egress` guard). |
+| `package-integrity` (amend) | Extend to component refs after the wire change.                                                                                               |
 
 ### 7.3 Documents to update in the same PR series
 
@@ -318,27 +318,27 @@ top-level position.
 
 ## 8. Proposed sequencing
 
-| Wave | Content | Gate |
-|---|---|---|
-| **0 — docs only** | Lock D6/D7/D9. Write D10/D11/D12. Spec v0.7, README, AGENTS. | Value prop and phase plan agreed on paper before a line changes. |
-| **1 — library spine** | `job_function` taxonomy + component/component_version (option a) + manifest wire change + golden vector + `component-review` guard. | Registry can express a skill/plugin/MCP per job function; guardrails green under mutation. |
+| Wave                               | Content                                                                                                                                    | Gate                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **0 — docs only**                  | Lock D6/D7/D9. Write D10/D11/D12. Spec v0.7, README, AGENTS.                                                                               | Value prop and phase plan agreed on paper before a line changes.                                               |
+| **1 — library spine**              | `job_function` taxonomy + component/component_version (option a) + manifest wire change + golden vector + `component-review` guard.        | Registry can express a skill/plugin/MCP per job function; guardrails green under mutation.                     |
 | **2 — questionnaire + downloader** | `packages/questionnaire`, `apps/public /start`, setup token, client-core token path, CLI `--token`, signed installers, `activation_event`. | A non-technical employee: questionnaire → download → first metered call, unassisted, no flags, no config file. |
-| **3 — panels** | `/adoption` funnel + `/rollout` + `/library` search (internal discovery) + real Postgres/ClickHouse wiring. | Management can see the funnel and the gaps on live data. |
-| **4 — reach** | External discovery sources + review pipeline; Desktop GUI + MDM; cost panel rework. | — |
+| **3 — panels**                     | `/adoption` funnel + `/rollout` + `/library` search (internal discovery) + real Postgres/ClickHouse wiring.                                | Management can see the funnel and the gaps on live data.                                                       |
+| **4 — reach**                      | External discovery sources + review pipeline; Desktop GUI + MDM; cost panel rework.                                                        | —                                                                                                              |
 
 ### Success criteria to replace the current ones
 
 Adoption-first means the top-line metric changes. Proposed §9/1.y replacement:
 
-| Metric | Target |
-|---|---|
-| Activated seats / eligible seats (per tenant, 90 days) | primary top-line |
-| Time-to-first-value (questionnaire start → first metered call) | < 10 min, unassisted |
-| Questionnaire → download → install completion | ≥ 70% |
-| Job functions with ≥ 1 published package | ≥ 60% of the tenant's headcount-weighted functions |
-| Weekly active agent users / activated seats | ≥ 50% |
-| *(secondary)* cost per active seat, `$/work-product` | trending down |
-| *(nice-to-have)* share of traffic on self-hosted models | tracked, not targeted |
+| Metric                                                         | Target                                             |
+| -------------------------------------------------------------- | -------------------------------------------------- |
+| Activated seats / eligible seats (per tenant, 90 days)         | primary top-line                                   |
+| Time-to-first-value (questionnaire start → first metered call) | < 10 min, unassisted                               |
+| Questionnaire → download → install completion                  | ≥ 70%                                              |
+| Job functions with ≥ 1 published package                       | ≥ 60% of the tenant's headcount-weighted functions |
+| Weekly active agent users / activated seats                    | ≥ 50%                                              |
+| _(secondary)_ cost per active seat, `$/work-product`           | trending down                                      |
+| _(nice-to-have)_ share of traffic on self-hosted models        | tracked, not targeted                              |
 
 ---
 

@@ -7,7 +7,13 @@
 
 import { describe, it, expect } from "vitest";
 import { validateGraph } from "../src/validate.js";
-import { SHIPPED_GRAPHS, graphForIndustryProfile, manufacturingV1, techV1, genericV1 } from "../src/index.js";
+import {
+  SHIPPED_GRAPHS,
+  graphForIndustryProfile,
+  manufacturingV1,
+  techV1,
+  genericV1,
+} from "../src/index.js";
 
 describe("shipped graphs are well-formed", () => {
   for (const [profile, graph] of Object.entries(SHIPPED_GRAPHS)) {

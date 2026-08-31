@@ -23,8 +23,9 @@ How should ARM enforce the rule that confidential+ content cannot be sent to clo
 ## Rationale
 
 (a) wins because:
+
 1. **Prompt privacy (Invariant §11.1)**: ARM-the-control-plane is metadata + audit only. Content inspection would require content to flow through ARM, violating the core trust boundary.
-2. **Strategy-appropriate tagging**: mint connectors (S3/GCS) tag at credential-vending time; proxy connectors (DB) tag at response time. The point where access is *implied* is when the tag fires.
+2. **Strategy-appropriate tagging**: mint connectors (S3/GCS) tag at credential-vending time; proxy connectors (DB) tag at response time. The point where access is _implied_ is when the tag fires.
 3. **Phase 2 extensibility**: content-pattern DLP hooks are reserved at the proxy for Phase 2, but Phase 1 ships metadata-only audit by default.
 
 ## Consequences

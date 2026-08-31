@@ -18,10 +18,14 @@ export const orgMutationVerbEnum = ["create", "rename", "reparent", "delete"] as
 
 export const orgMutationLogTable = pgTable("org_mutation_log", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
 
   /** Who performed the mutation (always a human — Invariant 7). */
-  actorUserId: uuid("actor_user_id").notNull().references(() => userTable.id),
+  actorUserId: uuid("actor_user_id")
+    .notNull()
+    .references(() => userTable.id),
 
   /** Which verb: create | rename | reparent | delete. */
   verb: text("verb").$type<(typeof orgMutationVerbEnum)[number]>().notNull(),

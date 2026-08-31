@@ -9,9 +9,24 @@ import { COLORS } from "../theme";
 
 export const V3 = {
   routers: [
-    { name: "adoption-router.ts", store: "ClickHouse", verb: "6 of 6 procedures", color: COLORS.cyan },
-    { name: "catalog-router.ts", store: "Postgres", verb: "6 of 6 procedures", color: COLORS.navy },
-    { name: "library-router.ts", store: "Postgres", verb: "9 of 12 procedures", color: COLORS.gold },
+    {
+      name: "adoption-router.ts",
+      store: "ClickHouse",
+      verb: "6 of 6 procedures",
+      color: COLORS.cyan,
+    },
+    {
+      name: "catalog-router.ts",
+      store: "Postgres",
+      verb: "6 of 6 procedures",
+      color: COLORS.navy,
+    },
+    {
+      name: "library-router.ts",
+      store: "Postgres",
+      verb: "9 of 12 procedures",
+      color: COLORS.gold,
+    },
   ],
 
   // Real numbers, read live off /adoption with ARM_FIXTURE_MODE=0
@@ -59,11 +74,13 @@ export const V3 = {
   bugsFound: [
     {
       title: `"tn_demo" is not a UUID`,
-      detail: "Postgres tenant_id/owner_user_id columns are uuid-typed with FK constraints — the dev route's human-readable placeholders always failed against real mode, silently passed in fixture mode.",
+      detail:
+        "Postgres tenant_id/owner_user_id columns are uuid-typed with FK constraints — the dev route's human-readable placeholders always failed against real mode, silently passed in fixture mode.",
     },
     {
       title: "eligibleSeats & trend hardcoded to 0 / []",
-      detail: "adoption-router.ts's real-mode branch never queried ClickHouse for two of activeUsers's four fields — only caught by reading the live number, not by a passing test.",
+      detail:
+        "adoption-router.ts's real-mode branch never queried ClickHouse for two of activeUsers's four fields — only caught by reading the live number, not by a passing test.",
     },
     {
       title: "Node fetch() rejects credentialed URLs",
@@ -71,5 +88,9 @@ export const V3 = {
     },
   ],
 
-  testSummary: { files: 6, tests: 111, withLiveDb: "DATABASE_URL + CLICKHOUSE_URL set" },
+  testSummary: {
+    files: 6,
+    tests: 111,
+    withLiveDb: "DATABASE_URL + CLICKHOUSE_URL set",
+  },
 };

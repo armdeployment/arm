@@ -12,7 +12,15 @@
  * import `@arm/catalog` back.
  */
 
-export { DIGEST_RE, sha256Hex, formatDigest, digestOf, isValidDigest, parseDigest, assertDigestMatches } from "./digest.js";
+export {
+  DIGEST_RE,
+  sha256Hex,
+  formatDigest,
+  digestOf,
+  isValidDigest,
+  parseDigest,
+  assertDigestMatches,
+} from "./digest.js";
 
 export { canonicalizeComponentManifest, componentManifestSha256 } from "./manifest.js";
 
@@ -37,7 +45,11 @@ export {
 
 export type { StorageBackend } from "./storage/backend.js";
 export { NotImplementedError } from "./storage/backend.js";
-export { FsStorageBackend, DEV_PLACEHOLDER_SIGNING_KEY, type FsBackendOptions } from "./storage/fs.js";
+export {
+  FsStorageBackend,
+  DEV_PLACEHOLDER_SIGNING_KEY,
+  type FsBackendOptions,
+} from "./storage/fs.js";
 export {
   S3StorageBackend,
   type S3BackendOptions,
@@ -46,7 +58,12 @@ export {
 } from "./storage/s3.js";
 export { OciStorageBackend } from "./storage/oci.js";
 
-export { DigestCache, type DigestCacheEntry, type DigestCacheOptions, type DigestFetcher } from "./cache.js";
+export {
+  DigestCache,
+  type DigestCacheEntry,
+  type DigestCacheOptions,
+  type DigestFetcher,
+} from "./cache.js";
 
 export {
   FIXTURE_TENANT_ID,

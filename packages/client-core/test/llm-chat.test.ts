@@ -16,7 +16,10 @@ describe("sendChatMessage", () => {
   });
 
   async function startMockProxy(
-    handler: (body: unknown, headers: Record<string, string | string[] | undefined>) => { status: number; body: unknown },
+    handler: (
+      body: unknown,
+      headers: Record<string, string | string[] | undefined>,
+    ) => { status: number; body: unknown },
   ): Promise<string> {
     const server = createServer((req, res) => {
       const chunks: Buffer[] = [];
@@ -42,7 +45,13 @@ describe("sendChatMessage", () => {
       capturedHeaders = headers;
       return {
         status: 200,
-        body: { id: "msg_1", model: "claude-sonnet-4-20250514", content: [{ type: "text", text: "What's your role?" }], usage: {}, stop_reason: "end_turn" },
+        body: {
+          id: "msg_1",
+          model: "claude-sonnet-4-20250514",
+          content: [{ type: "text", text: "What's your role?" }],
+          usage: {},
+          stop_reason: "end_turn",
+        },
       };
     });
 
@@ -58,22 +67,38 @@ describe("sendChatMessage", () => {
     expect(capturedHeaders["authorization"]).toBe("Bearer arm_mtr_test-token");
     expect(capturedHeaders["x-arm-subaccountid"]).toBe("sa_123");
     expect(capturedHeaders["x-arm-tenantid"]).toBe("tn_123");
-    const sentMessages = (capturedBody as { messages: { role: string; content: string }[] }).messages;
+    const sentMessages = (capturedBody as { messages: { role: string; content: string }[] })
+      .messages;
     expect(sentMessages[0]).toEqual({ role: "system", content: INSTALL_ASSISTANT_SYSTEM_PROMPT });
     expect(sentMessages[1]).toEqual({ role: "user", content: "I lead a manufacturing plant" });
   });
 
   it("throws ArmClientError('PROXY_UNREACHABLE') on a non-2xx response", async () => {
-    const armProxyUrl = await startMockProxy(() => ({ status: 403, body: { error: { type: "model_access_denied" } } }));
+    const armProxyUrl = await startMockProxy(() => ({
+      status: 403,
+      body: { error: { type: "model_access_denied" } },
+    }));
     await expect(
-      sendChatMessage({ armProxyUrl, agentToken: "t", subAccountId: "sa", tenantId: "tn", messages: [] }),
+      sendChatMessage({
+        armProxyUrl,
+        agentToken: "t",
+        subAccountId: "sa",
+        tenantId: "tn",
+        messages: [],
+      }),
     ).rejects.toMatchObject({ code: "PROXY_UNREACHABLE" } satisfies Partial<ArmClientError>);
   });
 
   it("throws ArmClientError when the response has no text content block", async () => {
     const armProxyUrl = await startMockProxy(() => ({ status: 200, body: { content: [] } }));
     await expect(
-      sendChatMessage({ armProxyUrl, agentToken: "t", subAccountId: "sa", tenantId: "tn", messages: [] }),
+      sendChatMessage({
+        armProxyUrl,
+        agentToken: "t",
+        subAccountId: "sa",
+        tenantId: "tn",
+        messages: [],
+      }),
     ).rejects.toThrow(/no text content/);
   });
 

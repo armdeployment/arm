@@ -32,25 +32,25 @@ Director > Manager > IC) is wrong for three reasons:
 
 The org-tree permission model is capability-based, NOT title-based. Four verbs:
 
-| Permission | What it allows | Default scope |
-|---|---|---|
-| `org_node:create` | Add a child node | delegated (plant_manager, subsidiary_admin) |
-| `org_node:rename` | Rename a node | delegated (dept_head, plant_manager) |
-| `org_node:reparent` | Move a node under a different parent | **org_admin only** |
-| `org_node:delete` | Remove a node (only if no active agents) | **org_admin only** |
+| Permission          | What it allows                           | Default scope                               |
+| ------------------- | ---------------------------------------- | ------------------------------------------- |
+| `org_node:create`   | Add a child node                         | delegated (plant_manager, subsidiary_admin) |
+| `org_node:rename`   | Rename a node                            | delegated (dept_head, plant_manager)        |
+| `org_node:reparent` | Move a node under a different parent     | **org_admin only**                          |
+| `org_node:delete`   | Remove a node (only if no active agents) | **org_admin only**                          |
 
 ### Role presets (seeded by profile, editable at runtime)
 
-The profile ships role presets that map to titles *at provisioning time*. After
+The profile ships role presets that map to titles _at provisioning time_. After
 provisioning, the `org_admin` can reconfigure them via `/admin/roles`.
 
-| Preset | Scope | Permissions |
-|---|---|---|
-| `org_admin` | org root (singleton) | all four verbs + `*` |
-| `subsidiary_admin` | organization node | create + rename (within subtree) |
-| `plant_manager` | plant node | create + rename (within plant) |
-| `dept_head` / `desk_head` | department node | rename own dept only |
-| `viewer` | any node | read-only |
+| Preset                    | Scope                | Permissions                      |
+| ------------------------- | -------------------- | -------------------------------- |
+| `org_admin`               | org root (singleton) | all four verbs + `*`             |
+| `subsidiary_admin`        | organization node    | create + rename (within subtree) |
+| `plant_manager`           | plant node           | create + rename (within plant)   |
+| `dept_head` / `desk_head` | department node      | rename own dept only             |
+| `viewer`                  | any node             | read-only                        |
 
 A real customer maps these to their titles: at Siemens a "Senior VP Manufacturing"
 gets `subsidiary_admin` on the Manufacturing Division; at a startup the "Head of

@@ -31,7 +31,9 @@ describe("parseExpectedChecksum", () => {
 
   it("throws (never installs unverified bytes) when the filename isn't listed", () => {
     const manifest = "aaaa...  some-other-file.tar.gz";
-    expect(() => parseExpectedChecksum(manifest, "node-v20.18.1-darwin-x64.tar.gz")).toThrow(ArmClientError);
+    expect(() => parseExpectedChecksum(manifest, "node-v20.18.1-darwin-x64.tar.gz")).toThrow(
+      ArmClientError,
+    );
   });
 });
 
@@ -54,7 +56,10 @@ describe("detectRuntime", () => {
       if (command === "python3") return { stdout: "Python 3.12.8\n" };
       throw new Error("not found");
     };
-    const probe = await detectRuntime("python", { agentHome: "/tmp/nonexistent-agent-home", execFileFn });
+    const probe = await detectRuntime("python", {
+      agentHome: "/tmp/nonexistent-agent-home",
+      execFileFn,
+    });
     expect(probe.present).toBe(true);
     expect(probe.version).toBe("3.12.8");
   });
@@ -63,7 +68,10 @@ describe("detectRuntime", () => {
     const execFileFn: ExecFileFn = async () => {
       throw new Error("command not found");
     };
-    const probe = await detectRuntime("node", { agentHome: "/tmp/nonexistent-agent-home", execFileFn });
+    const probe = await detectRuntime("node", {
+      agentHome: "/tmp/nonexistent-agent-home",
+      execFileFn,
+    });
     expect(probe.present).toBe(false);
     expect(probe.path).toBeUndefined();
   });
@@ -99,7 +107,13 @@ describe("provisionRuntime", () => {
       throw new Error("must not fetch when already present");
     }) as unknown as typeof fetch;
 
-    const result = await provisionRuntime("node", { agentHome, execFileFn, fetchFn, platform: "darwin", arch: "arm64" });
+    const result = await provisionRuntime("node", {
+      agentHome,
+      execFileFn,
+      fetchFn,
+      platform: "darwin",
+      arch: "arm64",
+    });
     expect(result.provisioned).toBe(false);
   });
 
@@ -130,12 +144,25 @@ describe("provisionRuntime", () => {
         return { ok: true, text: async () => `${sha256}  ${target.archiveFileName}` } as Response;
       }
       if (url === target.archiveUrl) {
-        return { ok: true, arrayBuffer: async () => archiveBytes.buffer.slice(archiveBytes.byteOffset, archiveBytes.byteOffset + archiveBytes.byteLength) } as Response;
+        return {
+          ok: true,
+          arrayBuffer: async () =>
+            archiveBytes.buffer.slice(
+              archiveBytes.byteOffset,
+              archiveBytes.byteOffset + archiveBytes.byteLength,
+            ),
+        } as Response;
       }
       throw new Error(`unexpected fetch: ${url}`);
     }) as unknown as typeof fetch;
 
-    const result = await provisionRuntime("node", { agentHome, execFileFn, fetchFn, platform: "linux", arch: "x64" });
+    const result = await provisionRuntime("node", {
+      agentHome,
+      execFileFn,
+      fetchFn,
+      platform: "linux",
+      arch: "x64",
+    });
     expect(result.provisioned).toBe(true);
     expect(result.path).toBe(join(bundledRuntimeBinDir(agentHome, "node"), "node"));
   });
@@ -152,13 +179,23 @@ describe("provisionRuntime", () => {
       }
       if (url === target.archiveUrl) {
         const bytes = Buffer.from("tampered or corrupted bytes");
-        return { ok: true, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) } as Response;
+        return {
+          ok: true,
+          arrayBuffer: async () =>
+            bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        } as Response;
       }
       throw new Error(`unexpected fetch: ${url}`);
     }) as unknown as typeof fetch;
 
     await expect(
-      provisionRuntime("python", { agentHome, execFileFn, fetchFn, platform: "darwin", arch: "arm64" }),
+      provisionRuntime("python", {
+        agentHome,
+        execFileFn,
+        fetchFn,
+        platform: "darwin",
+        arch: "arm64",
+      }),
     ).rejects.toThrow(/checksum/);
   });
 
@@ -167,7 +204,8 @@ describe("provisionRuntime", () => {
     const execFileFn: ExecFileFn = async () => {
       throw new Error("not found");
     };
-    const fetchFn = (async () => ({ ok: false, status: 404 }) as Response) as unknown as typeof fetch;
+    const fetchFn = (async () =>
+      ({ ok: false, status: 404 }) as Response) as unknown as typeof fetch;
 
     await expect(
       provisionRuntime("node", { agentHome, execFileFn, fetchFn, platform: "linux", arch: "x64" }),

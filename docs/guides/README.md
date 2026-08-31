@@ -11,13 +11,13 @@ Five guides. One lands first and freezes the contracts; the other four are then
 implemented **in parallel** by independent sub-agents that never write to the
 same file.
 
-| # | Guide | Owner agent | Wave |
-|---|---|---|---|
-| 00 | [Shared contracts](00-shared-contracts.md) | `contracts` | **0 — must complete first** |
-| 01 | [Library / Artifactory](01-library-artifactory.md) | `library` | 1 |
-| 02 | [Server side — management panels](02-server-panels.md) | `server` | 1 |
-| 03 | [Client side — questionnaire downloader](03-client-downloader.md) | `client` | 1 |
-| 04 | [Public site + live demo](04-public-site-demo.md) | `site` | 1 |
+| #   | Guide                                                             | Owner agent | Wave                        |
+| --- | ----------------------------------------------------------------- | ----------- | --------------------------- |
+| 00  | [Shared contracts](00-shared-contracts.md)                        | `contracts` | **0 — must complete first** |
+| 01  | [Library / Artifactory](01-library-artifactory.md)                | `library`   | 1                           |
+| 02  | [Server side — management panels](02-server-panels.md)            | `server`    | 1                           |
+| 03  | [Client side — questionnaire downloader](03-client-downloader.md) | `client`    | 1                           |
+| 04  | [Public site + live demo](04-public-site-demo.md)                 | `site`      | 1                           |
 
 Background: `docs/solutions/2026-08-21-d10-adoption-first-restructure.md`.
 
@@ -28,16 +28,16 @@ Background: `docs/solutions/2026-08-21-d10-adoption-first-restructure.md`.
 These were decided on 2026-08-21. **No sub-agent may change them.** If a guide's
 instructions appear to conflict with one, stop and report — do not improvise.
 
-| # | Assumption |
-|---|---|
-| A1 | **Value prop order**: agent adoption at scale (primary) → cost saving (secondary) → on-prem LLM (nice-to-have). Every metric, panel, and headline reflects that order. |
-| A2 | **The library is a real artifactory**: immutable, content-addressed, versioned artifact storage with signed manifests and a pluggable blob backend — not a metadata-only registry. |
-| A3 | **`tool` generalizes to `component`.** One registry entity with a `kind` discriminator. No parallel `skill`/`plugin` tables. No production data exists (fixtures only), so this is a clean cutover with no back-compat reader. |
-| A4 | **"Custom downloader" = one signed generic client + a per-user signed setup token.** Never a per-user compiled binary. |
-| A5 | **Questionnaire free-text never reaches the control plane.** Only structured answers and derived keys are transmitted or stored (Invariant 1). |
-| A6 | **Questionnaire recommendations auto-approve** for packages flagged `approval_required = false`; everything else routes to an approver. |
-| A7 | **No Desktop GUI in this scope.** Web questionnaire + signed platform installers wrapping the CLI. |
-| A8 | The eight §11 invariants are unchanged. Nothing in this work weakens one. |
+| #   | Assumption                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | **Value prop order**: agent adoption at scale (primary) → cost saving (secondary) → on-prem LLM (nice-to-have). Every metric, panel, and headline reflects that order.                                                         |
+| A2  | **The library is a real artifactory**: immutable, content-addressed, versioned artifact storage with signed manifests and a pluggable blob backend — not a metadata-only registry.                                             |
+| A3  | **`tool` generalizes to `component`.** One registry entity with a `kind` discriminator. No parallel `skill`/`plugin` tables. No production data exists (fixtures only), so this is a clean cutover with no back-compat reader. |
+| A4  | **"Custom downloader" = one signed generic client + a per-user signed setup token.** Never a per-user compiled binary.                                                                                                         |
+| A5  | **Questionnaire free-text never reaches the control plane.** Only structured answers and derived keys are transmitted or stored (Invariant 1).                                                                                 |
+| A6  | **Questionnaire recommendations auto-approve** for packages flagged `approval_required = false`; everything else routes to an approver.                                                                                        |
+| A7  | **No Desktop GUI in this scope.** Web questionnaire + signed platform installers wrapping the CLI.                                                                                                                             |
+| A8  | The eight §11 invariants are unchanged. Nothing in this work weakens one.                                                                                                                                                      |
 
 ---
 
@@ -66,13 +66,13 @@ instructions appear to conflict with one, stop and report — do not improvise.
 
 Exclusive write access. Anything not listed is read-only to every Wave-1 agent.
 
-| Path | Owner |
-|---|---|
-| `packages/proto/**`, `packages/db/src/schema/**`, `packages/clickhouse/**`, `scripts/guardrails/src/checks/{boundaries,ci-sync}.ts` | `contracts` (Wave 0 only) |
-| `packages/artifactory/**`, `packages/discovery/**`, `packages/catalog/**`, `packages/profiles/**`, `packages/trpc/src/library-router.ts`, `apps/data-plane/artifact-cache/**`, guardrails `component-review.ts` `artifact-integrity.ts` `blob-residency.ts` | `library` |
-| `apps/control-plane/web/**`, `apps/control-plane/workers/**`, `packages/trpc/src/adoption-router.ts`, `packages/trpc/src/index.ts` (router registration block only) | `server` |
-| `packages/questionnaire/**`, `packages/client-core/**`, `apps/cli/**`, `apps/onboarding/**`, `packaging/**`, `packages/trpc/src/onboarding-router.ts`, guardrails `questionnaire-determinism.ts` `no-content-in-activation.ts` | `client` |
-| `apps/public/**`, `docs/figures/**` | `site` |
+| Path                                                                                                                                                                                                                                                        | Owner                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `packages/proto/**`, `packages/db/src/schema/**`, `packages/clickhouse/**`, `scripts/guardrails/src/checks/{boundaries,ci-sync}.ts`                                                                                                                         | `contracts` (Wave 0 only) |
+| `packages/artifactory/**`, `packages/discovery/**`, `packages/catalog/**`, `packages/profiles/**`, `packages/trpc/src/library-router.ts`, `apps/data-plane/artifact-cache/**`, guardrails `component-review.ts` `artifact-integrity.ts` `blob-residency.ts` | `library`                 |
+| `apps/control-plane/web/**`, `apps/control-plane/workers/**`, `packages/trpc/src/adoption-router.ts`, `packages/trpc/src/index.ts` (router registration block only)                                                                                         | `server`                  |
+| `packages/questionnaire/**`, `packages/client-core/**`, `apps/cli/**`, `apps/onboarding/**`, `packaging/**`, `packages/trpc/src/onboarding-router.ts`, guardrails `questionnaire-determinism.ts` `no-content-in-activation.ts`                              | `client`                  |
+| `apps/public/**`, `docs/figures/**`                                                                                                                                                                                                                         | `site`                    |
 
 `packages/trpc/src/index.ts` is touched by two agents. To avoid a conflict, guide
 00 lands **all four router registrations up front** wired to placeholder routers

@@ -28,7 +28,9 @@ export const mcpRegistryAdapter: DiscoverySourceAdapter = {
     return (body as McpRegistryListing[]).map((listing) => {
       const externalRef = listing.id ?? listing.slug ?? listing.name;
       if (!externalRef) {
-        throw new Error(`mcp-registry adapter: listing has no id/slug/name to key on: ${JSON.stringify(listing)}`);
+        throw new Error(
+          `mcp-registry adapter: listing has no id/slug/name to key on: ${JSON.stringify(listing)}`,
+        );
       }
       return {
         externalRef: String(externalRef),

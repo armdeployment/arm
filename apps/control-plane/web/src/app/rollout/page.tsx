@@ -43,7 +43,9 @@ export default function RolloutPage() {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Rollout</h1>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          Rollout
+        </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
           Questionnaire designer, campaigns, download artifacts — the admin side of adoption
         </p>
@@ -76,16 +78,29 @@ function QuestionnaireDesigner() {
     <section className="inst-card p-5">
       <h2 className="label-meta mb-1">Questionnaire</h2>
       <p className="mb-4 text-[11px]" style={{ color: "var(--text-muted)" }}>
-        Graph editing is a form over the node list, not a visual editor. Definitions are immutable once published.
+        Graph editing is a form over the node list, not a visual editor. Definitions are immutable
+        once published.
       </p>
 
-      {q.isLoading && <div className="h-24 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />}
+      {q.isLoading && (
+        <div
+          className="h-24 animate-pulse rounded"
+          style={{ backgroundColor: "var(--bg-elevated)" }}
+        />
+      )}
       {q.isError && (
-        <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>Couldn&apos;t load the questionnaire.</p>
+        <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+          Couldn&apos;t load the questionnaire.
+        </p>
       )}
       {q.data && !q.data.questionnaire && (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-10 text-center" style={{ borderColor: "var(--border)" }}>
-          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>No questionnaire published yet</span>
+        <div
+          className="flex flex-col items-center justify-center gap-2 rounded-lg border py-10 text-center"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+            No questionnaire published yet
+          </span>
           <span className="max-w-xs text-[11px]" style={{ color: "var(--text-muted)" }}>
             Lands with docs/guides/03-client-downloader.md (packages/questionnaire). This card reads
             <code> onboarding.getQuestionnaire</code> and will populate automatically.
@@ -102,18 +117,28 @@ function QuestionnaireDesigner() {
       )}
       {q.data?.questionnaire && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="flex items-center gap-3 text-[11px]"
+            style={{ color: "var(--text-muted)" }}
+          >
             <span>v{q.data.questionnaire.version}</span>
             <span>·</span>
             <span>{q.data.questionnaire.industryProfile}</span>
             <span>·</span>
-            <span className="rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide" style={{ backgroundColor: "var(--success-soft)", color: "var(--success)" }}>
+            <span
+              className="rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide"
+              style={{ backgroundColor: "var(--success-soft)", color: "var(--success)" }}
+            >
               {q.data.questionnaire.status}
             </span>
           </div>
           <ol className="divide-y rounded-lg border" style={{ borderColor: "var(--border)" }}>
             {q.data.questionnaire.graph.nodes.map((node, i) => (
-              <li key={node.id} className="flex items-start gap-2 px-3 py-2 text-[12px]" style={{ color: "var(--text-primary)" }}>
+              <li
+                key={node.id}
+                className="flex items-start gap-2 px-3 py-2 text-[12px]"
+                style={{ color: "var(--text-primary)" }}
+              >
                 <span style={{ color: "var(--text-muted)" }}>{i + 1}.</span>
                 <span>{node.prompt}</span>
               </li>
@@ -148,7 +173,8 @@ function CampaignIssuer() {
     <section className="inst-card p-5">
       <h2 className="label-meta mb-1">Campaigns</h2>
       <p className="mb-4 text-[11px]" style={{ color: "var(--text-muted)" }}>
-        Issues a setup token + activation code for one or more work-package versions (single-token surface — see file header for the batch-campaign gap).
+        Issues a setup token + activation code for one or more work-package versions (single-token
+        surface — see file header for the batch-campaign gap).
       </p>
 
       <div className="flex gap-2">
@@ -158,7 +184,11 @@ function CampaignIssuer() {
           placeholder="Package version id(s), comma-separated"
           aria-label="Package version ids"
           className="flex-1 rounded-md border px-3 py-1.5 text-[12px]"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)" }}
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)",
+          }}
         />
         <button
           onClick={() => issue.mutate({ packageVersionIds: ids })}
@@ -171,7 +201,10 @@ function CampaignIssuer() {
       </div>
 
       {issue.data && (
-        <div className="mt-4 rounded-md border p-3 text-[11px]" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}>
+        <div
+          className="mt-4 rounded-md border p-3 text-[11px]"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-elevated)" }}
+        >
           <div>
             Activation code: <strong>{issue.data.activationCode}</strong>
           </div>
@@ -179,8 +212,9 @@ function CampaignIssuer() {
             Expires: {new Date(issue.data.expiresAt).toLocaleString()}
           </div>
           <p className="mt-1" style={{ color: "var(--text-muted)" }}>
-            `/start` link, per-user activation codes, and CSV export populate once a batch-campaign procedure lands
-            (docs/guides/03-client-downloader.md) — for now this issues one token per click.
+            `/start` link, per-user activation codes, and CSV export populate once a batch-campaign
+            procedure lands (docs/guides/03-client-downloader.md) — for now this issues one token
+            per click.
           </p>
         </div>
       )}
@@ -194,12 +228,18 @@ function DownloadArtifacts() {
   return (
     <section className="inst-card p-5">
       <h2 className="label-meta mb-1">Download Artifacts</h2>
-      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border py-10 text-center" style={{ borderColor: "var(--border)" }}>
-        <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Not available yet</span>
+      <div
+        className="flex flex-col items-center justify-center gap-2 rounded-lg border py-10 text-center"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+          Not available yet
+        </span>
         <span className="max-w-md text-[11px]" style={{ color: "var(--text-muted)" }}>
-          Installer versions, SHA256s, and MDM package links (guide 02 §3) have no corresponding procedure in the
-          frozen onboarding contract (guide 00 §8) — this is a genuine gap, not a loading state. See this file&apos;s
-          header comment. Populates once `client` publishes those artifacts (docs/guides/03-client-downloader.md).
+          Installer versions, SHA256s, and MDM package links (guide 02 §3) have no corresponding
+          procedure in the frozen onboarding contract (guide 00 §8) — this is a genuine gap, not a
+          loading state. See this file&apos;s header comment. Populates once `client` publishes
+          those artifacts (docs/guides/03-client-downloader.md).
         </span>
       </div>
     </section>

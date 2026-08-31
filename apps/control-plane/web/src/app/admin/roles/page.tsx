@@ -34,9 +34,9 @@ export default function RolesAdminPage() {
           Roles & Permissions
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-          Configure who can restructure the org tree. Role presets are seeded by your industry profile
-          at provisioning time — you can edit them, clone them, or create custom roles. This is the D8
-          permission model: capability-based, not title-based.
+          Configure who can restructure the org tree. Role presets are seeded by your industry
+          profile at provisioning time — you can edit them, clone them, or create custom roles. This
+          is the D8 permission model: capability-based, not title-based.
         </p>
       </div>
 
@@ -49,13 +49,30 @@ export default function RolesAdminPage() {
           <span className="text-lg">🔐</span>
           <div className="text-[12px]" style={{ color: "var(--text-primary)" }}>
             <strong>How authority works:</strong> Every org-tree edit is one of four verbs —{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--navy)" }}>create</code>,{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--navy)" }}>rename</code>,{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>reparent</code>,{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>delete</code>.{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>reparent</code> and{" "}
-            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>delete</code> are
-            org-admin-only. Your VP/Director/Manager titles map to these roles — the mapping is
+            <code className="font-mono text-[11px]" style={{ color: "var(--navy)" }}>
+              create
+            </code>
+            ,{" "}
+            <code className="font-mono text-[11px]" style={{ color: "var(--navy)" }}>
+              rename
+            </code>
+            ,{" "}
+            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>
+              reparent
+            </code>
+            ,{" "}
+            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>
+              delete
+            </code>
+            .{" "}
+            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>
+              reparent
+            </code>{" "}
+            and{" "}
+            <code className="font-mono text-[11px]" style={{ color: "var(--red)" }}>
+              delete
+            </code>{" "}
+            are org-admin-only. Your VP/Director/Manager titles map to these roles — the mapping is
             configuration you control.
           </div>
         </div>
@@ -65,16 +82,30 @@ export default function RolesAdminPage() {
       <div className="grid grid-cols-[1fr_320px] gap-6">
         {/* Role presets */}
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+          <h2
+            className="mb-3 text-sm font-semibold uppercase tracking-wide"
+            style={{ color: "var(--text-muted)" }}
+          >
             Role Presets ({roles.data?.roles.length ?? 0})
           </h2>
           {roles.isLoading ? (
-            <div className="text-sm" style={{ color: "var(--text-muted)" }}>Loading roles…</div>
+            <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Loading roles…
+            </div>
           ) : (
             <div className="space-y-3">
-              {roles.data?.roles.map((role: { key: string; label: string; description: string; scopeType: string; permissions: string[]; singleton: boolean }) => (
-                <RoleCard key={role.key} role={role} />
-              ))}
+              {roles.data?.roles.map(
+                (role: {
+                  key: string;
+                  label: string;
+                  description: string;
+                  scopeType: string;
+                  permissions: string[];
+                  singleton: boolean;
+                }) => (
+                  <RoleCard key={role.key} role={role} />
+                ),
+              )}
             </div>
           )}
 
@@ -90,34 +121,39 @@ export default function RolesAdminPage() {
         {/* Permission legend */}
         <div className="space-y-4">
           <div>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+            <h2
+              className="mb-3 text-sm font-semibold uppercase tracking-wide"
+              style={{ color: "var(--text-muted)" }}
+            >
               Org-Node Verbs
             </h2>
             <div className="space-y-2">
-              {perms.data?.verbs.map((verb: { key: string; label: string; description: string }) => (
-                <div
-                  key={verb.key}
-                  className="rounded-lg border p-3"
-                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
-                >
-                  <div className="flex items-center justify-between">
-                    <code className="text-[11px] font-mono" style={{ color: "var(--navy)" }}>
-                      {verb.key}
-                    </code>
-                    {(verb.key.includes("reparent") || verb.key.includes("delete")) && (
-                      <span
-                        className="rounded px-1.5 py-0.5 text-[8px] font-bold uppercase"
-                        style={{ backgroundColor: "rgba(220,38,38,0.1)", color: "var(--red)" }}
-                      >
-                        Admin only
-                      </span>
-                    )}
+              {perms.data?.verbs.map(
+                (verb: { key: string; label: string; description: string }) => (
+                  <div
+                    key={verb.key}
+                    className="rounded-lg border p-3"
+                    style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <code className="text-[11px] font-mono" style={{ color: "var(--navy)" }}>
+                        {verb.key}
+                      </code>
+                      {(verb.key.includes("reparent") || verb.key.includes("delete")) && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[8px] font-bold uppercase"
+                          style={{ backgroundColor: "rgba(220,38,38,0.1)", color: "var(--red)" }}
+                        >
+                          Admin only
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                      {verb.description}
+                    </p>
                   </div>
-                  <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                    {verb.description}
-                  </p>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
 
@@ -126,19 +162,32 @@ export default function RolesAdminPage() {
             className="rounded-lg border p-3"
             style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
           >
-            <h3 className="mb-2 text-[11px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>
+            <h3
+              className="mb-2 text-[11px] font-semibold uppercase"
+              style={{ color: "var(--text-muted)" }}
+            >
               Authority Flow
             </h3>
             <div className="space-y-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-              <div>🏛️ <strong>Org Admin</strong> → all verbs, all scopes</div>
+              <div>
+                🏛️ <strong>Org Admin</strong> → all verbs, all scopes
+              </div>
               <div className="pl-3">↓ delegates create + rename</div>
-              <div>🏛️ <strong>Subsidiary Admin</strong> → within subsidiary</div>
+              <div>
+                🏛️ <strong>Subsidiary Admin</strong> → within subsidiary
+              </div>
               <div className="pl-3">↓ delegates create + rename</div>
-              <div>🏭 <strong>Plant Manager</strong> → within plant</div>
+              <div>
+                🏭 <strong>Plant Manager</strong> → within plant
+              </div>
               <div className="pl-3">↓</div>
-              <div>📁 <strong>Dept Head</strong> → rename own dept</div>
+              <div>
+                📁 <strong>Dept Head</strong> → rename own dept
+              </div>
               <div className="pl-3">↓</div>
-              <div>👤 <strong>Viewer</strong> → read-only</div>
+              <div>
+                👤 <strong>Viewer</strong> → read-only
+              </div>
             </div>
           </div>
         </div>
@@ -149,7 +198,9 @@ export default function RolesAdminPage() {
 
 // ── Role card ─────────────────────────────────────────────────────────────
 
-function RoleCard({ role }: {
+function RoleCard({
+  role,
+}: {
   role: {
     key: string;
     label: string;
@@ -166,15 +217,22 @@ function RoleCard({ role }: {
   return (
     <div
       className="rounded-lg border p-4 transition-shadow hover:shadow-md"
-      style={{ borderColor: isAdmin ? "var(--navy)" : "var(--border)", backgroundColor: "var(--surface)" }}
+      style={{
+        borderColor: isAdmin ? "var(--navy)" : "var(--border)",
+        backgroundColor: "var(--surface)",
+      }}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-2.5">
           <span className="text-lg">{icon}</span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{role.label}</span>
-              <code className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>{role.key}</code>
+              <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                {role.label}
+              </span>
+              <code className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                {role.key}
+              </code>
               {role.singleton && (
                 <span
                   className="rounded px-1.5 py-0.5 text-[8px] font-bold uppercase"

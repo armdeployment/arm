@@ -3,7 +3,12 @@ import { Section, Kicker, ProseP, ScrollTable, Pill, StatCard } from "@/componen
 import { VideoBlock } from "@/components/video-block";
 import { productHero, deliverables, roadmapHeading, roadmapIntro } from "@/content/product";
 import { phasePlan, scorecardNote } from "@/content/roadmap";
-import { categoryClaim, competitiveMatrix, moatParagraph, competitiveSourceNote } from "@/content/competitive";
+import {
+  categoryClaim,
+  competitiveMatrix,
+  moatParagraph,
+  competitiveSourceNote,
+} from "@/content/competitive";
 import { simulationRunStats, simulationRunMeta } from "@/content/simulation-data";
 
 export const metadata: Metadata = { title: "Product" };
@@ -18,10 +23,21 @@ export default function ProductPage() {
   return (
     <>
       <Section tone="dark" className="py-14 sm:py-20">
-        <h1 className="m-0 mb-4 font-semibold" style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}>
+        <h1
+          className="m-0 mb-4 font-semibold"
+          style={{ fontSize: "var(--font-h1)", maxWidth: "40rem", color: "var(--text-on-dark)" }}
+        >
           {productHero.title}
         </h1>
-        <p style={{ fontSize: "var(--font-lead)", maxWidth: "40rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.6 }} className="m-0">
+        <p
+          style={{
+            fontSize: "var(--font-lead)",
+            maxWidth: "40rem",
+            color: "var(--text-on-dark-secondary)",
+            lineHeight: 1.6,
+          }}
+          className="m-0"
+        >
           {productHero.body}
         </p>
       </Section>
@@ -39,7 +55,10 @@ export default function ProductPage() {
                 <span aria-hidden="true" style={{ color: "var(--gold)", fontWeight: 700 }}>
                   →
                 </span>
-                <span className="text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}
+                >
                   {detail}
                 </span>
               </li>
@@ -65,10 +84,16 @@ export default function ProductPage() {
       {/* ── Category claim (investor content, kept on / and /product per guide 04 §5) ── */}
       <Section id="category" tone="dark">
         <Kicker tone="dark">The category argument</Kicker>
-        <h2 className="m-0 mb-4 font-semibold" style={{ fontSize: "var(--font-h2)", maxWidth: "42rem", color: "var(--text-on-dark)" }}>
+        <h2
+          className="m-0 mb-4 font-semibold"
+          style={{ fontSize: "var(--font-h2)", maxWidth: "42rem", color: "var(--text-on-dark)" }}
+        >
           {categoryClaim.headline}
         </h2>
-        <p className="m-0" style={{ maxWidth: "44rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.7 }}>
+        <p
+          className="m-0"
+          style={{ maxWidth: "44rem", color: "var(--text-on-dark-secondary)", lineHeight: 1.7 }}
+        >
           {categoryClaim.body}
         </p>
       </Section>
@@ -80,22 +105,60 @@ export default function ProductPage() {
         <ScrollTable>
           <thead>
             <tr>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>Capability</th>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>ARM</th>
-              <th className="label-meta p-3 text-left" style={{ borderBottom: "1px solid var(--border)" }}>Gateways / policy engines</th>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                Capability
+              </th>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                ARM
+              </th>
+              <th
+                className="label-meta p-3 text-left"
+                style={{ borderBottom: "1px solid var(--border)" }}
+              >
+                Gateways / policy engines
+              </th>
             </tr>
           </thead>
           <tbody>
             {competitiveMatrix.map((row) => (
               <tr key={row.capability}>
-                <td className="p-3 text-sm font-medium" style={{ borderBottom: "1px solid var(--border)" }}>{row.capability}</td>
-                <td className="p-3 text-sm" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>{row.arm}</td>
-                <td className="p-3 text-sm" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>{row.gateways}</td>
+                <td
+                  className="p-3 text-sm font-medium"
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                  {row.capability}
+                </td>
+                <td
+                  className="p-3 text-sm"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {row.arm}
+                </td>
+                <td
+                  className="p-3 text-sm"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {row.gateways}
+                </td>
               </tr>
             ))}
           </tbody>
         </ScrollTable>
-        <p className="m-0 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>{competitiveSourceNote}</p>
+        <p className="m-0 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+          {competitiveSourceNote}
+        </p>
       </Section>
 
       <Section id="moat">
@@ -112,7 +175,8 @@ export default function ProductPage() {
         </h2>
         <ProseP className="mb-6">
           {simulationRunMeta.caveat} {simulationRunMeta.employees} employees across{" "}
-          {simulationRunMeta.departments} departments, running {simulationRunMeta.agentTypes.join(", ")}.
+          {simulationRunMeta.departments} departments, running{" "}
+          {simulationRunMeta.agentTypes.join(", ")}.
         </ProseP>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {simulationRunStats.map((stat) => (
@@ -123,7 +187,9 @@ export default function ProductPage() {
 
       {/* ── Built vs planned ── */}
       <Section id="roadmap" tone="surface">
-        <h2 className="m-0 mb-2" style={{ fontSize: "var(--font-h2)" }}>{roadmapHeading}</h2>
+        <h2 className="m-0 mb-2" style={{ fontSize: "var(--font-h2)" }}>
+          {roadmapHeading}
+        </h2>
         <ProseP className="mb-6">{roadmapIntro}</ProseP>
         <div className="flex flex-col gap-4">
           {phasePlan.map((row) => {
@@ -137,14 +203,19 @@ export default function ProductPage() {
                   <h3 className="m-0 text-base font-semibold">{row.title}</h3>
                   <Pill tone={pill.tone}>{pill.label}</Pill>
                 </div>
-                <p className="m-0 text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                <p
+                  className="m-0 text-sm"
+                  style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}
+                >
                   {row.detail}
                 </p>
               </div>
             );
           })}
         </div>
-        <p className="m-0 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>{scorecardNote}</p>
+        <p className="m-0 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+          {scorecardNote}
+        </p>
       </Section>
     </>
   );

@@ -21,7 +21,11 @@ export function ChildScopeGrid({ scope }: ChildScopeGridProps) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-36 animate-pulse rounded-lg border bg-[var(--bg-elevated)]" style={{ borderColor: "var(--border)" }} />
+          <div
+            key={i}
+            className="h-36 animate-pulse rounded-lg border bg-[var(--bg-elevated)]"
+            style={{ borderColor: "var(--border)" }}
+          />
         ))}
       </div>
     );
@@ -31,7 +35,10 @@ export function ChildScopeGrid({ scope }: ChildScopeGridProps) {
 
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+      <h2
+        className="mb-3 text-sm font-semibold uppercase tracking-wider"
+        style={{ color: "var(--text-muted)" }}
+      >
         {TYPE_LABELS[data.children[0]!.type] ?? "Sub-scopes"}
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -66,32 +73,56 @@ export function ChildScopeGrid({ scope }: ChildScopeGridProps) {
             </div>
 
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+              <span
+                className="text-2xl font-bold tabular-nums"
+                style={{ color: "var(--text-primary)" }}
+              >
                 ${child.monthlySpend.toLocaleString()}
               </span>
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}> / mo</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {" "}
+                / mo
+              </span>
             </div>
 
-            <div className="mt-2 flex items-center gap-3 text-xs" style={{ color: "var(--text-secondary)" }}>
+            <div
+              className="mt-2 flex items-center gap-3 text-xs"
+              style={{ color: "var(--text-secondary)" }}
+            >
               <span>{child.agentCount} agents</span>
               <span>·</span>
-              <span style={{ color: child.budgetUtilPct > 80 ? "var(--danger)" : "var(--text-secondary)" }}>
+              <span
+                style={{
+                  color: child.budgetUtilPct > 80 ? "var(--danger)" : "var(--text-secondary)",
+                }}
+              >
                 {child.budgetUtilPct}% budget
               </span>
             </div>
 
             {/* Budget bar */}
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--bg-elevated)" }}>
+            <div
+              className="mt-2 h-1.5 overflow-hidden rounded-full"
+              style={{ backgroundColor: "var(--bg-elevated)" }}
+            >
               <div
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${Math.min(child.budgetUtilPct, 100)}%`,
-                  backgroundColor: child.budgetUtilPct > 80 ? "var(--danger)" : child.budgetUtilPct > 60 ? "var(--warning)" : "var(--accent)",
+                  backgroundColor:
+                    child.budgetUtilPct > 80
+                      ? "var(--danger)"
+                      : child.budgetUtilPct > 60
+                        ? "var(--warning)"
+                        : "var(--accent)",
                 }}
               />
             </div>
 
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100" style={{ color: "var(--accent)" }}>
+            <div
+              className="mt-3 flex items-center gap-1 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100"
+              style={{ color: "var(--accent)" }}
+            >
               Drill in →
             </div>
           </a>

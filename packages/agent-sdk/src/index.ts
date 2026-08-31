@@ -135,7 +135,13 @@ function readTOML(path: string): string {
 }
 
 /** Writes a JSON config: merges with existing to avoid overwriting other settings. */
-function writeJSONConfig(agent: AgentConfig, path: string, baseUrl: string, apiKey: string, subAccountId: string): void {
+function writeJSONConfig(
+  agent: AgentConfig,
+  path: string,
+  baseUrl: string,
+  apiKey: string,
+  subAccountId: string,
+): void {
   const existing = readJSON(path);
   existing[agent.baseUrlKey] = baseUrl;
   existing[agent.apiKeyKey] = apiKey;
@@ -156,16 +162,26 @@ function writeTOMLConfig(agent: AgentConfig, path: string, baseUrl: string, apiK
   const existing = readTOML(path);
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const armSection = existing.includes("[arm]") ? "" : `\n\n[arm]\nbase_url = "${baseUrl}"\napi_key = "${apiKey}"\n`;
+  const armSection = existing.includes("[arm]")
+    ? ""
+    : `\n\n[arm]\nbase_url = "${baseUrl}"\napi_key = "${apiKey}"\n`;
   writeFileSync(path, existing + armSection);
 }
 
 /** Writes an .env config file. */
-function writeEnvConfig(agent: AgentConfig, path: string, baseUrl: string, apiKey: string, subAccountId: string): void {
+function writeEnvConfig(
+  agent: AgentConfig,
+  path: string,
+  baseUrl: string,
+  apiKey: string,
+  subAccountId: string,
+): void {
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(path,
-    `# ARM Agent Configuration\n${agent.baseUrlKey}=${baseUrl}\n${agent.apiKeyKey}=${apiKey}\nARM_SUB_ACCOUNT_ID=${subAccountId}\n`);
+  writeFileSync(
+    path,
+    `# ARM Agent Configuration\n${agent.baseUrlKey}=${baseUrl}\n${agent.apiKeyKey}=${apiKey}\nARM_SUB_ACCOUNT_ID=${subAccountId}\n`,
+  );
 }
 
 /**
@@ -175,7 +191,13 @@ function writeEnvConfig(agent: AgentConfig, path: string, baseUrl: string, apiKe
 export function generateAgentConfig(input: SetupInput): SetupResult {
   const agent = AGENTS[input.agentType];
   if (!agent) {
-    return { success: false, configPath: "", configWritten: false, message: `Unknown agent type: ${input.agentType}. Supported: ${Object.keys(AGENTS).join(", ")}`, verificationUrl: "" };
+    return {
+      success: false,
+      configPath: "",
+      configWritten: false,
+      message: `Unknown agent type: ${input.agentType}. Supported: ${Object.keys(AGENTS).join(", ")}`,
+      verificationUrl: "",
+    };
   }
 
   const configPath = expandHome(agent.configPath);
@@ -192,7 +214,13 @@ export function generateAgentConfig(input: SetupInput): SetupResult {
         writeEnvConfig(agent, configPath, input.tenantUrl, input.apiKey, input.subAccountId);
         break;
       default:
-        return { success: false, configPath, configWritten: false, message: `Unsupported config format: ${agent.format}`, verificationUrl: "" };
+        return {
+          success: false,
+          configPath,
+          configWritten: false,
+          message: `Unsupported config format: ${agent.format}`,
+          verificationUrl: "",
+        };
     }
 
     return {
@@ -203,22 +231,38 @@ export function generateAgentConfig(input: SetupInput): SetupResult {
       verificationUrl: `${input.tenantUrl}/health`,
     };
   } catch (err) {
-    return { success: false, configPath, configWritten: false, message: `Failed to write config: ${(err as Error).message}`, verificationUrl: "" };
+    return {
+      success: false,
+      configPath,
+      configWritten: false,
+      message: `Failed to write config: ${(err as Error).message}`,
+      verificationUrl: "",
+    };
   }
 }
 
 /** Verifies connectivity to the ARM proxy by hitting the health endpoint. */
-export async function verifyConnection(tenantUrl: string): Promise<{ ok: boolean; latencyMs: number; detail: string }> {
+export async function verifyConnection(
+  tenantUrl: string,
+): Promise<{ ok: boolean; latencyMs: number; detail: string }> {
   const t0 = Date.now();
   try {
     const res = await fetch(`${tenantUrl}/health`, { method: "GET" });
     const latency = Date.now() - t0;
     if (res.ok) {
-      const body = await res.json() as Record<string, unknown>;
-      return { ok: true, latencyMs: latency, detail: `Connected to ARM proxy v${body.version ?? "?"} (${latency}ms)` };
+      const body = (await res.json()) as Record<string, unknown>;
+      return {
+        ok: true,
+        latencyMs: latency,
+        detail: `Connected to ARM proxy v${body.version ?? "?"} (${latency}ms)`,
+      };
     }
     return { ok: false, latencyMs: latency, detail: `Proxy returned ${res.status}` };
   } catch (err) {
-    return { ok: false, latencyMs: Date.now() - t0, detail: `Connection failed: ${(err as Error).message}` };
+    return {
+      ok: false,
+      latencyMs: Date.now() - t0,
+      detail: `Connection failed: ${(err as Error).message}`,
+    };
   }
 }

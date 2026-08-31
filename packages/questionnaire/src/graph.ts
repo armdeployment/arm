@@ -22,7 +22,9 @@ function primaryAnswerValue(answer: QuestionnaireAnswer[string]): string {
  *  edge, else undefined (dead end — validate.ts should prevent this). */
 function resolveEdge(node: QuestionNode, answer: QuestionnaireAnswer[string]) {
   const value = primaryAnswerValue(answer);
-  return node.next.find((edge) => edge.when === value) ?? node.next.find((edge) => edge.when === null);
+  return (
+    node.next.find((edge) => edge.when === value) ?? node.next.find((edge) => edge.when === null)
+  );
 }
 
 /**

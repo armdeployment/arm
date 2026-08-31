@@ -106,7 +106,12 @@ describe("resolveToolAccess — basic semantics", () => {
 
   it("supports wildcard action (*)", () => {
     const g = grant({ scopeType: "org", deny: false, action: "*" });
-    const r = resolveToolAccess({ grants: [g], principalId: "p1", toolId: "t1", action: "publish" });
+    const r = resolveToolAccess({
+      grants: [g],
+      principalId: "p1",
+      toolId: "t1",
+      action: "publish",
+    });
     expect(r.decision).toBe("allow");
   });
 
@@ -222,7 +227,7 @@ describe("tool verbs", () => {
     for (const [action, verb] of Object.entries(expected) as [ToolAction, string][]) {
       expect(toolVerbFor(action)).toBe(verb);
     }
-    expect((TOOL_ACTION_VERBS as readonly string[])).toContain(toolVerbFor("invoke"));
+    expect(TOOL_ACTION_VERBS as readonly string[]).toContain(toolVerbFor("invoke"));
   });
 });
 
@@ -261,10 +266,7 @@ describe("resolvePackageModel — package model routing", () => {
   });
 
   it("prefix matching: self_hosted/* allows self_hosted/llama-3", () => {
-    const r = resolvePackageModel(
-      { allowed_models: ["self_hosted/*"] },
-      "self_hosted/llama-3",
-    );
+    const r = resolvePackageModel({ allowed_models: ["self_hosted/*"] }, "self_hosted/llama-3");
     expect(r.model).toBe("self_hosted/llama-3");
     expect(r.downgraded).toBe(false);
   });
@@ -286,10 +288,7 @@ describe("resolvePackageModel — package model routing", () => {
   });
 
   it("no-fallback violation → returns requested model with reason package_policy_block (no throw)", () => {
-    const r = resolvePackageModel(
-      { allowed_models: ["glm-5.2"] },
-      "claude-sonnet-4.5",
-    );
+    const r = resolvePackageModel({ allowed_models: ["glm-5.2"] }, "claude-sonnet-4.5");
     expect(r).toEqual({
       model: "claude-sonnet-4.5",
       downgraded: false,
@@ -298,11 +297,7 @@ describe("resolvePackageModel — package model routing", () => {
   });
 
   it("accepts tier option without changing allowlist behavior", () => {
-    const r = resolvePackageModel(
-      { allowed_models: ["glm-5.2"] },
-      "glm-5.2",
-      { tier: "critical" },
-    );
+    const r = resolvePackageModel({ allowed_models: ["glm-5.2"] }, "glm-5.2", { tier: "critical" });
     expect(r.reason).toBe("package_policy_allowed");
   });
 });
@@ -325,9 +320,11 @@ describe("Invariant §11.3 — resolveToolAccess deny-wins property test (fast-c
       deny: fc.boolean(),
     })
     .chain((base) =>
-      fc.boolean().map<ToolGrant>((expired) =>
-        expired ? { ...base, expiresAt: "2020-01-01T00:00:00Z" } : { ...base },
-      ),
+      fc
+        .boolean()
+        .map<ToolGrant>((expired) =>
+          expired ? { ...base, expiresAt: "2020-01-01T00:00:00Z" } : { ...base },
+        ),
     );
 
   it("never allows when any unexpired matching deny exists", () => {
@@ -350,8 +347,7 @@ describe("Invariant §11.3 — resolveToolAccess deny-wins property test (fast-c
               g.toolId === "t1" &&
               (g.action === "*" || g.action === action) &&
               g.deny &&
-              (g.expiresAt === undefined ||
-                new Date(g.expiresAt) >= new Date("2026-07-27")),
+              (g.expiresAt === undefined || new Date(g.expiresAt) >= new Date("2026-07-27")),
           );
 
           if (matchingUnexpiredDeny) {
@@ -365,34 +361,31 @@ describe("Invariant §11.3 — resolveToolAccess deny-wins property test (fast-c
 
   it("result is allow only when at least one unexpired matching allow exists and no unexpired matching deny", () => {
     fc.assert(
-      fc.property(
-        fc.array(grantArbitrary, { minLength: 0, maxLength: 20 }),
-        (grants) => {
-          const now = new Date("2026-07-27");
-          const result = resolveToolAccess({
-            grants,
-            principalId: "p1",
-            toolId: "t1",
-            action: "invoke",
-            now,
-          });
+      fc.property(fc.array(grantArbitrary, { minLength: 0, maxLength: 20 }), (grants) => {
+        const now = new Date("2026-07-27");
+        const result = resolveToolAccess({
+          grants,
+          principalId: "p1",
+          toolId: "t1",
+          action: "invoke",
+          now,
+        });
 
-          const matchingUnexpired = (predicate: (g: ToolGrant) => boolean) =>
-            grants.some(
-              (g) =>
-                g.principalId === "p1" &&
-                g.toolId === "t1" &&
-                (g.action === "*" || g.action === "invoke") &&
-                (g.expiresAt === undefined || new Date(g.expiresAt) >= now) &&
-                predicate(g),
-            );
+        const matchingUnexpired = (predicate: (g: ToolGrant) => boolean) =>
+          grants.some(
+            (g) =>
+              g.principalId === "p1" &&
+              g.toolId === "t1" &&
+              (g.action === "*" || g.action === "invoke") &&
+              (g.expiresAt === undefined || new Date(g.expiresAt) >= now) &&
+              predicate(g),
+          );
 
-          if (result.decision === "allow") {
-            expect(matchingUnexpired((g) => !g.deny)).toBe(true);
-            expect(matchingUnexpired((g) => g.deny)).toBe(false);
-          }
-        },
-      ),
+        if (result.decision === "allow") {
+          expect(matchingUnexpired((g) => !g.deny)).toBe(true);
+          expect(matchingUnexpired((g) => g.deny)).toBe(false);
+        }
+      }),
       { numRuns: 300 },
     );
   });

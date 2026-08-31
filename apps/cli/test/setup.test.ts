@@ -109,7 +109,14 @@ describe("runSetupCommand — advanced (--role) path", () => {
     const runSetupFn = vi.fn(async () => STUB_RESULT);
 
     const result = await runSetupCommand(
-      ["--role", "quality_engineer", "--tenant-url", "https://cp.arm.acme.com", "--sub-account-id", "sa_123"],
+      [
+        "--role",
+        "quality_engineer",
+        "--tenant-url",
+        "https://cp.arm.acme.com",
+        "--sub-account-id",
+        "sa_123",
+      ],
       { runSetupFn },
     );
 
@@ -159,10 +166,14 @@ describe("runSetupCommand — advanced (--role) path", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const runSetupFn = vi.fn(async () => STUB_RESULT);
 
-    const result = await runSetupCommand(["--role", "x", "--tenant-url", "https://cp"], { runSetupFn });
+    const result = await runSetupCommand(["--role", "x", "--tenant-url", "https://cp"], {
+      runSetupFn,
+    });
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("no agent token"));
-    expect(runSetupFn).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "pending-assignment" }));
+    expect(runSetupFn).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: "pending-assignment" }),
+    );
     const callArgs = (runSetupFn.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
     expect("agentToken" in callArgs).toBe(false);
     expect(result).toBe(STUB_RESULT);
@@ -173,7 +184,16 @@ describe("runSetupCommand — advanced (--role) path", () => {
     const runSetupFn = vi.fn(async () => STUB_RESULT);
 
     await runSetupCommand(
-      ["--role", "x", "--tenant-url", "https://cp", "--proxy-url", "https://proxy", "--agent-home", "/tmp/home"],
+      [
+        "--role",
+        "x",
+        "--tenant-url",
+        "https://cp",
+        "--proxy-url",
+        "https://proxy",
+        "--agent-home",
+        "/tmp/home",
+      ],
       { runSetupFn },
     );
 
@@ -239,10 +259,14 @@ describe("runSetupCommand — --token (A4 primary) path", () => {
 
     await runSetupCommand(
       [
-        "--token", "AB12CD",
-        "--tenant-url", "https://cp.arm.acme.com",
-        "--agent-home", "/tmp/smoke-agent-home",
-        "--agent-token", "arm_mtr_dev_token",
+        "--token",
+        "AB12CD",
+        "--tenant-url",
+        "https://cp.arm.acme.com",
+        "--agent-home",
+        "/tmp/smoke-agent-home",
+        "--agent-token",
+        "arm_mtr_dev_token",
       ],
       { resolveFn, runSetupFn },
     );
@@ -293,7 +317,11 @@ describe("runSetupCommand — --setup-file (.armsetup double-click) path", () =>
   }
 
   it("reads {version, token, control_plane_url} from the file and redeems it", async () => {
-    const path = await writeSetupFile({ version: 1, token: "ABC123", control_plane_url: "https://cp.arm.acme.com" });
+    const path = await writeSetupFile({
+      version: 1,
+      token: "ABC123",
+      control_plane_url: "https://cp.arm.acme.com",
+    });
     const resolved: SetupArgs = {
       controlPlaneUrl: "https://cp.arm.acme.com",
       token: "catalog-token",
@@ -307,12 +335,19 @@ describe("runSetupCommand — --setup-file (.armsetup double-click) path", () =>
 
     const result = await runSetupCommand(["--setup-file", path], { resolveFn, runSetupFn });
 
-    expect(resolveFn).toHaveBeenCalledWith({ token: "ABC123", controlPlaneUrl: "https://cp.arm.acme.com" });
+    expect(resolveFn).toHaveBeenCalledWith({
+      token: "ABC123",
+      controlPlaneUrl: "https://cp.arm.acme.com",
+    });
     expect(result).toBe(STUB_RESULT);
   });
 
   it("threads --agent-home through when set alongside --setup-file", async () => {
-    const path = await writeSetupFile({ version: 1, token: "ABC123", control_plane_url: "https://cp.arm.acme.com" });
+    const path = await writeSetupFile({
+      version: 1,
+      token: "ABC123",
+      control_plane_url: "https://cp.arm.acme.com",
+    });
     const resolved: SetupArgs = {
       controlPlaneUrl: "https://cp.arm.acme.com",
       token: "catalog-token",

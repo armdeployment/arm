@@ -78,7 +78,10 @@ async function hashPrompt(text: string): Promise<string> {
   const data = encoder.encode(text);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  return hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
 }
 
 // ── Stage 1: structural freebies ───────────────────────────────────────────
@@ -180,9 +183,26 @@ const LABEL_KEYWORD_MAP: Record<string, string[]> = {
   code_generation: ["implement", "generate", "write a function", "create", "build", "scaffold"],
   test_generation: ["test", "spec", "coverage", "assert", "expect", "mock", "fixture"],
   documentation: ["document", "docs", "readme", "explain", "comment", "docstring", "guide"],
-  hot_issue_resolution: ["bug", "fix", "error", "crash", "issue", "traceback", "stack trace", "hotfix"],
+  hot_issue_resolution: [
+    "bug",
+    "fix",
+    "error",
+    "crash",
+    "issue",
+    "traceback",
+    "stack trace",
+    "hotfix",
+  ],
   incident_triage: ["incident", "alert", "page", "oncall", "outage", "sev", "triage"],
-  cnc_toolpath_optimization: ["cnc", "toolpath", "gcode", "g-code", "feed rate", "spindle", "machining"],
+  cnc_toolpath_optimization: [
+    "cnc",
+    "toolpath",
+    "gcode",
+    "g-code",
+    "feed rate",
+    "spindle",
+    "machining",
+  ],
   defect_analysis: ["defect", "spc", "quality", "inspection", "reject", "yield", "tolerance"],
   demand_forecasting: ["forecast", "demand", "inventory", "supply", "planning", "reorder", "stock"],
   route_optimization: ["route", "logistics", "shipping", "dispatch", "delivery", "vehicle routing"],
@@ -237,7 +257,7 @@ function classifyLinear(
   }
 
   // Confidence = normalized score (capped at 1.0).
-  const maxPossible = (LABEL_KEYWORD_MAP[bestLabel]?.length ?? 1);
+  const maxPossible = LABEL_KEYWORD_MAP[bestLabel]?.length ?? 1;
   const confidence = Math.min(bestScore / Math.max(maxPossible * 0.4, 1), 1.0);
 
   if (confidence >= threshold) {
@@ -348,17 +368,17 @@ export async function classifyPrompt(
 
     // Stage 3: linear keyword classifier (µs).
     const linear = classifyLinear(features, taxonomy, cfg.linearConfidenceThreshold);
-    if (linear && linear.confidence !== null && linear.confidence >= cfg.linearConfidenceThreshold) {
+    if (
+      linear &&
+      linear.confidence !== null &&
+      linear.confidence >= cfg.linearConfidenceThreshold
+    ) {
       cache.set(cacheKey, { result: linear, ts: Date.now() });
       return linear;
     }
 
     // Stage 4: embedding centroid (only on the ambiguous tail).
-    const result = classifyEmbeddingCentroid(
-      features,
-      taxonomy,
-      cfg.embeddingConfidenceThreshold,
-    );
+    const result = classifyEmbeddingCentroid(features, taxonomy, cfg.embeddingConfidenceThreshold);
     // Cache even unknowns — saves work on identical retries.
     cache.set(cacheKey, { result, ts: Date.now() });
     return result;

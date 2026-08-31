@@ -66,7 +66,9 @@ export default function DownloadPage() {
         { packageVersionIds: [selected.packageVersionId] },
         {
           onSuccess: () => {
-            void emitOnboardingEvent("token_issued", { packageVersionId: selected.packageVersionId });
+            void emitOnboardingEvent("token_issued", {
+              packageVersionId: selected.packageVersionId,
+            });
           },
         },
       );
@@ -78,7 +80,11 @@ export default function DownloadPage() {
   const setupFileHref =
     issue.data && typeof window !== "undefined"
       ? `data:application/json;base64,${window.btoa(
-          JSON.stringify({ version: 1, token: issue.data.token, control_plane_url: window.location.origin }),
+          JSON.stringify({
+            version: 1,
+            token: issue.data.token,
+            control_plane_url: window.location.origin,
+          }),
         )}`
       : undefined;
 
@@ -87,15 +93,16 @@ export default function DownloadPage() {
   }
 
   const platforms: Exclude<Platform, "unknown">[] = ["windows", "macos", "linux"];
-  const ordered = platform === "unknown" ? platforms : [platform, ...platforms.filter((p) => p !== platform)];
+  const ordered =
+    platform === "unknown" ? platforms : [platform, ...platforms.filter((p) => p !== platform)];
 
   return (
     <div className="onboarding-shell">
       <div className="onboarding-card">
         <div className="onboarding-prompt">Download your {selected.name} setup</div>
         <p className="onboarding-help">
-          One file, no config, no terminal. Install the ARM client for your platform, then double-click the file
-          below — it activates automatically.
+          One file, no config, no terminal. Install the ARM client for your platform, then
+          double-click the file below — it activates automatically.
         </p>
 
         {issue.isPending ? <p className="onboarding-help">Preparing your setup link…</p> : null}
@@ -124,7 +131,9 @@ export default function DownloadPage() {
               <code>arm setup</code> instead:
             </p>
             <div className="onboarding-code">{issue.data.activationCode}</div>
-            <p className="onboarding-help">Expires {new Date(issue.data.expiresAt).toLocaleTimeString()} — 15 minutes from now.</p>
+            <p className="onboarding-help">
+              Expires {new Date(issue.data.expiresAt).toLocaleTimeString()} — 15 minutes from now.
+            </p>
             <a
               href={`mailto:?subject=${encodeURIComponent("Your ARM setup link")}&body=${encodeURIComponent(
                 `Your activation code is ${issue.data.activationCode} — enter it at ${
@@ -132,7 +141,12 @@ export default function DownloadPage() {
                 }/start when running "arm setup".`,
               )}`}
               className="onboarding-button onboarding-button-secondary"
-              style={{ textAlign: "center", textDecoration: "none", display: "inline-block", marginTop: "0.75rem" }}
+              style={{
+                textAlign: "center",
+                textDecoration: "none",
+                display: "inline-block",
+                marginTop: "0.75rem",
+              }}
             >
               Send me the link
             </a>

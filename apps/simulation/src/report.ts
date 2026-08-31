@@ -21,32 +21,38 @@ const CH_AUTH = "arm:arm_dev_password";
 
 async function chQuery<T = any>(sql: string): Promise<T[]> {
   const res = await fetch(`${CH_URL}/?query=${encodeURIComponent(sql + " FORMAT JSON")}`, {
-    headers: { "Authorization": "Basic " + Buffer.from(CH_AUTH).toString("base64") },
+    headers: { Authorization: "Basic " + Buffer.from(CH_AUTH).toString("base64") },
   });
   if (!res.ok) return [];
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   return json.data ?? [];
 }
 
 // ── SVG Chart Generators ──────────────────────────────────────────────────
 
-function barChart(data: { label: string; value: number; color: string }[], title: string, unit: string): string {
-  const maxVal = Math.max(...data.map(d => d.value), 1);
+function barChart(
+  data: { label: string; value: number; color: string }[],
+  title: string,
+  unit: string,
+): string {
+  const maxVal = Math.max(...data.map((d) => d.value), 1);
   const barWidth = 55;
   const gap = 20;
   const chartWidth = data.length * (barWidth + gap) + 50;
   const chartHeight = 260;
-  const bars = data.map((d, i) => {
-    const h = (d.value / maxVal) * 180;
-    const x = 40 + i * (barWidth + gap);
-    const y = chartHeight - 40 - h;
-    const valLabel = unit === "$" ? `$${(d.value / 100).toFixed(2)}` : d.value.toLocaleString();
-    return `
+  const bars = data
+    .map((d, i) => {
+      const h = (d.value / maxVal) * 180;
+      const x = 40 + i * (barWidth + gap);
+      const y = chartHeight - 40 - h;
+      const valLabel = unit === "$" ? `$${(d.value / 100).toFixed(2)}` : d.value.toLocaleString();
+      return `
       <rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="4" fill="${d.color}"/>
-      <text x="${x + barWidth/2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">${valLabel}</text>
-      <text x="${x + barWidth/2}" y="${chartHeight - 22}" text-anchor="middle" font-size="10" fill="#64748b">${d.label}</text>
+      <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="#1e293b">${valLabel}</text>
+      <text x="${x + barWidth / 2}" y="${chartHeight - 22}" text-anchor="middle" font-size="10" fill="#64748b">${d.label}</text>
     `;
-  }).join("");
+    })
+    .join("");
   return `
     <div class="chart-box">
     <svg viewBox="0 0 ${chartWidth} ${chartHeight}" width="100%" style="max-width:${chartWidth}px" xmlns="http://www.w3.org/2000/svg">
@@ -57,42 +63,54 @@ function barChart(data: { label: string; value: number; color: string }[], title
     </div>`;
 }
 
-function donutChart(data: { label: string; value: number; color: string }[], title: string): string {
+function donutChart(
+  data: { label: string; value: number; color: string }[],
+  title: string,
+): string {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   let cumulativeAngle = -90;
-  const cx = 100, cy = 110, r = 70, innerR = 42;
+  const cx = 100,
+    cy = 110,
+    r = 70,
+    innerR = 42;
 
-  const arcs = data.map(d => {
-    const angle = (d.value / total) * 360;
-    const startAngle = cumulativeAngle;
-    const endAngle = cumulativeAngle + angle;
-    cumulativeAngle = endAngle;
+  const arcs = data
+    .map((d) => {
+      const angle = (d.value / total) * 360;
+      const startAngle = cumulativeAngle;
+      const endAngle = cumulativeAngle + angle;
+      cumulativeAngle = endAngle;
 
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
 
-    const x1 = cx + r * Math.cos(startRad);
-    const y1 = cy + r * Math.sin(startRad);
-    const x2 = cx + r * Math.cos(endRad);
-    const y2 = cy + r * Math.sin(endRad);
-    const x3 = cx + innerR * Math.cos(endRad);
-    const y3 = cy + innerR * Math.sin(endRad);
-    const x4 = cx + innerR * Math.cos(startRad);
-    const y4 = cy + innerR * Math.sin(startRad);
+      const x1 = cx + r * Math.cos(startRad);
+      const y1 = cy + r * Math.sin(startRad);
+      const x2 = cx + r * Math.cos(endRad);
+      const y2 = cy + r * Math.sin(endRad);
+      const x3 = cx + innerR * Math.cos(endRad);
+      const y3 = cy + innerR * Math.sin(endRad);
+      const x4 = cx + innerR * Math.cos(startRad);
+      const y4 = cy + innerR * Math.sin(startRad);
 
-    const largeArc = angle > 180 ? 1 : 0;
-    const pct = ((d.value / total) * 100).toFixed(1);
+      const largeArc = angle > 180 ? 1 : 0;
+      const pct = ((d.value / total) * 100).toFixed(1);
 
-    return `
+      return `
       <path d="M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4} Z" fill="${d.color}"/>
       <text x="${cx + (r + 14) * Math.cos((startRad + endRad) / 2)}" y="${cy + (r + 14) * Math.sin((startRad + endRad) / 2)}" font-size="9" fill="#475569" text-anchor="middle">${pct}%</text>
     `;
-  }).join("");
+    })
+    .join("");
 
-  const legend = data.map((d, i) => `
+  const legend = data
+    .map(
+      (d, i) => `
     <rect x="210" y="${40 + i * 20}" width="12" height="12" rx="2" fill="${d.color}"/>
     <text x="228" y="${50 + i * 20}" font-size="11" fill="#334155">${d.label} (${d.value})</text>
-  `).join("");
+  `,
+    )
+    .join("");
 
   const ch = Math.max(220, 40 + data.length * 20 + 10);
   return `
@@ -197,20 +215,39 @@ async function main() {
   // ── Build charts ──
   const COLORS = ["#1E3A8A", "#3B82F6", "#64748B", "#15803D", "#B45309", "#B91C1C", "#6366F1"];
   const deptChart = barChart(
-    deptStats.map((d, i) => ({ label: d.department.slice(0, 12), value: Number(d.cloud_cost), color: COLORS[i % COLORS.length] })),
-    "Cloud-Equivalent Cost by Department", "$"
+    deptStats.map((d, i) => ({
+      label: d.department.slice(0, 12),
+      value: Number(d.cloud_cost),
+      color: COLORS[i % COLORS.length],
+    })),
+    "Cloud-Equivalent Cost by Department",
+    "$",
   );
   const deptTokenChart = barChart(
-    deptStats.map((d, i) => ({ label: d.department.slice(0, 12), value: Number(d.tokens), color: COLORS[i % COLORS.length] })),
-    "Token Consumption by Department", ""
+    deptStats.map((d, i) => ({
+      label: d.department.slice(0, 12),
+      value: Number(d.tokens),
+      color: COLORS[i % COLORS.length],
+    })),
+    "Token Consumption by Department",
+    "",
   );
   const modelChart = donutChart(
-    modelStats.map((d, i) => ({ label: d.model, value: Number(d.calls), color: COLORS[i % COLORS.length] })),
-    "Model Distribution (Successful Calls)"
+    modelStats.map((d, i) => ({
+      label: d.model,
+      value: Number(d.calls),
+      color: COLORS[i % COLORS.length],
+    })),
+    "Model Distribution (Successful Calls)",
   );
   const taskChart = barChart(
-    taskStats.slice(0, 8).map((d, i) => ({ label: d.task_type.replace(/_/g, " ").slice(0, 14), value: Number(d.calls), color: COLORS[i % COLORS.length] })),
-    "Calls by Task Type", ""
+    taskStats.slice(0, 8).map((d, i) => ({
+      label: d.task_type.replace(/_/g, " ").slice(0, 14),
+      value: Number(d.calls),
+      color: COLORS[i % COLORS.length],
+    })),
+    "Calls by Task Type",
+    "",
   );
 
   // ── Timeline chart ──
@@ -224,19 +261,25 @@ async function main() {
     <svg viewBox="0 0 ${timelineWidth} 200" width="100%" style="max-width:${timelineWidth}px" xmlns="http://www.w3.org/2000/svg">
       <text x="20" y="20" font-size="13" font-weight="700" fill="#0f172a">Activity Timeline (calls per minute)</text>
       <line x1="40" y1="160" x2="${timelineWidth - 10}" y2="160" stroke="#cbd5e1" stroke-width="1"/>
-      ${timelinePoints.map((t: any, i: number) => {
-        const h = (Number(t.calls) / maxTimelineCalls) * 120;
-        const x = 45 + i * (tlBarWidth + tlGap);
-        return `
-          <rect x="${x}" y="${160 - h}" width="${tlBarWidth}" height="${h}" rx="3" fill="#3b82f6" opacity="${0.5 + (i / Math.max(timelinePoints.length,1)) * 0.5}"/>
-          <text x="${x + tlBarWidth/2}" y="175" text-anchor="middle" font-size="8" fill="#64748b">${String(t.minute).slice(11, 16)}</text>
+      ${timelinePoints
+        .map((t: any, i: number) => {
+          const h = (Number(t.calls) / maxTimelineCalls) * 120;
+          const x = 45 + i * (tlBarWidth + tlGap);
+          return `
+          <rect x="${x}" y="${160 - h}" width="${tlBarWidth}" height="${h}" rx="3" fill="#3b82f6" opacity="${0.5 + (i / Math.max(timelinePoints.length, 1)) * 0.5}"/>
+          <text x="${x + tlBarWidth / 2}" y="175" text-anchor="middle" font-size="8" fill="#64748b">${String(t.minute).slice(11, 16)}</text>
         `;
-      }).join("")}
+        })
+        .join("")}
     </svg>
     </div>`;
 
   // ── Build HTML ──
-  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   const totalCalls = Number(s.calls ?? 0);
   const totalTokens = Number(s.total_tokens ?? 0);
   const cloudCost = Number(s.cloud_cost ?? 0);
@@ -246,10 +289,27 @@ async function main() {
   const successRate = totalCalls > 0 ? ((Number(s.successes) / totalCalls) * 100).toFixed(1) : "0";
 
   const html = buildHTML({
-    today, totalCalls, totalTokens, cloudCost, actualCost, savings, avgLatency, successRate,
-    successes: Number(s.successes ?? 0), denied: Number(s.denied ?? 0), errors: Number(s.errors ?? 0),
-    deptChart, deptTokenChart, modelChart, taskChart, timelineChart,
-    deptStats, policyEvents, budgets, decisions, agents,
+    today,
+    totalCalls,
+    totalTokens,
+    cloudCost,
+    actualCost,
+    savings,
+    avgLatency,
+    successRate,
+    successes: Number(s.successes ?? 0),
+    denied: Number(s.denied ?? 0),
+    errors: Number(s.errors ?? 0),
+    deptChart,
+    deptTokenChart,
+    modelChart,
+    taskChart,
+    timelineChart,
+    deptStats,
+    policyEvents,
+    budgets,
+    decisions,
+    agents,
   });
 
   // ── Render PDF ──
@@ -272,7 +332,7 @@ async function main() {
 
 function buildHTML(d: any): string {
   const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-  const fmtLarge = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+  const fmtLarge = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -425,7 +485,9 @@ ${d.taskChart}
 
 <table>
   <tr><th>Department</th><th>Calls</th><th>Tokens</th><th>Cloud-Equiv Cost</th><th>Actual Cost</th><th>Savings</th><th>Policy Blocks</th></tr>
-  ${d.deptStats.map((r: any) => `
+  ${d.deptStats
+    .map(
+      (r: any) => `
     <tr>
       <td><strong>${r.department}</strong></td>
       <td>${r.calls}</td>
@@ -435,7 +497,9 @@ ${d.taskChart}
       <td style="color: #059669; font-weight: 600;">${fmt(Number(r.cloud_cost))}</td>
       <td>${r.denied}</td>
     </tr>
-  `).join("")}
+  `,
+    )
+    .join("")}
   <tr style="font-weight: 700; background: #eff6ff;">
     <td>TOTAL</td>
     <td>${d.totalCalls}</td>
@@ -457,10 +521,15 @@ ${d.taskChart}
 <h2 class="section">Budget Status by Department</h2>
 <table>
   <tr><th>Department</th><th>Monthly Budget</th><th>Spent</th><th>Remaining</th><th>Utilization</th><th>Agents</th></tr>
-  ${d.budgets.rows.map((r: any) => {
-    const pct = r.budget_monthly_cents > 0 ? ((r.spend_monthly_cents / r.budget_monthly_cents) * 100).toFixed(1) : "0";
-    const barColor = parseFloat(pct) > 80 ? "#ef4444" : parseFloat(pct) > 60 ? "#f59e0b" : "#10b981";
-    return `
+  ${d.budgets.rows
+    .map((r: any) => {
+      const pct =
+        r.budget_monthly_cents > 0
+          ? ((r.spend_monthly_cents / r.budget_monthly_cents) * 100).toFixed(1)
+          : "0";
+      const barColor =
+        parseFloat(pct) > 80 ? "#ef4444" : parseFloat(pct) > 60 ? "#f59e0b" : "#10b981";
+      return `
       <tr>
         <td><strong>${r.name}</strong></td>
         <td>${fmt(r.budget_monthly_cents)}</td>
@@ -476,49 +545,66 @@ ${d.taskChart}
         </td>
         <td>${r.agent_count}</td>
       </tr>`;
-  }).join("")}
+    })
+    .join("")}
 </table>
 
 <!-- POLICY & SECURITY -->
 <h2 class="section">Policy Enforcement & Security Events</h2>
-${d.policyEvents.length === 0 ? "<p>No policy events recorded during this simulation period.</p>" : `
+${
+  d.policyEvents.length === 0
+    ? "<p>No policy events recorded during this simulation period.</p>"
+    : `
 <table>
   <tr><th>Decision</th><th>Reason</th><th>Count</th></tr>
-  ${d.policyEvents.map((r: any) => `
+  ${d.policyEvents
+    .map(
+      (r: any) => `
     <tr>
       <td><span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
-        background: ${r.decision === 'deny' ? '#fef2f2' : r.decision === 'downgrade' ? '#fef3c7' : '#f0fdf4'};
-        color: ${r.decision === 'deny' ? '#dc2626' : r.decision === 'downgrade' ? '#d97706' : '#059669'};">${r.decision}</span></td>
+        background: ${r.decision === "deny" ? "#fef2f2" : r.decision === "downgrade" ? "#fef3c7" : "#f0fdf4"};
+        color: ${r.decision === "deny" ? "#dc2626" : r.decision === "downgrade" ? "#d97706" : "#059669"};">${r.decision}</span></td>
       <td>${r.reason}</td>
       <td><strong>${r.count}</strong></td>
-    </tr>`).join("")}
-</table>`}
+    </tr>`,
+    )
+    .join("")}
+</table>`
+}
 
 <!-- MANAGEMENT DECISIONS -->
 <h2 class="section" style="page-break-before: always;">Management Decisions</h2>
-${d.decisions.rows.map((r: any) => `
+${d.decisions.rows
+  .map(
+    (r: any) => `
   <div class="decision">
     <div class="type">${r.decision_type.replace(/_/g, " ")} · ${r.decided_by === "usr_ceo" ? "Patricia Vance (CEO)" : r.decided_by === "usr_david" ? "David Kim (Supply Chain Head)" : r.decided_by}</div>
     <div class="title">${r.title}</div>
     <div class="desc">${r.description}</div>
   </div>
-`).join("")}
+`,
+  )
+  .join("")}
 
 <!-- AGENT INVENTORY -->
 <h2 class="section" style="page-break-before: always;">Agent Inventory</h2>
 <table>
   <tr><th>Agent</th><th>Type</th><th>Department</th><th>Task</th><th>Clearance</th><th>Tier</th><th>Model</th><th>Stakeholder</th></tr>
-  ${d.agents.rows.map((r: any) => `
+  ${d.agents.rows
+    .map(
+      (r: any) => `
     <tr>
       <td><strong>${r.name}</strong></td>
       <td>${r.agent_type}</td>
       <td>${r.dept}</td>
       <td>${r.task_type.replace(/_/g, " ")}</td>
-      <td><span style="font-size: 10px; font-weight: 600; color: ${r.classification_clearance === 'restricted' ? '#dc2626' : r.classification_clearance === 'confidential' ? '#d97706' : '#059669'};">${r.classification_clearance}</span></td>
+      <td><span style="font-size: 10px; font-weight: 600; color: ${r.classification_clearance === "restricted" ? "#dc2626" : r.classification_clearance === "confidential" ? "#d97706" : "#059669"};">${r.classification_clearance}</span></td>
       <td>${r.priority_tier}</td>
       <td>${r.preferred_model}</td>
       <td>${r.stakeholder}</td>
-    </tr>`).join("")}
+    </tr>`,
+    )
+    .join("")}
 </table>
 
 <!-- BUSINESS IMPACT -->
@@ -576,4 +662,7 @@ ${d.decisions.rows.map((r: any) => `
 </html>`;
 }
 
-main().catch(e => { console.error("Report generation failed:", e); process.exit(1); });
+main().catch((e) => {
+  console.error("Report generation failed:", e);
+  process.exit(1);
+});

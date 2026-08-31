@@ -21,9 +21,13 @@ import { tenantTable } from "./org-tree.js";
 /** Resource — a governed external asset (S3 bucket, DB, SharePoint site, …). */
 export const resourceTable = pgTable("resource", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   type: resourceTypeEnum("type").notNull(),
-  connectorId: uuid("connector_id").notNull().references(() => resourceConnectorTable.id),
+  connectorId: uuid("connector_id")
+    .notNull()
+    .references(() => resourceConnectorTable.id),
   externalRef: text("external_ref").notNull(),
   classification: text("classification").notNull(), // FK-by-value to ClassificationLevel.name
   tagsJson: jsonb("tags_json").$type<Record<string, string>>().notNull().default({}),
@@ -33,7 +37,9 @@ export const resourceTable = pgTable("resource", {
 /** ResourceConnector — how a resource type is reached (spec §6.2). */
 export const resourceConnectorTable = pgTable("resource_connector", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   type: resourceTypeEnum("type").notNull(),
   authMechanism: text("auth_mechanism").notNull(),
   vendingStrategy: vendingStrategyEnum("vending_strategy").notNull(),
@@ -43,7 +49,9 @@ export const resourceConnectorTable = pgTable("resource_connector", {
 /** ResourceRole — named action bundle attachable to resources. */
 export const resourceRoleTable = pgTable("resource_role", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   name: text("name").notNull(),
   actions: jsonb("actions").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -57,17 +65,23 @@ export const resourceRoleTable = pgTable("resource_role", {
  */
 export const permissionGrantTable = pgTable("permission_grant", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   principalType: principalTypeEnum("principal_type").notNull(),
   principalId: uuid("principal_id").notNull(),
   scopeType: scopeTypeEnum("scope_type"), // optional scope anchoring for inheritance resolution
   scopeId: uuid("scope_id"),
-  resourceId: uuid("resource_id").notNull().references(() => resourceTable.id),
+  resourceId: uuid("resource_id")
+    .notNull()
+    .references(() => resourceTable.id),
   actions: jsonb("actions").$type<string[]>().notNull().default([]),
   // `deny: true` marks this row as an explicit deny (Inheritance chain, §6.1).
   deny: jsonb("deny").$type<boolean>().notNull().default(false),
   constraintsJson: jsonb("constraints_json").$type<Record<string, unknown>>(),
-  grantedBy: uuid("granted_by").notNull().references(() => userTable.id),
+  grantedBy: uuid("granted_by")
+    .notNull()
+    .references(() => userTable.id),
   grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
 });
@@ -79,7 +93,9 @@ export const permissionGrantTable = pgTable("permission_grant", {
  */
 export const classificationLevelTable = pgTable("classification_level", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   rank: integer("rank").notNull(),
   name: text("name").notNull().unique(), // public, internal, confidential, restricted
   /** Regulatory flags for dual-axis classification (D6). Empty array = single-axis. */
@@ -89,9 +105,15 @@ export const classificationLevelTable = pgTable("classification_level", {
 /** AccessRequest — JIT elevation request (§6.4). */
 export const accessRequestTable = pgTable("access_request", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-  requesterAgentId: uuid("requester_agent_id").notNull().references(() => agentTable.id),
-  resourceId: uuid("resource_id").notNull().references(() => resourceTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
+  requesterAgentId: uuid("requester_agent_id")
+    .notNull()
+    .references(() => agentTable.id),
+  resourceId: uuid("resource_id")
+    .notNull()
+    .references(() => resourceTable.id),
   actions: jsonb("actions").$type<string[]>().notNull().default([]),
   reason: text("reason"),
   status: accessRequestStatusEnum("status").notNull().default("pending"),
@@ -103,9 +125,15 @@ export const accessRequestTable = pgTable("access_request", {
 /** AccessApproval — decision record for an AccessRequest. */
 export const accessApprovalTable = pgTable("access_approval", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-  requestId: uuid("request_id").notNull().references(() => accessRequestTable.id),
-  approverId: uuid("approver_id").notNull().references(() => userTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
+  requestId: uuid("request_id")
+    .notNull()
+    .references(() => accessRequestTable.id),
+  approverId: uuid("approver_id")
+    .notNull()
+    .references(() => userTable.id),
   decision: approvalDecisionEnum("decision").notNull(),
   conditionsJson: jsonb("conditions_json").$type<Record<string, unknown>>(),
   decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),

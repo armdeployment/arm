@@ -32,7 +32,9 @@ export const httpIndexAdapter: DiscoverySourceAdapter = {
     return body.components.map((entry) => {
       const kindParse = componentKindSchema.safeParse(entry.kind);
       if (!kindParse.success) {
-        throw new Error(`http-index adapter: entry "${entry.external_ref}" has invalid kind "${entry.kind}"`);
+        throw new Error(
+          `http-index adapter: entry "${entry.external_ref}" has invalid kind "${entry.kind}"`,
+        );
       }
       return {
         externalRef: entry.external_ref,

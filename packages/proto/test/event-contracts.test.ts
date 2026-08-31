@@ -8,11 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  tokenUsageEventSchema,
-  accessAuditEventSchema,
-  ALL_EVENT_FIELDS,
-} from "../src/index.js";
+import { tokenUsageEventSchema, accessAuditEventSchema, ALL_EVENT_FIELDS } from "../src/index.js";
 
 describe("token_usage_event contract", () => {
   const valid = {
@@ -33,21 +29,15 @@ describe("token_usage_event contract", () => {
   });
 
   it("rejects negative token counts", () => {
-    expect(() =>
-      tokenUsageEventSchema.parse({ ...valid, input_tokens: -1 }),
-    ).toThrow();
+    expect(() => tokenUsageEventSchema.parse({ ...valid, input_tokens: -1 })).toThrow();
   });
 
   it("rejects invalid source enum", () => {
-    expect(() =>
-      tokenUsageEventSchema.parse({ ...valid, source: "hack" }),
-    ).toThrow();
+    expect(() => tokenUsageEventSchema.parse({ ...valid, source: "hack" })).toThrow();
   });
 
   it("rejects invalid priority_tier", () => {
-    expect(() =>
-      tokenUsageEventSchema.parse({ ...valid, priority_tier: "urgent" }),
-    ).toThrow();
+    expect(() => tokenUsageEventSchema.parse({ ...valid, priority_tier: "urgent" })).toThrow();
   });
 
   it("rejects missing tenant_id", () => {
@@ -73,15 +63,11 @@ describe("access_audit_event contract", () => {
   });
 
   it("rejects invalid decision enum", () => {
-    expect(() =>
-      accessAuditEventSchema.parse({ ...valid, decision: "maybe" }),
-    ).toThrow();
+    expect(() => accessAuditEventSchema.parse({ ...valid, decision: "maybe" })).toThrow();
   });
 
   it("rejects empty agent_id", () => {
-    expect(() =>
-      accessAuditEventSchema.parse({ ...valid, agent_id: "" }),
-    ).toThrow();
+    expect(() => accessAuditEventSchema.parse({ ...valid, agent_id: "" })).toThrow();
   });
 });
 

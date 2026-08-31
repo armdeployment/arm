@@ -32,8 +32,7 @@ export const ARM_ERROR_FIXES: Record<ArmErrorCode, string> = {
     "Your agent runtime is older than this package requires. Update it (the installer's `arm doctor` command can do this) and re-run setup.",
   TOKEN_EXPIRED:
     "This setup link expired 15 minutes after it was issued. Ask your admin for a fresh link or activation code from the questionnaire.",
-  TOKEN_ALREADY_USED:
-    "This setup link was already used — ask IT for a new one.",
+  TOKEN_ALREADY_USED: "This setup link was already used — ask IT for a new one.",
   MANIFEST_TAMPERED:
     "The package manifest failed integrity verification. Do not proceed — this can indicate a compromised network or server. Contact IT.",
   DIGEST_MISMATCH:

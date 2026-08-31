@@ -61,10 +61,10 @@ this was a safely-scoped fix, not a wider rename.)
   budget caps ($950/$700/$420/$300/$400/$600 mo).
 - Clicked "Request" on Quality Engineer — real `requestAssignment` mutation,
   confirmed the row landed in Postgres (`SELECT ... ORDER BY created_at DESC
-  LIMIT 1` showed it immediately).
+LIMIT 1` showed it immediately).
 - `/governance` Approvals Inbox showed that exact request; clicked
   "Approve" — real `approveAssignment` mutation, confirmed `status =
-  'approved'` and `approver_user_id` set in Postgres.
+'approved'` and `approver_user_id` set in Postgres.
 
 ## Known limitation, not fixed here
 

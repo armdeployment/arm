@@ -20,16 +20,10 @@ import { TOOL_SCOPE_RANK, type ScopeType } from "./scope-rank.js";
 export type ToolAction = "invoke" | "configure" | "publish";
 
 /** `tool:*` verb strings — D8 permission-verb extension for D9 tool authz. */
-export const TOOL_ACTION_VERBS = [
-  "tool:invoke",
-  "tool:configure",
-  "tool:publish",
-] as const;
+export const TOOL_ACTION_VERBS = ["tool:invoke", "tool:configure", "tool:publish"] as const;
 
 /** Maps a ToolAction to its `tool:*` permission verb. */
-export function toolVerbFor(
-  action: ToolAction,
-): (typeof TOOL_ACTION_VERBS)[number] {
+export function toolVerbFor(action: ToolAction): (typeof TOOL_ACTION_VERBS)[number] {
   switch (action) {
     case "invoke":
       return "tool:invoke";
@@ -53,8 +47,7 @@ export { TOOL_SCOPE_RANK };
 /** Rank lookup; unknown scope types rank last (least authoritative), never NaN. */
 function toolScopeRank(scopeType: string): number {
   return (
-    (TOOL_SCOPE_RANK as Record<string, number | undefined>)[scopeType] ??
-    Number.MAX_SAFE_INTEGER
+    (TOOL_SCOPE_RANK as Record<string, number | undefined>)[scopeType] ?? Number.MAX_SAFE_INTEGER
   );
 }
 
@@ -100,9 +93,7 @@ export interface ResolveToolAccessInput {
  * 3. No deny → highest-authority ALLOW wins.
  * 4. No matching grants → deny (closed by default).
  */
-export function resolveToolAccess(
-  input: ResolveToolAccessInput,
-): ToolAccessDecision {
+export function resolveToolAccess(input: ResolveToolAccessInput): ToolAccessDecision {
   const now = input.now ?? new Date();
 
   const matching = input.grants.filter((g) => {
@@ -191,10 +182,7 @@ export function resolvePackageModel(
 
   const allowed = routing.allowed_models ?? [];
   const matches = allowed.some(
-    (m) =>
-      m === requestedModel ||
-      m === "*" ||
-      requestedModel.startsWith(m.replace("/*", "/")),
+    (m) => m === requestedModel || m === "*" || requestedModel.startsWith(m.replace("/*", "/")),
   );
   if (matches) {
     return { model: requestedModel, downgraded: false, reason: "package_policy_allowed" };

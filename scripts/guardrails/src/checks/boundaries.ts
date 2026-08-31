@@ -135,9 +135,7 @@ export function checkBoundaries(files: { path: string; content: string }[]): Che
     return {
       id: "boundaries",
       status: "fail",
-      detail: violations
-        .map((v) => `${v.from} -> @arm/${v.to} (${v.reason})`)
-        .join(", "),
+      detail: violations.map((v) => `${v.from} -> @arm/${v.to} (${v.reason})`).join(", "),
       scanned: files.length,
       assertsNegative: true,
     };
@@ -164,7 +162,8 @@ register({
     const files: { path: string; content: string }[] = [];
     const walk = (dir: string, rel: string): void => {
       for (const entry of readdirSync(dir)) {
-        if (entry === "node_modules" || entry === ".git" || entry === "dist" || entry === ".turbo") continue;
+        if (entry === "node_modules" || entry === ".git" || entry === "dist" || entry === ".turbo")
+          continue;
         const p = join(dir, entry);
         const st = statSync(p);
         if (st.isDirectory()) walk(p, `${rel}${entry}/`);

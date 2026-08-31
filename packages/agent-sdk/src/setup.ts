@@ -9,12 +9,7 @@
  */
 
 import { createInterface } from "node:readline";
-import {
-  AGENTS,
-  generateAgentConfig,
-  verifyConnection,
-  type SetupInput,
-} from "./index.js";
+import { AGENTS, generateAgentConfig, verifyConnection, type SetupInput } from "./index.js";
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -82,7 +77,9 @@ async function main() {
       console.log(`  ✓ ${verify.detail}`);
     } else {
       console.log(`  ⚠ ${verify.detail}`);
-      console.log("  The proxy may not be running. Your config is saved — retry when the proxy is available.");
+      console.log(
+        "  The proxy may not be running. Your config is saved — retry when the proxy is available.",
+      );
     }
   } else {
     console.log(`✗ Setup failed: ${result.message}`);

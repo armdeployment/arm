@@ -18,7 +18,10 @@ import {
 
 describe("RBAC — hasPermission", () => {
   const adminRole: ResolvedRole = { name: "admin", permissions: ["*"] };
-  const agentRole: ResolvedRole = { name: "agent-mgr", permissions: ["agent:create", "agent:read", "agent:disable"] };
+  const agentRole: ResolvedRole = {
+    name: "agent-mgr",
+    permissions: ["agent:create", "agent:read", "agent:disable"],
+  };
   const budgetRole: ResolvedRole = { name: "budget-viewer", permissions: ["budget:read"] };
 
   it("grants exact permission match", () => {
@@ -102,7 +105,12 @@ describe("Agent token payload builder", () => {
 describe("SAML/SCIM provisioning", () => {
   it("provisions a SCIM user successfully", async () => {
     const { provisionSCIMUser } = await import("../src/index.js");
-    const r = await provisionSCIMUser({ schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"], userName: "a@b.com", emails: [{ value: "a@b.com", type: "work" }], active: true });
+    const r = await provisionSCIMUser({
+      schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+      userName: "a@b.com",
+      emails: [{ value: "a@b.com", type: "work" }],
+      active: true,
+    });
     expect(r.success).toBe(true);
     expect(r.resourceId).toContain("user_");
   });
@@ -130,7 +138,13 @@ describe("IdP integration — enterprise identity", () => {
 
   it("mapIdPClaims maps Entra claims to ARM claims", async () => {
     const { mapIdPClaims, PRESET_CLAIM_MAPPINGS } = await import("../src/index.js");
-    const raw = { sub: "user-1", email: "eng@acme.com", oid: "oid-1", department: "Engineering", jobTitle: "Senior Engineer" };
+    const raw = {
+      sub: "user-1",
+      email: "eng@acme.com",
+      oid: "oid-1",
+      department: "Engineering",
+      jobTitle: "Senior Engineer",
+    };
     const claims = mapIdPClaims(raw, PRESET_CLAIM_MAPPINGS.entra);
     expect(claims.email).toBe("eng@acme.com");
     expect(claims.scope).toBe("Engineering");
@@ -139,8 +153,12 @@ describe("IdP integration — enterprise identity", () => {
   it("bootstrapAgent creates agent identity with credentials", async () => {
     const { bootstrapAgent } = await import("../src/index.js");
     const result = await bootstrapAgent({
-      stakeholderUserId: "user_eng_1", agentName: "test-agent", agentType: "opencode",
-      scopeType: "team", scopeId: "team_be", requestedTier: "critical",
+      stakeholderUserId: "user_eng_1",
+      agentName: "test-agent",
+      agentType: "opencode",
+      scopeType: "team",
+      scopeId: "team_be",
+      requestedTier: "critical",
     });
     expect(result.success).toBe(true);
     expect(result.agentId).toContain("agt_");

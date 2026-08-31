@@ -7,7 +7,12 @@ import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import { pullComponentBlob, installComponent, installDirFor } from "../src/components.js";
 import { ArmClientError } from "../src/errors.js";
-import { makeComponent, makeComponentVersion, SKILL_BLOB_DIGEST, SKILL_BLOB_TEXT } from "./helpers.js";
+import {
+  makeComponent,
+  makeComponentVersion,
+  SKILL_BLOB_DIGEST,
+  SKILL_BLOB_TEXT,
+} from "./helpers.js";
 
 describe("installDirFor", () => {
   it("maps installable kinds to their agent-home subdirectory", () => {
@@ -117,7 +122,12 @@ describe("installComponent", () => {
     tempDirs.push(agentHome);
 
     const resolved = {
-      component: makeComponent({ kind: "skill", slug: "8d-generator", endpoint: null, auth_strategy: null }),
+      component: makeComponent({
+        kind: "skill",
+        slug: "8d-generator",
+        endpoint: null,
+        auth_strategy: null,
+      }),
       version: makeComponentVersion({ blob_digest: SKILL_BLOB_DIGEST }),
     };
     const result = await installComponent(resolved, { dataPlaneUrl, agentHome });

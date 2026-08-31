@@ -59,8 +59,11 @@ export const holdingProfile: IndustryProfilePreset = {
         budgetMonthlyCents: 10000_00,
         children: [
           {
-            type: "plant", name: "Plant Detroit", location: "Detroit, MI, USA",
-            budgetMonthlyCents: 5000_00, tags: { regulatory: "ITAR" },
+            type: "plant",
+            name: "Plant Detroit",
+            location: "Detroit, MI, USA",
+            budgetMonthlyCents: 5000_00,
+            tags: { regulatory: "ITAR" },
             children: [
               { type: "department", name: "Production", budgetMonthlyCents: 3000_00 },
               { type: "department", name: "Quality Control", budgetMonthlyCents: 1000_00 },
@@ -68,7 +71,9 @@ export const holdingProfile: IndustryProfilePreset = {
             ],
           },
           {
-            type: "plant", name: "Plant Shenzhen", location: "Shenzhen, China",
+            type: "plant",
+            name: "Plant Shenzhen",
+            location: "Shenzhen, China",
             budgetMonthlyCents: 5000_00,
             children: [
               { type: "department", name: "Production", budgetMonthlyCents: 3000_00 },
@@ -100,22 +105,71 @@ export const holdingProfile: IndustryProfilePreset = {
   },
 
   personas: [
-    { key: "portfolio_manager", label: "Portfolio Manager", defaultPanels: ["subsidiary_overview", "consolidated_spend", "portfolio_health"] },
-    { key: "subsidiary_cfo", label: "Subsidiary CFO", defaultPanels: ["spend", "agents", "consolidated_spend"] },
-    { key: "consolidation_analyst", label: "Consolidation Analyst", defaultPanels: ["consolidated_spend", "cross_entity_audit"] },
-    { key: "board_reporter", label: "Board Reporter", defaultPanels: ["subsidiary_overview", "portfolio_health", "cross_entity_audit"] },
-    { key: "shared_services", label: "Shared Services Admin", defaultPanels: ["spend", "agents", "access", "audit"] },
-    { key: "admin", label: "Group Admin", defaultPanels: ["subsidiary_overview", "consolidated_spend", "cross_entity_audit", "portfolio_health", "agents", "access", "audit", "resources", "idp"] },
+    {
+      key: "portfolio_manager",
+      label: "Portfolio Manager",
+      defaultPanels: ["subsidiary_overview", "consolidated_spend", "portfolio_health"],
+    },
+    {
+      key: "subsidiary_cfo",
+      label: "Subsidiary CFO",
+      defaultPanels: ["spend", "agents", "consolidated_spend"],
+    },
+    {
+      key: "consolidation_analyst",
+      label: "Consolidation Analyst",
+      defaultPanels: ["consolidated_spend", "cross_entity_audit"],
+    },
+    {
+      key: "board_reporter",
+      label: "Board Reporter",
+      defaultPanels: ["subsidiary_overview", "portfolio_health", "cross_entity_audit"],
+    },
+    {
+      key: "shared_services",
+      label: "Shared Services Admin",
+      defaultPanels: ["spend", "agents", "access", "audit"],
+    },
+    {
+      key: "admin",
+      label: "Group Admin",
+      defaultPanels: [
+        "subsidiary_overview",
+        "consolidated_spend",
+        "cross_entity_audit",
+        "portfolio_health",
+        "agents",
+        "access",
+        "audit",
+        "resources",
+        "idp",
+      ],
+    },
   ],
 
   // Superset — holding company can enable anything any subsidiary needs
   resourceTypes: {
     enabled: [
-      "s3", "gcs", "db", "sharepoint", "onedrive", "files", "internal",
+      "s3",
+      "gcs",
+      "db",
+      "sharepoint",
+      "onedrive",
+      "files",
+      "internal",
       // OT (manufacturing subsidiary)
-      "mes", "erp", "scada", "historian", "plm", "cmms", "iot",
+      "mes",
+      "erp",
+      "scada",
+      "historian",
+      "plm",
+      "cmms",
+      "iot",
       // Finance subsidiary
-      "trading_system", "bloomberg", "reuters", "risk_engine",
+      "trading_system",
+      "bloomberg",
+      "reuters",
+      "risk_engine",
     ],
   },
 
@@ -237,21 +291,109 @@ export const holdingProfile: IndustryProfilePreset = {
 
   seedAgents: [
     // Corporate (Parent)
-    { name: "Consolidation-Agent", type: "claude_code", departmentName: "Corporate (Parent)", taskType: "financial_consolidation", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "BoardReport-Agent", type: "opencode", departmentName: "Corporate (Parent)", taskType: "board_reporting", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "MACounsel-Agent", type: "claude_code", departmentName: "Corporate (Parent)", taskType: "ma_legal_review", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
+    {
+      name: "Consolidation-Agent",
+      type: "claude_code",
+      departmentName: "Corporate (Parent)",
+      taskType: "financial_consolidation",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "BoardReport-Agent",
+      type: "opencode",
+      departmentName: "Corporate (Parent)",
+      taskType: "board_reporting",
+      clearance: "confidential",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "MACounsel-Agent",
+      type: "claude_code",
+      departmentName: "Corporate (Parent)",
+      taskType: "ma_legal_review",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
     // Tech Division
-    { name: "CodeReview-Bot", type: "claude_code", departmentName: "Subsidiary: Tech Division", taskType: "code_review", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
-    { name: "DevOps-Agent", type: "copilot", departmentName: "Subsidiary: Tech Division", taskType: "devops_automation", clearance: "internal", tier: "standard", preferredModel: "minicpm5-1b" },
+    {
+      name: "CodeReview-Bot",
+      type: "claude_code",
+      departmentName: "Subsidiary: Tech Division",
+      taskType: "code_review",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "DevOps-Agent",
+      type: "copilot",
+      departmentName: "Subsidiary: Tech Division",
+      taskType: "devops_automation",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
     // Manufacturing Division
-    { name: "ToolPath-Optimizer", type: "opencode", departmentName: "Subsidiary: Manufacturing Division", taskType: "cnc_toolpath_optimization", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "QualityAnalysis-Agent", type: "claude_code", departmentName: "Subsidiary: Manufacturing Division", taskType: "defect_analysis", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
+    {
+      name: "ToolPath-Optimizer",
+      type: "opencode",
+      departmentName: "Subsidiary: Manufacturing Division",
+      taskType: "cnc_toolpath_optimization",
+      clearance: "confidential",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "QualityAnalysis-Agent",
+      type: "claude_code",
+      departmentName: "Subsidiary: Manufacturing Division",
+      taskType: "defect_analysis",
+      clearance: "confidential",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
     // Finance Division
-    { name: "RiskAssess-Agent", type: "claude_code", departmentName: "Subsidiary: Finance Division", taskType: "risk_assessment", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "ComplianceCheck-Bot", type: "opencode", departmentName: "Subsidiary: Finance Division", taskType: "compliance_review", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
+    {
+      name: "RiskAssess-Agent",
+      type: "claude_code",
+      departmentName: "Subsidiary: Finance Division",
+      taskType: "risk_assessment",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "ComplianceCheck-Bot",
+      type: "opencode",
+      departmentName: "Subsidiary: Finance Division",
+      taskType: "compliance_review",
+      clearance: "confidential",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
     // Shared Services
-    { name: "ITGovernance-Agent", type: "pi", departmentName: "Shared Services", taskType: "it_governance", clearance: "internal", tier: "standard", preferredModel: "qwen3.5" },
-    { name: "AuditTrail-Agent", type: "claude_code", departmentName: "Shared Services", taskType: "audit_trail_analysis", clearance: "restricted", tier: "standard", preferredModel: "qwen3.5" },
+    {
+      name: "ITGovernance-Agent",
+      type: "pi",
+      departmentName: "Shared Services",
+      taskType: "it_governance",
+      clearance: "internal",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "AuditTrail-Agent",
+      type: "claude_code",
+      departmentName: "Shared Services",
+      taskType: "audit_trail_analysis",
+      clearance: "restricted",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
   ],
 
   uiPanels: [
@@ -270,28 +412,42 @@ export const holdingProfile: IndustryProfilePreset = {
   // ── Role presets (D8) — cross-subsidiary org authority ──
   rolePresets: [
     {
-      key: "org_admin", label: "Org Admin",
-      description: "Parent-company level authority: restructure any subsidiary, add new subsidiaries, reparent across the whole tree.",
-      scopeType: "org", singleton: true,
-      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+      key: "org_admin",
+      label: "Org Admin",
+      description:
+        "Parent-company level authority: restructure any subsidiary, add new subsidiaries, reparent across the whole tree.",
+      scopeType: "org",
+      singleton: true,
+      permissions: [
+        "org_node:create",
+        "org_node:rename",
+        "org_node:reparent",
+        "org_node:delete",
+        "*",
+      ],
     },
     {
-      key: "subsidiary_admin", label: "Subsidiary Admin",
-      description: "Restructure WITHIN their subsidiary only: add plants, departments, lines. Cannot reparent across subsidiaries.",
+      key: "subsidiary_admin",
+      label: "Subsidiary Admin",
+      description:
+        "Restructure WITHIN their subsidiary only: add plants, departments, lines. Cannot reparent across subsidiaries.",
       scopeType: "organization",
-      permissions: ["org_node:create", "org_node:rename"]
+      permissions: ["org_node:create", "org_node:rename"],
     },
     {
-      key: "portfolio_manager", label: "Portfolio Manager",
+      key: "portfolio_manager",
+      label: "Portfolio Manager",
       description: "Read-only view across all subsidiaries. No org-tree edits.",
-      scopeType: "org", singleton: true,
-      permissions: []
+      scopeType: "org",
+      singleton: true,
+      permissions: [],
     },
     {
-      key: "viewer", label: "Viewer",
+      key: "viewer",
+      label: "Viewer",
       description: "Read-only within their own subsidiary.",
       scopeType: "organization",
-      permissions: []
+      permissions: [],
     },
   ],
 
@@ -299,23 +455,53 @@ export const holdingProfile: IndustryProfilePreset = {
   workTypeTaxonomies: [
     {
       departmentName: "Corporate (Parent)",
-      labels: ["financial_consolidation", "board_reporting", "ma_legal_review", "treasury_analysis", "investor_relations"],
+      labels: [
+        "financial_consolidation",
+        "board_reporting",
+        "ma_legal_review",
+        "treasury_analysis",
+        "investor_relations",
+      ],
     },
     {
       departmentName: "Subsidiary: Tech Division",
-      labels: ["code_review", "devops_automation", "architecture_design", "incident_triage", "dependency_upgrade"],
+      labels: [
+        "code_review",
+        "devops_automation",
+        "architecture_design",
+        "incident_triage",
+        "dependency_upgrade",
+      ],
     },
     {
       departmentName: "Subsidiary: Manufacturing Division",
-      labels: ["cnc_toolpath_optimization", "defect_analysis", "predictive_maintenance", "quality_inspection", "demand_forecasting"],
+      labels: [
+        "cnc_toolpath_optimization",
+        "defect_analysis",
+        "predictive_maintenance",
+        "quality_inspection",
+        "demand_forecasting",
+      ],
     },
     {
       departmentName: "Subsidiary: Finance Division",
-      labels: ["risk_assessment", "trade_analysis", "compliance_review", "reconciliation", "regulatory_reporting"],
+      labels: [
+        "risk_assessment",
+        "trade_analysis",
+        "compliance_review",
+        "reconciliation",
+        "regulatory_reporting",
+      ],
     },
     {
       departmentName: "Shared Services",
-      labels: ["it_governance", "audit_trail_analysis", "access_review", "policy_review", "cybersecurity_scan"],
+      labels: [
+        "it_governance",
+        "audit_trail_analysis",
+        "access_review",
+        "policy_review",
+        "cybersecurity_scan",
+      ],
     },
   ],
 
@@ -326,7 +512,8 @@ export const holdingProfile: IndustryProfilePreset = {
       name: "Consolidation Analyst",
       family: "corporate_finance",
       mode: "copilot",
-      description: "Cross-entity consolidation, board-pack assembly, and variance memos for group finance.",
+      description:
+        "Cross-entity consolidation, board-pack assembly, and variance memos for group finance.",
       tools: [
         { tool: "erp.sap", toolVersion: "2.0.0" },
         { tool: "spreadsheets.excel", toolVersion: "1.2.0" },
@@ -359,7 +546,8 @@ export const holdingProfile: IndustryProfilePreset = {
       name: "Executive Assistant",
       family: "executive",
       mode: "copilot",
-      description: "Portfolio KPI briefings, approvals inbox summaries, and web research for group leadership. Aggregates-only — never raw content.",
+      description:
+        "Portfolio KPI briefings, approvals inbox summaries, and web research for group leadership. Aggregates-only — never raw content.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -391,7 +579,8 @@ export const holdingProfile: IndustryProfilePreset = {
       name: "Senior Manager",
       family: "leadership",
       mode: "copilot",
-      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
+      description:
+        "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },

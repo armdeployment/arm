@@ -24,7 +24,11 @@ export interface S3SignedRequest {
 /** Produces a signed request for one S3 operation. Implementations wrap
  *  SigV4 (or the deployment's own broker) — never a bare access key here. */
 export interface S3RequestSigner {
-  sign(method: "PUT" | "GET" | "HEAD", key: string, opts?: { presignTtlSeconds?: number }): Promise<S3SignedRequest>;
+  sign(
+    method: "PUT" | "GET" | "HEAD",
+    key: string,
+    opts?: { presignTtlSeconds?: number },
+  ): Promise<S3SignedRequest>;
 }
 
 export interface S3BackendOptions {

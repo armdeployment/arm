@@ -20,12 +20,24 @@ export const V6 = {
     role: "senior_manager",
     packageVersion: "senior_manager@1.0.0",
     budget: "$300/month",
-    components: ["jira", "historian-pi", "Approval Summaries", "Exec Digest", "Kpi Analyst", "Kpi Briefing Generator", "Tpl Exec Digest", "Tpl Kpi Brief"],
+    components: [
+      "jira",
+      "historian-pi",
+      "Approval Summaries",
+      "Exec Digest",
+      "Kpi Analyst",
+      "Kpi Briefing Generator",
+      "Tpl Exec Digest",
+      "Tpl Kpi Brief",
+    ],
   },
 
   chat: {
     user: "I run a manufacturing plant and my team keeps waiting on me for budget approvals before they can order parts",
-    classification: { tag: "budget_approval_pain", jobFunctionHint: "senior_manager" },
+    classification: {
+      tag: "budget_approval_pain",
+      jobFunctionHint: "senior_manager",
+    },
   },
 
   folders: {

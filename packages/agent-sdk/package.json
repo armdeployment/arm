@@ -4,7 +4,9 @@
   "description": "ARM Agent SDK — connect coding agents (opencode, claude code, copilot, Pi) to the ARM governance platform",
   "private": true,
   "type": "module",
-  "bin": { "arm-agent": "./dist/setup.js" },
+  "bin": {
+    "arm-agent": "./dist/setup.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

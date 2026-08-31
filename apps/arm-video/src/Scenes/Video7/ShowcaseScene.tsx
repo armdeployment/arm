@@ -1,4 +1,10 @@
-import { interpolate, useCurrentFrame, Easing, Img, staticFile } from "remotion";
+import {
+  interpolate,
+  useCurrentFrame,
+  Easing,
+  Img,
+  staticFile,
+} from "remotion";
 import { COLORS, FONT_SANS, FONT_MONO } from "../../theme";
 
 /**
@@ -69,7 +75,10 @@ export const ShowcaseScene: React.FC<ShowcaseSceneProps> = ({
   const titleColor = dark ? COLORS.white : COLORS.text;
   const mutedColor = dark ? COLORS.textDarkMuted : COLORS.textMuted;
 
-  const appear = interpolate(frame, [0, 15], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const appear = interpolate(frame, [0, 15], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const titleY = interpolate(frame, [0, 15], [30, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -77,79 +86,181 @@ export const ShowcaseScene: React.FC<ShowcaseSceneProps> = ({
   });
 
   return (
-    <div style={{
-      width: "100%", height: "100%", backgroundColor: bg,
-      display: "flex", flexDirection: "column", alignItems: "center",
-      fontFamily: FONT_SANS, padding: "20px 40px 22px",
-    }}>
-      <div style={{ opacity: appear, transform: `translateY(${titleY}px)`, textAlign: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: 19, color: accent, fontWeight: 700, letterSpacing: 2.4, textTransform: "uppercase", marginBottom: 5 }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        backgroundColor: bg,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        fontFamily: FONT_SANS,
+        padding: "20px 40px 22px",
+      }}
+    >
+      <div
+        style={{
+          opacity: appear,
+          transform: `translateY(${titleY}px)`,
+          textAlign: "center",
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 19,
+            color: accent,
+            fontWeight: 700,
+            letterSpacing: 2.4,
+            textTransform: "uppercase",
+            marginBottom: 5,
+          }}
+        >
           {kicker}
         </div>
-        <div style={{ fontSize: 43, fontWeight: 700, color: titleColor, letterSpacing: -0.8, lineHeight: 1.1 }}>{title}</div>
+        <div
+          style={{
+            fontSize: 43,
+            fontWeight: 700,
+            color: titleColor,
+            letterSpacing: -0.8,
+            lineHeight: 1.1,
+          }}
+        >
+          {title}
+        </div>
       </div>
 
-      <div style={{
-        opacity: interpolate(frame, [10, 24], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        width: "100%", flex: 1, minHeight: 0,
-        backgroundColor: COLORS.white, borderRadius: 12,
-        border: `1px solid ${dark ? COLORS.borderDark : COLORS.border}`,
-        overflow: "hidden", boxShadow: "0 10px 34px rgba(0,0,0,0.14)",
-      }}>
+      <div
+        style={{
+          opacity: interpolate(frame, [10, 24], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+          width: "100%",
+          flex: 1,
+          minHeight: 0,
+          backgroundColor: COLORS.white,
+          borderRadius: 12,
+          border: `1px solid ${dark ? COLORS.borderDark : COLORS.border}`,
+          overflow: "hidden",
+          boxShadow: "0 10px 34px rgba(0,0,0,0.14)",
+        }}
+      >
         <Img
           src={staticFile(image)}
           style={{
-            width: "100%", height: "100%", display: "block",
-            objectFit: "cover", objectPosition: imagePosition,
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "cover",
+            objectPosition: imagePosition,
             transform: zoom === 1 ? undefined : `scale(${zoom})`,
             transformOrigin: imagePosition,
           }}
         />
       </div>
 
-      <div style={{
-        opacity: interpolate(frame, [24, 36], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        marginTop: 9, fontSize: 17, color: mutedColor, textAlign: "center",
-      }}>
+      <div
+        style={{
+          opacity: interpolate(frame, [24, 36], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+          marginTop: 9,
+          fontSize: 17,
+          color: mutedColor,
+          textAlign: "center",
+        }}
+      >
         {caption}
       </div>
 
       {facts.length > 0 && (
-        <div style={{ display: "flex", gap: 14, width: "100%", marginTop: 12, alignItems: "stretch" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 14,
+            width: "100%",
+            marginTop: 12,
+            alignItems: "stretch",
+          }}
+        >
           {facts.map((f, i) => {
-            const o = interpolate(frame, [16 + i * 9, 30 + i * 9], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            const o = interpolate(frame, [16 + i * 9, 30 + i * 9], [0, 1], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            });
             const isGood = f.tone === "good";
             const isAccent = f.tone === "accent";
             return (
-              <div key={f.label} style={{
-                opacity: o, transform: `translateY(${(1 - o) * 18}px)`,
-                flex: 1, minWidth: 0,
-                backgroundColor: isAccent ? COLORS.navyDark : isGood ? "rgba(22,163,74,0.07)" : COLORS.white,
-                border: `1px solid ${isGood ? `${COLORS.green}33` : isAccent ? COLORS.navyDark : COLORS.border}`,
-                borderRadius: 11, padding: "14px 18px",
-              }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                  <span style={{
-                    fontSize: 18.5, fontWeight: 700, lineHeight: 1.25,
-                    color: isAccent ? COLORS.goldLight : isGood ? COLORS.green : COLORS.text,
-                  }}>
+              <div
+                key={f.label}
+                style={{
+                  opacity: o,
+                  transform: `translateY(${(1 - o) * 18}px)`,
+                  flex: 1,
+                  minWidth: 0,
+                  backgroundColor: isAccent
+                    ? COLORS.navyDark
+                    : isGood
+                      ? "rgba(22,163,74,0.07)"
+                      : COLORS.white,
+                  border: `1px solid ${isGood ? `${COLORS.green}33` : isAccent ? COLORS.navyDark : COLORS.border}`,
+                  borderRadius: 11,
+                  padding: "14px 18px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 18.5,
+                      fontWeight: 700,
+                      lineHeight: 1.25,
+                      color: isAccent
+                        ? COLORS.goldLight
+                        : isGood
+                          ? COLORS.green
+                          : COLORS.text,
+                    }}
+                  >
                     {f.label}
                   </span>
                   {f.value && (
-                    <span style={{
-                      fontSize: 29, fontWeight: 800, fontFamily: FONT_MONO, whiteSpace: "nowrap",
-                      color: isAccent ? COLORS.white : isGood ? COLORS.green : COLORS.navy,
-                    }}>
+                    <span
+                      style={{
+                        fontSize: 29,
+                        fontWeight: 800,
+                        fontFamily: FONT_MONO,
+                        whiteSpace: "nowrap",
+                        color: isAccent
+                          ? COLORS.white
+                          : isGood
+                            ? COLORS.green
+                            : COLORS.navy,
+                      }}
+                    >
                       {f.value}
                     </span>
                   )}
                 </div>
                 {f.detail && (
-                  <div style={{
-                    fontSize: 15, marginTop: 6, lineHeight: 1.5,
-                    color: isAccent ? COLORS.textDarkMuted : COLORS.textMuted,
-                    fontFamily: isAccent ? FONT_MONO : FONT_SANS,
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      marginTop: 6,
+                      lineHeight: 1.5,
+                      color: isAccent ? COLORS.textDarkMuted : COLORS.textMuted,
+                      fontFamily: isAccent ? FONT_MONO : FONT_SANS,
+                    }}
+                  >
                     {f.detail}
                   </div>
                 )}
@@ -160,10 +271,22 @@ export const ShowcaseScene: React.FC<ShowcaseSceneProps> = ({
       )}
 
       {note && (
-        <div style={{
-          opacity: interpolate(frame, [16 + facts.length * 9 + 8, 30 + facts.length * 9 + 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-          fontSize: 16, color: mutedColor, lineHeight: 1.5, marginTop: 10, textAlign: "center", maxWidth: 1500,
-        }}>
+        <div
+          style={{
+            opacity: interpolate(
+              frame,
+              [16 + facts.length * 9 + 8, 30 + facts.length * 9 + 8],
+              [0, 1],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+            ),
+            fontSize: 16,
+            color: mutedColor,
+            lineHeight: 1.5,
+            marginTop: 10,
+            textAlign: "center",
+            maxWidth: 1500,
+          }}
+        >
           {note}
         </div>
       )}

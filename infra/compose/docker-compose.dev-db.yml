@@ -38,7 +38,11 @@ services:
     volumes:
       - arm-clickhouse-dev-data:/var/lib/clickhouse
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null --user=arm --password=arm_dev_password 'http://localhost:8123/?query=SELECT+1'",
+        ]
       interval: 2s
       retries: 30
       start_period: 10s

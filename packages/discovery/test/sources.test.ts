@@ -11,7 +11,8 @@ function jsonResponse(body: unknown, init?: { status?: number; url?: string }): 
 }
 
 function fakeFetch(handler: (url: string) => Response): typeof fetch {
-  return (async (input: string | URL | Request) => handler(typeof input === "string" ? input : input.toString())) as unknown as typeof fetch;
+  return (async (input: string | URL | Request) =>
+    handler(typeof input === "string" ? input : input.toString())) as unknown as typeof fetch;
 }
 
 describe("fetchJsonSameOrigin (rule 4: no redirects off source host, no code execution)", () => {
@@ -23,24 +24,32 @@ describe("fetchJsonSameOrigin (rule 4: no redirects off source host, no code exe
 
   it("refuses a 3xx redirect response", async () => {
     const fetchImpl = fakeFetch(() => new Response(null, { status: 302 }));
-    await expect(fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl)).rejects.toThrow(/redirect/);
+    await expect(
+      fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl),
+    ).rejects.toThrow(/redirect/);
   });
 
   it("refuses a response whose final URL lands on a different host", async () => {
     const fetchImpl = fakeFetch(() =>
       jsonResponse({ a: 1 }, { url: "https://evil.example.com/hijacked.json" }),
     );
-    await expect(fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl)).rejects.toThrow(/cross-host/);
+    await expect(
+      fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl),
+    ).rejects.toThrow(/cross-host/);
   });
 
   it("throws on a non-2xx, non-redirect response", async () => {
     const fetchImpl = fakeFetch(() => new Response(null, { status: 500 }));
-    await expect(fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl)).rejects.toThrow(/HTTP 500/);
+    await expect(
+      fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl),
+    ).rejects.toThrow(/HTTP 500/);
   });
 
   it("never executes fetched content as code (a JS payload stays inert JSON-parse failure, not eval'd)", async () => {
     const fetchImpl = fakeFetch(() => new Response("globalThis.PWNED = true;", { status: 200 }));
-    await expect(fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl)).rejects.toThrow();
+    await expect(
+      fetchJsonSameOrigin("https://registry.example.com/index.json", fetchImpl),
+    ).rejects.toThrow();
     expect((globalThis as Record<string, unknown>).PWNED).toBeUndefined();
   });
 });
@@ -76,7 +85,10 @@ describe("mcpRegistryAdapter", () => {
   it("throws when the response isn't a JSON array", async () => {
     const fetchImpl = fakeFetch(() => jsonResponse({ not: "an array" }));
     await expect(
-      mcpRegistryAdapter.fetchCandidates({ endpoint: "https://registry.example.com/index.json", authRef: null }, { fetchImpl }),
+      mcpRegistryAdapter.fetchCandidates(
+        { endpoint: "https://registry.example.com/index.json", authRef: null },
+        { fetchImpl },
+      ),
     ).rejects.toThrow(/expected a JSON array/);
   });
 });
@@ -86,7 +98,11 @@ describe("gitOrgScannerAdapter", () => {
     const fetchImpl = fakeFetch((url) => {
       if (url.includes("repos.json")) {
         return jsonResponse([
-          { name: "opted-in-repo", topics: ["arm-component"], manifest_url: "https://git.example.com/opted-in-repo/arm-component.json" },
+          {
+            name: "opted-in-repo",
+            topics: ["arm-component"],
+            manifest_url: "https://git.example.com/opted-in-repo/arm-component.json",
+          },
           { name: "unrelated-repo", topics: ["other-topic"] },
         ]);
       }
@@ -115,7 +131,13 @@ describe("gitOrgScannerAdapter", () => {
   it("falls back to 'plugin' kind when the manifest's kind is invalid/missing", async () => {
     const fetchImpl = fakeFetch((url) =>
       url.includes("repos.json")
-        ? jsonResponse([{ name: "r", topics: ["arm-component"], manifest_url: "https://git.example.com/r/manifest.json" }])
+        ? jsonResponse([
+            {
+              name: "r",
+              topics: ["arm-component"],
+              manifest_url: "https://git.example.com/r/manifest.json",
+            },
+          ])
         : jsonResponse({ name: "R" }),
     );
     const candidates = await gitOrgScannerAdapter.fetchCandidates(
@@ -130,7 +152,15 @@ describe("httpIndexAdapter", () => {
   it("maps a generic { components: [...] } index", async () => {
     const fetchImpl = fakeFetch(() =>
       jsonResponse({
-        components: [{ external_ref: "ext-1", kind: "http_api", name: "Ext API", description: "desc", manifest: { x: 1 } }],
+        components: [
+          {
+            external_ref: "ext-1",
+            kind: "http_api",
+            name: "Ext API",
+            description: "desc",
+            manifest: { x: 1 },
+          },
+        ],
       }),
     );
     const candidates = await httpIndexAdapter.fetchCandidates(
@@ -138,7 +168,13 @@ describe("httpIndexAdapter", () => {
       { fetchImpl },
     );
     expect(candidates).toEqual([
-      { externalRef: "ext-1", proposedKind: "http_api", name: "Ext API", description: "desc", rawManifest: { x: 1 } },
+      {
+        externalRef: "ext-1",
+        proposedKind: "http_api",
+        name: "Ext API",
+        description: "desc",
+        rawManifest: { x: 1 },
+      },
     ]);
   });
 
@@ -147,14 +183,20 @@ describe("httpIndexAdapter", () => {
       jsonResponse({ components: [{ external_ref: "ext-1", kind: "not-a-real-kind", name: "X" }] }),
     );
     await expect(
-      httpIndexAdapter.fetchCandidates({ endpoint: "https://marketplace.example.com/index.json", authRef: null }, { fetchImpl }),
+      httpIndexAdapter.fetchCandidates(
+        { endpoint: "https://marketplace.example.com/index.json", authRef: null },
+        { fetchImpl },
+      ),
     ).rejects.toThrow(/invalid kind/);
   });
 
   it("throws when the response has no components array", async () => {
     const fetchImpl = fakeFetch(() => jsonResponse({ nope: true }));
     await expect(
-      httpIndexAdapter.fetchCandidates({ endpoint: "https://marketplace.example.com/index.json", authRef: null }, { fetchImpl }),
+      httpIndexAdapter.fetchCandidates(
+        { endpoint: "https://marketplace.example.com/index.json", authRef: null },
+        { fetchImpl },
+      ),
     ).rejects.toThrow(/expected/);
   });
 });

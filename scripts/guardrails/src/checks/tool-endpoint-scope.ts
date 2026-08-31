@@ -37,6 +37,7 @@
  */
 
 import { register, type CheckResult } from "../types.js";
+import { includesChain } from "../source-match.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -73,10 +74,7 @@ export function checkToolEndpoints(tools: ToolEndpointRecord[]): CheckResult {
     const classification = t.dataClassification.toLowerCase();
     const auth = t.authStrategy.toLowerCase();
 
-    if (
-      !ENDPOINT_URL_FORM.test(t.endpoint) &&
-      !ENDPOINT_HOST_PORT_FORM.test(t.endpoint)
-    ) {
+    if (!ENDPOINT_URL_FORM.test(t.endpoint) && !ENDPOINT_HOST_PORT_FORM.test(t.endpoint)) {
       violations.push(
         `index ${i}: malformed endpoint "${t.endpoint}" (expected https|internal|mcp|cli:// URL or bare host[:port])`,
       );
@@ -96,7 +94,11 @@ export function checkToolEndpoints(tools: ToolEndpointRecord[]): CheckResult {
       );
     }
 
-    if (t.kind === "connector" && classification === "restricted" && PUBLIC_HTTPS.test(t.endpoint)) {
+    if (
+      t.kind === "connector" &&
+      classification === "restricted" &&
+      PUBLIC_HTTPS.test(t.endpoint)
+    ) {
       violations.push(
         `index ${i}: connector touching restricted data must not call a public https endpoint (${t.endpoint}) — tenant-VPC form only (Invariant 1)`,
       );
@@ -170,9 +172,10 @@ register({
       'text("auth_strategy")',
       'text("data_classification").notNull()',
     ];
-    const missing = required.filter((needle) => !content.includes(needle));
-    const missingTable =
-      !content.includes("export const componentTable") ? ["componentTable definition"] : [];
+    const missing = required.filter((needle) => !includesChain(content, needle));
+    const missingTable = !includesChain(content, "export const componentTable")
+      ? ["componentTable definition"]
+      : [];
 
     const issues = [...missingTable, ...missing];
     if (issues.length > 0) {

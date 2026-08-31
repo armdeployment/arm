@@ -243,18 +243,18 @@ Non-negotiable rules, each with a test:
 
 Replace the guide-00 placeholder. All procedures are `tenantProcedure`.
 
-| Procedure | Shape |
-|---|---|
-| `search` | `{ q?, kinds?, jobFunction?, classification?, mode?, cursor?, limit }` → `{ items, facets, nextCursor }` |
-| `facets` | `{ q? }` → counts per dimension |
-| `getComponent` | `{ slug }` → component + versions + job functions + install count |
-| `listVersions` | `{ componentId }` → versions, newest first, `yanked` flagged |
-| `publishVersion` | mutation, requires `tool:publish`; delegates to `@arm/artifactory` |
-| `listJobFunctions` | `{ family? }` → taxonomy with package coverage counts |
-| `recommendForJobFunction` | `{ key }` → ranked packages + components |
-| `gaps` | → uncovered job functions ranked by headcount weight |
-| `listSources` / `listCandidates` | discovery admin surfaces |
-| `promoteCandidate` / `rejectCandidate` | mutations, require `tool:publish`, audited |
+| Procedure                              | Shape                                                                                                    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `search`                               | `{ q?, kinds?, jobFunction?, classification?, mode?, cursor?, limit }` → `{ items, facets, nextCursor }` |
+| `facets`                               | `{ q? }` → counts per dimension                                                                          |
+| `getComponent`                         | `{ slug }` → component + versions + job functions + install count                                        |
+| `listVersions`                         | `{ componentId }` → versions, newest first, `yanked` flagged                                             |
+| `publishVersion`                       | mutation, requires `tool:publish`; delegates to `@arm/artifactory`                                       |
+| `listJobFunctions`                     | `{ family? }` → taxonomy with package coverage counts                                                    |
+| `recommendForJobFunction`              | `{ key }` → ranked packages + components                                                                 |
+| `gaps`                                 | → uncovered job functions ranked by headcount weight                                                     |
+| `listSources` / `listCandidates`       | discovery admin surfaces                                                                                 |
+| `promoteCandidate` / `rejectCandidate` | mutations, require `tool:publish`, audited                                                               |
 
 Every mutation emits an audit event and follows the high-stakes pattern (impact
 preview data returned, never a silent write).
@@ -263,11 +263,11 @@ preview data returned, never a silent write).
 
 ## 8. Guardrails you own
 
-| Guard | Implementation sketch | Mutation proof |
-|---|---|---|
-| `component-review` | scan all `work_package_version.components[]` against component review status | flip one seeded component to `draft` → guard red → restore byte-identically |
-| `artifact-integrity` | every version with a blob has a well-formed `sha256:` digest; scan manifests for `http(s)://` where a digest field belongs | replace a digest with a URL → red |
-| `blob-residency` | no `tenant_authored` component has a `control_plane` blob | flip one seed → red |
+| Guard                | Implementation sketch                                                                                                      | Mutation proof                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `component-review`   | scan all `work_package_version.components[]` against component review status                                               | flip one seeded component to `draft` → guard red → restore byte-identically |
+| `artifact-integrity` | every version with a blob has a well-formed `sha256:` digest; scan manifests for `http(s)://` where a digest field belongs | replace a digest with a URL → red                                           |
+| `blob-residency`     | no `tenant_authored` component has a `control_plane` blob                                                                  | flip one seed → red                                                         |
 
 All three fail loudly on empty input — a scan of zero components is red (§14.2).
 

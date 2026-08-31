@@ -7,7 +7,9 @@ test.describe("axe accessibility pass (guide 04 §7 + §8)", () => {
   for (const route of ROUTES) {
     test(`${route} has no axe violations`, async ({ page }) => {
       await page.goto(route);
-      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      const results = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze();
       const summary = results.violations
         .map((v) => `${v.id} (${v.impact}): ${v.help} — ${v.nodes.length} node(s)`)
         .join("\n");
@@ -25,7 +27,9 @@ test.describe("keyboard + landmarks", () => {
     await expect(skipLink).toHaveAttribute("href", "#main-content");
   });
 
-  test("every page has exactly one main landmark and a reduced-motion-safe animation policy", async ({ page }) => {
+  test("every page has exactly one main landmark and a reduced-motion-safe animation policy", async ({
+    page,
+  }) => {
     await page.goto("/");
     expect(await page.locator("main").count()).toBe(1);
   });

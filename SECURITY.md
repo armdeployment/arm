@@ -25,7 +25,7 @@ guardrails (`pnpm guardrails`) rather than convention:
   `no-content-egress`, `blob-residency`, and `no-content-in-activation`
   guardrails.
 - **Short-lived credentials everywhere.** Rendered agent configs contain
-  environment-variable *references*, never literal secrets;
+  environment-variable _references_, never literal secrets;
   `assertNoSecretsInConfig` fails the install if a literal appears.
 - **Tenant isolation.** Every query is `tenant_id`-scoped; the
   `tenant-isolation` guardrail rejects unscoped queries.

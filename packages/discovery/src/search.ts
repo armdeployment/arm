@@ -87,9 +87,7 @@ export function buildComponentSearchSql(tenantId: string, input: SearchInput): B
 
   const limit = input.limit ?? DEFAULT_SEARCH_LIMIT;
   params.push(limit);
-  const rankExpr = input.q
-    ? `ts_rank(search_vector, plainto_tsquery('english', $2))`
-    : `0`;
+  const rankExpr = input.q ? `ts_rank(search_vector, plainto_tsquery('english', $2))` : `0`;
   const sql =
     `SELECT id, slug, name, description, kind, data_classification, source_kind, ${rankExpr} AS rank ` +
     `FROM component WHERE ${where.join(" AND ")} ORDER BY rank DESC, slug ASC LIMIT $${params.length}`;
@@ -103,7 +101,9 @@ export function buildWorkPackageSearchSql(tenantId: string, input: SearchInput):
 
   if (input.q) {
     params.push(input.q);
-    where.push(`(search_vector @@ plainto_tsquery('english', $${params.length}) OR role_key % $${params.length})`);
+    where.push(
+      `(search_vector @@ plainto_tsquery('english', $${params.length}) OR role_key % $${params.length})`,
+    );
   }
   if (input.mode) {
     params.push(input.mode);
@@ -183,19 +183,35 @@ export function searchInMemory(
   const limit = input.limit ?? DEFAULT_SEARCH_LIMIT;
 
   let compResults = components.filter((c) => c.reviewStatus === "approved");
-  if (input.kinds && input.kinds.length > 0) compResults = compResults.filter((c) => input.kinds!.includes(c.kind));
-  if (input.classification) compResults = compResults.filter((c) => c.dataClassification === input.classification);
-  if (input.jobFunction) compResults = compResults.filter((c) => c.jobFunctions.includes(input.jobFunction!));
+  if (input.kinds && input.kinds.length > 0)
+    compResults = compResults.filter((c) => input.kinds!.includes(c.kind));
+  if (input.classification)
+    compResults = compResults.filter((c) => c.dataClassification === input.classification);
+  if (input.jobFunction)
+    compResults = compResults.filter((c) => c.jobFunctions.includes(input.jobFunction!));
   compResults = compResults.filter((c) => matchesQuery(input.q, [c.name, c.slug, c.description]));
 
   let wpResults = workPackages.slice();
   if (input.mode) wpResults = wpResults.filter((w) => w.mode === input.mode);
-  if (input.jobFunction) wpResults = wpResults.filter((w) => w.jobFunctions.includes(input.jobFunction!));
+  if (input.jobFunction)
+    wpResults = wpResults.filter((w) => w.jobFunctions.includes(input.jobFunction!));
   wpResults = wpResults.filter((w) => matchesQuery(input.q, [w.name, w.roleKey, w.description]));
 
   const items: SearchResultItem[] = [
-    ...compResults.map((c): SearchResultItem => ({ type: "component", id: c.id, slug: c.slug, name: c.name, description: c.description })),
-    ...wpResults.map((w): SearchResultItem => ({ type: "work_package", id: w.id, slug: w.roleKey, name: w.name, description: w.description })),
+    ...compResults.map((c): SearchResultItem => ({
+      type: "component",
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+    })),
+    ...wpResults.map((w): SearchResultItem => ({
+      type: "work_package",
+      id: w.id,
+      slug: w.roleKey,
+      name: w.name,
+      description: w.description,
+    })),
   ].sort((a, b) => a.slug.localeCompare(b.slug));
 
   const start = input.cursor ? Number(input.cursor) : 0;

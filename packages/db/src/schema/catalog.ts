@@ -19,7 +19,16 @@
  * versions); every row is `tenant_id`-scoped (Invariant 6).
  */
 
-import { pgTable, uuid, text, jsonb, timestamp, integer, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  jsonb,
+  timestamp,
+  integer,
+  boolean,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { workPackageModeEnum, packageAssignmentStatusEnum } from "./enums.js";
 import { tenantTable } from "./org-tree.js";
 
@@ -42,7 +51,9 @@ export const workPackageTable = pgTable(
   "work_package",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     roleKey: text("role_key").notNull(),
     name: text("name").notNull(),
     family: text("family").notNull(),
@@ -82,8 +93,12 @@ export const workPackageVersionTable = pgTable(
   "work_package_version",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
-    packageId: uuid("package_id").notNull().references(() => workPackageTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
+    packageId: uuid("package_id")
+      .notNull()
+      .references(() => workPackageTable.id),
     version: text("version").notNull(),
     /** Manifest wire-shape version — 2 = the D10 component/job_functions
      *  manifest (guide 00 §4). There is no v1 reader; this column exists so a
@@ -112,10 +127,12 @@ export const workPackageVersionTable = pgTable(
  */
 export const packageAssignmentTable = pgTable("package_assignment", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-  packageVersionId: uuid("package_version_id").notNull().references(
-    () => workPackageVersionTable.id,
-  ),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
+  packageVersionId: uuid("package_version_id")
+    .notNull()
+    .references(() => workPackageVersionTable.id),
   assigneeType: text("assignee_type").notNull(), // user | agent | org_node
   assigneeId: uuid("assignee_id").notNull(),
   status: packageAssignmentStatusEnum("status").notNull().default("requested"),
@@ -196,7 +213,9 @@ export interface WorkPackageSeedInput {
  */
 export const budgetReservationTable = pgTable("budget_reservation", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   packageId: uuid("package_id").references(() => workPackageTable.id),
   workType: text("work_type"),
   period: text("period").notNull(),

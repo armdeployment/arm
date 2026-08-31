@@ -163,9 +163,21 @@ const raw = {
       prompt: "Which computer will you install on?",
       help: "This selects the right installer — it is never stored on your response.",
       options: [
-        { value: "windows", label: "Windows", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "macos", label: "macOS", signals: { job_functions: [], components: [], weight: 1 } },
-        { value: "linux", label: "Linux", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "windows",
+          label: "Windows",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "macos",
+          label: "macOS",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
+        {
+          value: "linux",
+          label: "Linux",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
       ],
       next: [{ when: null, goto: null }],
     },
@@ -175,7 +187,11 @@ const raw = {
       prompt: "Thanks — none of the standard roles fit your day-to-day.",
       help: "We've recorded that as a coverage gap for the library team — no free text is stored, just this structured marker.",
       options: [
-        { value: "ack", label: "Continue", signals: { job_functions: [], components: [], weight: 1 } },
+        {
+          value: "ack",
+          label: "Continue",
+          signals: { job_functions: [], components: [], weight: 1 },
+        },
       ],
       next: [],
     },

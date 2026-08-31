@@ -53,7 +53,9 @@ function canonicalize(value: unknown): unknown {
 }
 
 function sha256Of(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalize(value)))
+    .digest("hex");
 }
 
 describe("manifest v2 golden vector (guide 00 §4)", () => {

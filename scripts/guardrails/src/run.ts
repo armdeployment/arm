@@ -18,7 +18,7 @@ function applyVacuousGuardRule(r: CheckResult): CheckResult {
       detail:
         (r.detail ?? r.id) +
         " — VACUOUS GUARD: asserted a negative over an empty input set. " +
-          "A lint that scans zero files is red, not green (spec §14.2).",
+        "A lint that scans zero files is red, not green (spec §14.2).",
     };
   }
   return r;

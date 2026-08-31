@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 
-export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Container({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`mx-auto px-4 sm:px-6 ${className}`} style={{ maxWidth: "var(--content-max)" }}>
       {children}
@@ -23,17 +29,19 @@ export function Section({
     tone === "surface" ? "var(--bg-surface)" : tone === "dark" ? "var(--bg-dark)" : "transparent";
   const color = tone === "dark" ? "var(--text-on-dark)" : "var(--text-primary)";
   return (
-    <section
-      id={id}
-      className={`py-12 sm:py-16 ${className}`}
-      style={{ background: bg, color }}
-    >
+    <section id={id} className={`py-12 sm:py-16 ${className}`} style={{ background: bg, color }}>
       <Container>{children}</Container>
     </section>
   );
 }
 
-export function Kicker({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "dark" }) {
+export function Kicker({
+  children,
+  tone = "default",
+}: {
+  children: ReactNode;
+  tone?: "default" | "dark";
+}) {
   // On a dark section background (var(--bg-dark)), var(--gold) measures
   // 3.55:1 — below WCAG AA's 4.5:1 for normal text (axe caught this on
   // /product's "category" section). --gold-on-dark is a lighter amber tuned
@@ -67,7 +75,15 @@ export function ScrollTable({ children }: { children: ReactNode }) {
   );
 }
 
-export function StatCard({ label, value, source }: { label: string; value: string; source: string }) {
+export function StatCard({
+  label,
+  value,
+  source,
+}: {
+  label: string;
+  value: string;
+  source: string;
+}) {
   return (
     <div className="inst-card p-5">
       <p className="label-meta m-0 mb-2">{label}</p>
@@ -81,7 +97,13 @@ export function StatCard({ label, value, source }: { label: string; value: strin
   );
 }
 
-export function Pill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "info" }) {
+export function Pill({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "warning" | "info";
+}) {
   const colors: Record<string, { bg: string; fg: string }> = {
     neutral: { bg: "var(--bg-elevated)", fg: "var(--text-secondary)" },
     success: { bg: "var(--success-soft)", fg: "var(--success)" },

@@ -20,7 +20,8 @@ export const financeProfile: IndustryProfilePreset = {
 
   orgTree: {
     style: "flat",
-    description: "Flat hierarchy with strong cross-team isolation (Chinese walls). Organization → Department → Desk → Workstream.",
+    description:
+      "Flat hierarchy with strong cross-team isolation (Chinese walls). Organization → Department → Desk → Workstream.",
     nodes: [
       { type: "department", name: "Trading", budgetMonthlyCents: 12000_00 },
       { type: "department", name: "Risk Management", budgetMonthlyCents: 6000_00 },
@@ -41,19 +42,51 @@ export const financeProfile: IndustryProfilePreset = {
 
   personas: [
     { key: "trader", label: "Trader", defaultPanels: ["spend", "trade_volume", "risk_exposure"] },
-    { key: "risk_analyst", label: "Risk Analyst", defaultPanels: ["risk_exposure", "compliance_status", "spend"] },
-    { key: "compliance_officer", label: "Compliance Officer", defaultPanels: ["compliance_status", "regulatory_deadlines", "audit"] },
-    { key: "quant", label: "Quant Researcher", defaultPanels: ["spend", "trade_volume", "model_policy"] },
-    { key: "audit", label: "Internal Audit", defaultPanels: ["audit", "compliance_status", "access"] },
-    { key: "cfo", label: "CFO / Finance", defaultPanels: ["spend", "consolidated_spend", "risk_exposure"] },
-    { key: "admin", label: "Admin", defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"] },
+    {
+      key: "risk_analyst",
+      label: "Risk Analyst",
+      defaultPanels: ["risk_exposure", "compliance_status", "spend"],
+    },
+    {
+      key: "compliance_officer",
+      label: "Compliance Officer",
+      defaultPanels: ["compliance_status", "regulatory_deadlines", "audit"],
+    },
+    {
+      key: "quant",
+      label: "Quant Researcher",
+      defaultPanels: ["spend", "trade_volume", "model_policy"],
+    },
+    {
+      key: "audit",
+      label: "Internal Audit",
+      defaultPanels: ["audit", "compliance_status", "access"],
+    },
+    {
+      key: "cfo",
+      label: "CFO / Finance",
+      defaultPanels: ["spend", "consolidated_spend", "risk_exposure"],
+    },
+    {
+      key: "admin",
+      label: "Admin",
+      defaultPanels: ["spend", "agents", "access", "audit", "resources", "idp"],
+    },
   ],
 
   resourceTypes: {
     enabled: [
-      "db", "internal", "sharepoint", "onedrive", "files", "s3",
+      "db",
+      "internal",
+      "sharepoint",
+      "onedrive",
+      "files",
+      "s3",
       // Finance-specific systems
-      "trading_system", "bloomberg", "reuters", "risk_engine",
+      "trading_system",
+      "bloomberg",
+      "reuters",
+      "risk_engine",
     ],
   },
 
@@ -111,7 +144,8 @@ export const financeProfile: IndustryProfilePreset = {
     },
     {
       name: "Insider / MNPI",
-      pattern: "(?i)\\b(MNPI|insider|material.?non.?public|pre.?announcement|earnings.?surprise)\\b",
+      pattern:
+        "(?i)\\b(MNPI|insider|material.?non.?public|pre.?announcement|earnings.?surprise)\\b",
       flags: "i",
       severity: "critical",
       category: "export_controlled",
@@ -155,14 +189,78 @@ export const financeProfile: IndustryProfilePreset = {
   },
 
   seedAgents: [
-    { name: "TradeAnalysis-Agent", type: "claude_code", departmentName: "Trading", taskType: "trade_analysis", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "RiskAssess-Agent", type: "claude_code", departmentName: "Risk Management", taskType: "risk_assessment", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "ComplianceCheck-Bot", type: "opencode", departmentName: "Compliance", taskType: "compliance_review", clearance: "confidential", tier: "critical", preferredModel: "qwen3.5" },
-    { name: "QuantResearch-Agent", type: "pi", departmentName: "Quantitative Research", taskType: "quant_research", clearance: "restricted", tier: "standard", preferredModel: "qwen3.5" },
-    { name: "Recon-Bot", type: "copilot", departmentName: "Operations", taskType: "reconciliation", clearance: "confidential", tier: "background", preferredModel: "minicpm5-1b" },
-    { name: "AuditTrail-Agent", type: "claude_code", departmentName: "Audit", taskType: "audit_trail_analysis", clearance: "restricted", tier: "standard", preferredModel: "qwen3.5" },
-    { name: "RegReport-Agent", type: "opencode", departmentName: "Compliance", taskType: "regulatory_reporting", clearance: "confidential", tier: "standard", preferredModel: "minicpm5-1b" },
-    { name: "PortfolioAgent", type: "pi", departmentName: "Trading", taskType: "portfolio_optimization", clearance: "restricted", tier: "critical", preferredModel: "qwen3.5" },
+    {
+      name: "TradeAnalysis-Agent",
+      type: "claude_code",
+      departmentName: "Trading",
+      taskType: "trade_analysis",
+      clearance: "confidential",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "RiskAssess-Agent",
+      type: "claude_code",
+      departmentName: "Risk Management",
+      taskType: "risk_assessment",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "ComplianceCheck-Bot",
+      type: "opencode",
+      departmentName: "Compliance",
+      taskType: "compliance_review",
+      clearance: "confidential",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "QuantResearch-Agent",
+      type: "pi",
+      departmentName: "Quantitative Research",
+      taskType: "quant_research",
+      clearance: "restricted",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "Recon-Bot",
+      type: "copilot",
+      departmentName: "Operations",
+      taskType: "reconciliation",
+      clearance: "confidential",
+      tier: "background",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "AuditTrail-Agent",
+      type: "claude_code",
+      departmentName: "Audit",
+      taskType: "audit_trail_analysis",
+      clearance: "restricted",
+      tier: "standard",
+      preferredModel: "qwen3.5",
+    },
+    {
+      name: "RegReport-Agent",
+      type: "opencode",
+      departmentName: "Compliance",
+      taskType: "regulatory_reporting",
+      clearance: "confidential",
+      tier: "standard",
+      preferredModel: "minicpm5-1b",
+    },
+    {
+      name: "PortfolioAgent",
+      type: "pi",
+      departmentName: "Trading",
+      taskType: "portfolio_optimization",
+      clearance: "restricted",
+      tier: "critical",
+      preferredModel: "qwen3.5",
+    },
   ],
 
   uiPanels: [
@@ -180,28 +278,41 @@ export const financeProfile: IndustryProfilePreset = {
   // ── Role presets (D8) — with Chinese-wall awareness ──
   rolePresets: [
     {
-      key: "org_admin", label: "Org Admin",
+      key: "org_admin",
+      label: "Org Admin",
       description: "Full authority: restructure any desk. Chief Compliance Officer equivalent.",
-      scopeType: "org", singleton: true,
-      permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+      scopeType: "org",
+      singleton: true,
+      permissions: [
+        "org_node:create",
+        "org_node:rename",
+        "org_node:reparent",
+        "org_node:delete",
+        "*",
+      ],
     },
     {
-      key: "desk_head", label: "Desk Head",
-      description: "Rename own desk; create + rename teams within own desk. Cannot cross Chinese walls.",
+      key: "desk_head",
+      label: "Desk Head",
+      description:
+        "Rename own desk; create + rename teams within own desk. Cannot cross Chinese walls.",
       scopeType: "department",
-      permissions: ["org_node:create", "org_node:rename"]
+      permissions: ["org_node:create", "org_node:rename"],
     },
     {
-      key: "compliance_officer", label: "Compliance Officer",
+      key: "compliance_officer",
+      label: "Compliance Officer",
       description: "Read-only across all desks (audit authority). No org-tree edits.",
-      scopeType: "org", singleton: true,
-      permissions: []
+      scopeType: "org",
+      singleton: true,
+      permissions: [],
     },
     {
-      key: "viewer", label: "Viewer",
+      key: "viewer",
+      label: "Viewer",
       description: "Read-only within own desk.",
       scopeType: "department",
-      permissions: []
+      permissions: [],
     },
   ],
 
@@ -209,20 +320,44 @@ export const financeProfile: IndustryProfilePreset = {
   workTypeTaxonomies: [
     {
       departmentName: "Trading",
-      labels: ["trade_analysis", "portfolio_optimization", "execution_strategy", "alpha_research", "position_rebalance"],
+      labels: [
+        "trade_analysis",
+        "portfolio_optimization",
+        "execution_strategy",
+        "alpha_research",
+        "position_rebalance",
+      ],
       secondaryTagPresets: ["resource:trading_system", "resource:bloomberg"],
     },
     {
       departmentName: "Risk Management",
-      labels: ["risk_assessment", "stress_test", "limit_review", "var_computation", "exposure_analysis"],
+      labels: [
+        "risk_assessment",
+        "stress_test",
+        "limit_review",
+        "var_computation",
+        "exposure_analysis",
+      ],
     },
     {
       departmentName: "Compliance",
-      labels: ["compliance_review", "regulatory_reporting", "policy_review", "mnpi_screening", "trade_surveillance"],
+      labels: [
+        "compliance_review",
+        "regulatory_reporting",
+        "policy_review",
+        "mnpi_screening",
+        "trade_surveillance",
+      ],
     },
     {
       departmentName: "Quantitative Research",
-      labels: ["quant_research", "model_backtest", "factor_analysis", "sharpe_optimization", "signal_research"],
+      labels: [
+        "quant_research",
+        "model_backtest",
+        "factor_analysis",
+        "sharpe_optimization",
+        "signal_research",
+      ],
     },
     {
       departmentName: "Operations",
@@ -230,7 +365,12 @@ export const financeProfile: IndustryProfilePreset = {
     },
     {
       departmentName: "Audit",
-      labels: ["audit_trail_analysis", "forensic_review", "control_testing", "finding_documentation"],
+      labels: [
+        "audit_trail_analysis",
+        "forensic_review",
+        "control_testing",
+        "finding_documentation",
+      ],
     },
   ],
 
@@ -241,7 +381,8 @@ export const financeProfile: IndustryProfilePreset = {
       name: "Financial Analyst",
       family: "analysis",
       mode: "copilot",
-      description: "Market-data research, spreadsheet analysis, and financial memos for analysts across desks.",
+      description:
+        "Market-data research, spreadsheet analysis, and financial memos for analysts across desks.",
       tools: [
         { tool: "marketdata.bloomberg", toolVersion: "1.0.0" },
         { tool: "spreadsheets.excel", toolVersion: "1.2.0" },
@@ -274,7 +415,8 @@ export const financeProfile: IndustryProfilePreset = {
       name: "Executive Assistant",
       family: "executive",
       mode: "copilot",
-      description: "KPI briefings, approvals inbox summaries, and web research for management. Aggregates-only — never raw content.",
+      description:
+        "KPI briefings, approvals inbox summaries, and web research for management. Aggregates-only — never raw content.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },
@@ -306,7 +448,8 @@ export const financeProfile: IndustryProfilePreset = {
       name: "Senior Manager",
       family: "leadership",
       mode: "copilot",
-      description: "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
+      description:
+        "Team ARM-adoption visibility, budget/spend oversight, and one-tap approvals for department leads — the decision-maker persona, not a hands-on tool user.",
       tools: [
         { tool: "dashboards.api", toolVersion: "1.9.0" },
         { tool: "approvals.inbox", toolVersion: "1.2.0" },

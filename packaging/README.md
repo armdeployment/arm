@@ -80,13 +80,13 @@ CI runs a matrix, one job per platform).
 
 ## Code signing — credential gates (AGENTS.md: never fabricate a credential)
 
-| Platform | Script | Env var(s) | Behavior when absent |
-|---|---|---|---|
-| macOS (raw binary) | `build-sea.mjs`'s `sign()` | `ARM_MACOS_SIGN_IDENTITY` | Ad-hoc signs (`codesign --sign -`) so the binary can run locally at all; tags the artifact `unsigned-dev` |
-| macOS (.pkg) | `macos/notarize.sh` | `ARM_MACOS_SIGN_IDENTITY`, `ARM_APPLE_NOTARY_PROFILE` | Skips signing/notarization entirely; reports the gate; exits 0 |
-| Windows (.exe/.msi) | `windows/sign.ps1` | `ARM_WINDOWS_CERT_THUMBPRINT` | Skips signing; reports the gate; exits 0 |
-| Linux (.deb) | `linux/build-deb.sh` | `ARM_DEB_GPG_KEY_ID` | Skips `dpkg-sig`; reports the gate |
-| Linux (.rpm) | `linux/build-rpm.sh` | `ARM_RPM_GPG_KEY_ID` (documented, not yet wired) | Reports the gate; RPM GPG signing lands with the first real key |
+| Platform            | Script                     | Env var(s)                                            | Behavior when absent                                                                                      |
+| ------------------- | -------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| macOS (raw binary)  | `build-sea.mjs`'s `sign()` | `ARM_MACOS_SIGN_IDENTITY`                             | Ad-hoc signs (`codesign --sign -`) so the binary can run locally at all; tags the artifact `unsigned-dev` |
+| macOS (.pkg)        | `macos/notarize.sh`        | `ARM_MACOS_SIGN_IDENTITY`, `ARM_APPLE_NOTARY_PROFILE` | Skips signing/notarization entirely; reports the gate; exits 0                                            |
+| Windows (.exe/.msi) | `windows/sign.ps1`         | `ARM_WINDOWS_CERT_THUMBPRINT`                         | Skips signing; reports the gate; exits 0                                                                  |
+| Linux (.deb)        | `linux/build-deb.sh`       | `ARM_DEB_GPG_KEY_ID`                                  | Skips `dpkg-sig`; reports the gate                                                                        |
+| Linux (.rpm)        | `linux/build-rpm.sh`       | `ARM_RPM_GPG_KEY_ID` (documented, not yet wired)      | Reports the gate; RPM GPG signing lands with the first real key                                           |
 
 **Unsigned binaries get blocked by SmartScreen (Windows) and Gatekeeper
 (macOS)**, which destroys the "very easy" adoption promise (A1) — signing

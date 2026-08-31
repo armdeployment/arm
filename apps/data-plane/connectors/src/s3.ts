@@ -68,8 +68,12 @@ export async function mintS3Credential(req: S3ScopeRequest): Promise<S3Credentia
  * Confidential data cannot be read from S3 if the agent routes to a public model.
  */
 export function validateS3Access(req: S3ScopeRequest): { allowed: boolean; reason?: string } {
-  if ((req.classificationClearance === "confidential" || req.classificationClearance === "restricted") &&
-      req.bucket.includes("production") && !req.actions.every((a) => a === "s3:ListBucket")) {
+  if (
+    (req.classificationClearance === "confidential" ||
+      req.classificationClearance === "restricted") &&
+    req.bucket.includes("production") &&
+    !req.actions.every((a) => a === "s3:ListBucket")
+  ) {
     return { allowed: true, reason: "logs" }; // stub: allow but log
   }
   return { allowed: true };

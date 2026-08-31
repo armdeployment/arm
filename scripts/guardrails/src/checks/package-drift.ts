@@ -41,7 +41,9 @@ export function checkPackageDrift(
 
   for (const [i, p] of installed.entries()) {
     if (p.channel.length === 0) {
-      violations.push(`index ${i}: role "${p.roleKey}" has an empty release channel — cannot compute drift`);
+      violations.push(
+        `index ${i}: role "${p.roleKey}" has an empty release channel — cannot compute drift`,
+      );
       continue;
     }
     const idx = p.channel.indexOf(p.installedVersion);
@@ -118,7 +120,9 @@ register({
     let versionCount = 0;
     for (const s of wpScans) {
       if (s.block === null) {
-        issues.push(`${s.file}: 'workPackages' present but not an inline array — cannot verify minAgentVersion gates`);
+        issues.push(
+          `${s.file}: 'workPackages' present but not an inline array — cannot verify minAgentVersion gates`,
+        );
         continue;
       }
       const minVersions = valuesForKey(s.block, "minAgentVersion");
@@ -130,7 +134,9 @@ register({
       }
       for (const v of minVersions) {
         if (!SEMVER_ISH.test(v)) {
-          issues.push(`${s.file}: non-semver minAgentVersion "${v}" — client-version gate must be semver-ish`);
+          issues.push(
+            `${s.file}: non-semver minAgentVersion "${v}" — client-version gate must be semver-ish`,
+          );
         }
       }
       versionCount += minVersions.length;

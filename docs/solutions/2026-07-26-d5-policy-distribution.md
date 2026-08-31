@@ -23,6 +23,7 @@ When the control plane updates a policy (e.g., a new deny rule), how does the da
 ## Rationale
 
 (b) wins because:
+
 1. **Bounded worst case**: push has an unbounded worst case — a silently missed push means a stale deny rule stays active indefinitely. Pull is bounded by TTL: worst case is a TTL-duration delay.
 2. **No new VPC connectivity surface**: the data plane already has outbound mTLS to the control plane. Push would require inbound connectivity to the data plane (new firewall surface, new attack vector).
 3. **SLA**: 10-second pull interval, DENY-class propagation ≤ 15s, fail-closed when stale.

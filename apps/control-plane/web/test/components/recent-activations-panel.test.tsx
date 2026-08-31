@@ -1,10 +1,29 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { RecentActivationsPanelView, type ActivationRow } from "../../src/components/adoption/recent-activations-panel";
+import {
+  RecentActivationsPanelView,
+  type ActivationRow,
+} from "../../src/components/adoption/recent-activations-panel";
 
 const ROWS: ActivationRow[] = [
-  { ts: "2026-08-20T12:00:00.000Z", orgNodeId: "dept_qa", userRef: "u_quality_engineer_3", jobFunctionKey: "quality_engineer", step: "weekly_active", outcome: "ok", errorCode: "" },
-  { ts: "2026-08-20T11:00:00.000Z", orgNodeId: "dept_fin", userRef: "u_office_worker_general_9", jobFunctionKey: "office_worker_general", step: "installed", outcome: "error", errorCode: "mdm_push_failed" },
+  {
+    ts: "2026-08-20T12:00:00.000Z",
+    orgNodeId: "dept_qa",
+    userRef: "u_quality_engineer_3",
+    jobFunctionKey: "quality_engineer",
+    step: "weekly_active",
+    outcome: "ok",
+    errorCode: "",
+  },
+  {
+    ts: "2026-08-20T11:00:00.000Z",
+    orgNodeId: "dept_fin",
+    userRef: "u_office_worker_general_9",
+    jobFunctionKey: "office_worker_general",
+    step: "installed",
+    outcome: "error",
+    errorCode: "mdm_push_failed",
+  },
 ];
 
 describe("RecentActivationsPanelView", () => {

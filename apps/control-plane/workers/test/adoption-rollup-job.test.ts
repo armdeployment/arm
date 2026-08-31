@@ -33,7 +33,9 @@ describe("computeAdoptionRollup — real aggregation over the activation populat
       byGroup.set(key, [...(byGroup.get(key) ?? []), r]);
     }
     for (const group of byGroup.values()) {
-      const sorted = [...group].sort((a, b) => ACTIVATION_STEPS.indexOf(a.step) - ACTIVATION_STEPS.indexOf(b.step));
+      const sorted = [...group].sort(
+        (a, b) => ACTIVATION_STEPS.indexOf(a.step) - ACTIVATION_STEPS.indexOf(b.step),
+      );
       for (let i = 1; i < sorted.length; i++) {
         expect(sorted[i]!.count).toBeLessThanOrEqual(sorted[i - 1]!.count);
       }
@@ -55,7 +57,10 @@ describe("computeAdoptionRollup — real aggregation over the activation populat
       const b = tuple(rows[i]!);
       // Lexicographic tuple comparison, numeric on the last field.
       const cmp =
-        a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]) || a[3] - b[3];
+        a[0].localeCompare(b[0]) ||
+        a[1].localeCompare(b[1]) ||
+        a[2].localeCompare(b[2]) ||
+        a[3] - b[3];
       expect(cmp).toBeLessThanOrEqual(0);
     }
   });

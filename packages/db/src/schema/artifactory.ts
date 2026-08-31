@@ -64,7 +64,9 @@ export const componentTable = pgTable(
   "component",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     slug: text("slug").notNull(),
     kind: componentKindEnum("kind").notNull(),
     name: text("name").notNull(),
@@ -103,8 +105,12 @@ export const componentVersionTable = pgTable(
   "component_version",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
-    componentId: uuid("component_id").notNull().references(() => componentTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
+    componentId: uuid("component_id")
+      .notNull()
+      .references(() => componentTable.id),
     version: text("version").notNull(),
     manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull().default({}),
     manifestSha256: text("manifest_sha256").notNull(),
@@ -159,7 +165,9 @@ export const jobFunctionTable = pgTable(
   "job_function",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     key: text("key").notNull(),
     name: text("name").notNull(),
     functionFamily: text("function_family").notNull(),
@@ -182,13 +190,17 @@ export const jobFunctionTable = pgTable(
 export const componentJobFunctionTable = pgTable(
   "component_job_function",
   {
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-    componentId: uuid("component_id").notNull().references(() => componentTable.id),
-    jobFunctionId: uuid("job_function_id").notNull().references(() => jobFunctionTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
+    componentId: uuid("component_id")
+      .notNull()
+      .references(() => componentTable.id),
+    jobFunctionId: uuid("job_function_id")
+      .notNull()
+      .references(() => jobFunctionTable.id),
   },
-  (table) => [
-    primaryKey({ columns: [table.componentId, table.jobFunctionId] }),
-  ],
+  (table) => [primaryKey({ columns: [table.componentId, table.jobFunctionId] })],
 );
 
 /** WorkPackageJobFunction — many-to-many junction (which packages serve which
@@ -196,13 +208,15 @@ export const componentJobFunctionTable = pgTable(
 export const workPackageJobFunctionTable = pgTable(
   "work_package_job_function",
   {
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     packageId: uuid("package_id").notNull(), // FK to work_package.id (packages/db/src/schema/catalog.ts)
-    jobFunctionId: uuid("job_function_id").notNull().references(() => jobFunctionTable.id),
+    jobFunctionId: uuid("job_function_id")
+      .notNull()
+      .references(() => jobFunctionTable.id),
   },
-  (table) => [
-    primaryKey({ columns: [table.packageId, table.jobFunctionId] }),
-  ],
+  (table) => [primaryKey({ columns: [table.packageId, table.jobFunctionId] })],
 );
 
 /** DiscoverySource — an external feed candidate components are pulled from
@@ -210,7 +224,9 @@ export const workPackageJobFunctionTable = pgTable(
  *  opaque vault reference, never a credential (Invariant 4). */
 export const discoverySourceTable = pgTable("discovery_source", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   kind: discoverySourceKindEnum("kind").notNull(),
   name: text("name").notNull(),
   endpoint: text("endpoint").notNull(),
@@ -231,8 +247,12 @@ export const discoveryCandidateTable = pgTable(
   "discovery_candidate",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-    sourceId: uuid("source_id").notNull().references(() => discoverySourceTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => discoverySourceTable.id),
     externalRef: text("external_ref").notNull(),
     proposedKind: componentKindEnum("proposed_kind").notNull(),
     name: text("name").notNull(),
@@ -245,6 +265,9 @@ export const discoveryCandidateTable = pgTable(
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("discovery_candidate_source_id_external_ref_uq").on(table.sourceId, table.externalRef),
+    uniqueIndex("discovery_candidate_source_id_external_ref_uq").on(
+      table.sourceId,
+      table.externalRef,
+    ),
   ],
 );

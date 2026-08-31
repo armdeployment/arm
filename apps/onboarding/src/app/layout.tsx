@@ -4,7 +4,8 @@ import { TRPCProvider } from "../lib/trpc/provider";
 
 export const metadata: Metadata = {
   title: "ARM Setup — Get your agent",
-  description: "Answer a few questions, download your ARM agent, and start working — no role key, no config file, no terminal.",
+  description:
+    "Answer a few questions, download your ARM agent, and start working — no role key, no config file, no terminal.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

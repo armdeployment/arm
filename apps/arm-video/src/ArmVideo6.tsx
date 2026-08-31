@@ -28,31 +28,58 @@ export const ArmVideo6: React.FC = () => {
       <TransitionSeries.Sequence durationInFrames={5 * FPS} name="Intro">
         <SceneV6Intro />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
-      <TransitionSeries.Sequence durationInFrames={6 * FPS} name="Questionnaire">
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
+      <TransitionSeries.Sequence
+        durationInFrames={6 * FPS}
+        name="Questionnaire"
+      >
         <SceneV6Questionnaire />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
-      <TransitionSeries.Sequence durationInFrames={6 * FPS} name="Recommendation">
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
+      <TransitionSeries.Sequence
+        durationInFrames={6 * FPS}
+        name="Recommendation"
+      >
         <SceneV6Recommendation />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
       <TransitionSeries.Sequence durationInFrames={7 * FPS} name="Activate">
         <SceneV6Activate />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
       <TransitionSeries.Sequence durationInFrames={7 * FPS} name="Installed">
         <SceneV6Installed />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
       <TransitionSeries.Sequence durationInFrames={8 * FPS} name="Chat">
         <SceneV6Chat />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
       <TransitionSeries.Sequence durationInFrames={8 * FPS} name="MultiFolder">
         <SceneV6MultiFolder />
       </TransitionSeries.Sequence>
-      <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: T })} />
+      <TransitionSeries.Transition
+        presentation={slide({ direction: "from-left" })}
+        timing={linearTiming({ durationInFrames: T })}
+      />
       <TransitionSeries.Sequence durationInFrames={7 * FPS} name="Outro">
         <SceneV6Outro />
       </TransitionSeries.Sequence>

@@ -48,8 +48,12 @@ export function recommendForJobFunction(
   const approved = candidates.filter((c) => c.reviewStatus === "approved");
 
   const scored = approved.map((c) => {
-    const jobFunctionScore = c.jobFunctions.includes(input.jobFunctionKey) ? JOB_FUNCTION_MATCH_WEIGHT : 0;
-    const deptCount = input.departmentId ? (c.installCountByDepartment[input.departmentId] ?? 0) : 0;
+    const jobFunctionScore = c.jobFunctions.includes(input.jobFunctionKey)
+      ? JOB_FUNCTION_MATCH_WEIGHT
+      : 0;
+    const deptCount = input.departmentId
+      ? (c.installCountByDepartment[input.departmentId] ?? 0)
+      : 0;
     const departmentScore = departmentSignal(deptCount) * DEPARTMENT_INSTALL_WEIGHT;
     return { slug: c.slug, score: jobFunctionScore + departmentScore, publishedAt: c.publishedAt };
   });

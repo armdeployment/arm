@@ -83,8 +83,8 @@ correctly on the first pass.
 Ran the real proxy (`ARM_PROXY_UPSTREAM_URL=http://localhost:11434`,
 pointed at this machine's real Ollama) alongside the real onboarding
 server, redeemed a real activation code through the wizard, then typed
-into the chat: *"I run a manufacturing plant and my team keeps waiting on
-me for budget approvals before they can order parts."* Got back a real,
+into the chat: _"I run a manufacturing plant and my team keeps waiting on
+me for budget approvals before they can order parts."_ Got back a real,
 contextual reply from `minicpm5-1b` — not simulated, not templated. The
 transcript correctly classified to `budget_approval_pain → senior_manager`
 via the same deterministic path a typed paragraph would have. Separately

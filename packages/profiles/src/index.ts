@@ -53,7 +53,11 @@ export function listProfiles(): { id: ProfileId; label: string; description: str
       label: holdingProfile.label,
       description: holdingProfile.description,
     },
-    { id: "custom", label: "Custom", description: "À-la-carte: start empty, configure every capability individually." },
+    {
+      id: "custom",
+      label: "Custom",
+      description: "À-la-carte: start empty, configure every capability individually.",
+    },
   ];
 }
 
@@ -113,10 +117,18 @@ export function getProfile(id: ProfileId): IndustryProfilePreset {
     ],
     rolePresets: [
       {
-        key: "org_admin", label: "Org Admin",
+        key: "org_admin",
+        label: "Org Admin",
         description: "Full authority — configure every role afterwards.",
-        scopeType: "org", singleton: true,
-        permissions: ["org_node:create", "org_node:rename", "org_node:reparent", "org_node:delete", "*"]
+        scopeType: "org",
+        singleton: true,
+        permissions: [
+          "org_node:create",
+          "org_node:rename",
+          "org_node:reparent",
+          "org_node:delete",
+          "*",
+        ],
       },
     ],
     workTypeTaxonomies: [],
@@ -183,10 +195,7 @@ export function countOrgNodes(nodes: OrgNodeSeed[]): number {
 }
 
 /** Count nodes of a specific type (e.g. "plant", "organization"). */
-export function countOrgNodesByType(
-  nodes: OrgNodeSeed[],
-  type: OrgNodeSeed["type"],
-): number {
+export function countOrgNodesByType(nodes: OrgNodeSeed[], type: OrgNodeSeed["type"]): number {
   let count = 0;
   for (const n of nodes) {
     if (n.type === type) count += 1;

@@ -28,7 +28,13 @@ export interface CoveragePanelViewProps {
   errorMessage?: string;
 }
 
-export function CoveragePanelView({ status, rows, freshnessMs, sampleData, errorMessage }: CoveragePanelViewProps) {
+export function CoveragePanelView({
+  status,
+  rows,
+  freshnessMs,
+  sampleData,
+  errorMessage,
+}: CoveragePanelViewProps) {
   const isEmpty = status === "ready" && (!rows || rows.length === 0);
   const effectiveStatus: PanelStatus = status === "ready" && isEmpty ? "empty" : status;
 
@@ -44,7 +50,12 @@ export function CoveragePanelView({ status, rows, freshnessMs, sampleData, error
       sampleData={sampleData}
     >
       {rows && (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Coverage table, scrollable">
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Coverage table, scrollable"
+        >
           <table className="w-full text-left text-[12px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -58,16 +69,28 @@ export function CoveragePanelView({ status, rows, freshnessMs, sampleData, error
             <tbody>
               {rows.map((r) => {
                 const covered = r.packages.length > 0;
-                const pct = r.eligibleSeats > 0 ? Math.round((r.activatedSeats / r.eligibleSeats) * 100) : 0;
+                const pct =
+                  r.eligibleSeats > 0 ? Math.round((r.activatedSeats / r.eligibleSeats) * 100) : 0;
                 return (
-                  <tr key={r.jobFunctionKey} className="border-b" style={{ borderColor: "var(--border)" }}>
+                  <tr
+                    key={r.jobFunctionKey}
+                    className="border-b"
+                    style={{ borderColor: "var(--border)" }}
+                  >
                     <td className="py-2 pr-3">
-                      <div className="font-medium" style={{ color: "var(--text-primary)" }}>{r.name}</div>
-                      <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>{r.departmentName}</div>
+                      <div className="font-medium" style={{ color: "var(--text-primary)" }}>
+                        {r.name}
+                      </div>
+                      <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        {r.departmentName}
+                      </div>
                     </td>
                     <td className="py-2 pr-3">
                       {covered ? (
-                        <span className="rounded bg-[var(--navy-light)] px-1.5 py-0.5 text-[10px] font-medium" style={{ color: "var(--navy)" }}>
+                        <span
+                          className="rounded bg-[var(--navy-light)] px-1.5 py-0.5 text-[10px] font-medium"
+                          style={{ color: "var(--navy)" }}
+                        >
                           {r.packages.join(", ")}
                         </span>
                       ) : (
@@ -79,9 +102,20 @@ export function CoveragePanelView({ status, rows, freshnessMs, sampleData, error
                         </span>
                       )}
                     </td>
-                    <td className="py-2 pr-3 text-right tabular">{r.activatedSeats} <span style={{ color: "var(--text-muted)" }}>({pct}%)</span></td>
-                    <td className="py-2 pr-3 text-right tabular" style={{ color: "var(--text-secondary)" }}>{r.eligibleSeats}</td>
-                    <td className="py-2 text-right font-semibold tabular" style={{ color: r.uncoveredWeight > 0 ? "var(--warning)" : "var(--success)" }}>
+                    <td className="py-2 pr-3 text-right tabular">
+                      {r.activatedSeats}{" "}
+                      <span style={{ color: "var(--text-muted)" }}>({pct}%)</span>
+                    </td>
+                    <td
+                      className="py-2 pr-3 text-right tabular"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {r.eligibleSeats}
+                    </td>
+                    <td
+                      className="py-2 text-right font-semibold tabular"
+                      style={{ color: r.uncoveredWeight > 0 ? "var(--warning)" : "var(--success)" }}
+                    >
                       {r.uncoveredWeight}
                     </td>
                   </tr>
@@ -95,7 +129,13 @@ export function CoveragePanelView({ status, rows, freshnessMs, sampleData, error
   );
 }
 
-export function CoveragePanel({ scope, jobFunctionKey }: { scope: ScopeRef; jobFunctionKey?: string | null }) {
+export function CoveragePanel({
+  scope,
+  jobFunctionKey,
+}: {
+  scope: ScopeRef;
+  jobFunctionKey?: string | null;
+}) {
   const q = trpc.adoption.coverage.useQuery({ scope, jobFunctionKey: jobFunctionKey ?? null });
 
   if (q.isLoading) return <CoveragePanelView status="loading" />;

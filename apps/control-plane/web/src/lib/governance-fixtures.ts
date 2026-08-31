@@ -42,7 +42,28 @@ export interface CostPerWorkProductRow {
  * attribution yet (tracked gap, see file header).
  */
 export const SAMPLE_COST_PER_WORK_PRODUCT: CostPerWorkProductRow[] = [
-  { id: "cpwp_8d", workProduct: "8D Report", unit: "$ / 8D", rawUsd: 182, reworkRatePct: 6.2, effectiveUsd: 214 },
-  { id: "cpwp_ppap", workProduct: "PPAP Submission", unit: "$ / PPAP", rawUsd: 298, reworkRatePct: 4.1, effectiveUsd: 312 },
-  { id: "cpwp_plc", workProduct: "PLC Routine", unit: "$ / routine", rawUsd: 16, reworkRatePct: 9.8, effectiveUsd: 18 },
+  {
+    id: "cpwp_8d",
+    workProduct: "8D Report",
+    unit: "$ / 8D",
+    rawUsd: 182,
+    reworkRatePct: 6.2,
+    effectiveUsd: 214,
+  },
+  {
+    id: "cpwp_ppap",
+    workProduct: "PPAP Submission",
+    unit: "$ / PPAP",
+    rawUsd: 298,
+    reworkRatePct: 4.1,
+    effectiveUsd: 312,
+  },
+  {
+    id: "cpwp_plc",
+    workProduct: "PLC Routine",
+    unit: "$ / routine",
+    rawUsd: 16,
+    reworkRatePct: 9.8,
+    effectiveUsd: 18,
+  },
 ];

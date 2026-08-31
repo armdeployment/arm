@@ -54,9 +54,44 @@ export const PROXY_CLASSIFICATION_LOG = [
 
 // REAL ClickHouse query output — classification truth table
 export const CLICKHOUSE_CLASSIFICATION = [
-  { agent: "CodeReview-Bot", dept: "Engineering", workType: "code_review", stage: "linear", conf: 1.0, status: "success" },
-  { agent: "DocGen-Agent", dept: "Engineering", workType: "documentation", stage: "linear", conf: 1.0, status: "success" },
-  { agent: "ToolPath-Optimizer", dept: "Manufacturing", workType: "cnc_toolpath_optimization", stage: "linear", conf: 1.0, status: "success" },
-  { agent: "SecurityScan-Agent", dept: "Quality Assurance", workType: "cybersecurity_scan", stage: "linear", conf: 1.0, status: "success" },
-  { agent: "DemandForecast-Agent", dept: "Supply Chain", workType: "demand_forecasting", stage: "linear", conf: 1.0, status: "success" },
+  {
+    agent: "CodeReview-Bot",
+    dept: "Engineering",
+    workType: "code_review",
+    stage: "linear",
+    conf: 1.0,
+    status: "success",
+  },
+  {
+    agent: "DocGen-Agent",
+    dept: "Engineering",
+    workType: "documentation",
+    stage: "linear",
+    conf: 1.0,
+    status: "success",
+  },
+  {
+    agent: "ToolPath-Optimizer",
+    dept: "Manufacturing",
+    workType: "cnc_toolpath_optimization",
+    stage: "linear",
+    conf: 1.0,
+    status: "success",
+  },
+  {
+    agent: "SecurityScan-Agent",
+    dept: "Quality Assurance",
+    workType: "cybersecurity_scan",
+    stage: "linear",
+    conf: 1.0,
+    status: "success",
+  },
+  {
+    agent: "DemandForecast-Agent",
+    dept: "Supply Chain",
+    workType: "demand_forecasting",
+    stage: "linear",
+    conf: 1.0,
+    status: "success",
+  },
 ];

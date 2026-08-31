@@ -29,6 +29,7 @@
  */
 
 import { register, type CheckResult } from "../types.js";
+import { countChain, includesChain } from "../source-match.js";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -199,8 +200,8 @@ register({
       tableIssues.push(`catalog schema file not found: ${catalogSchemaPath}`);
     } else {
       const schema = fs.readFileSync(catalogSchemaPath, "utf-8");
-      shaCount += schema.split(needle).length - 1;
-      if (!schema.includes("export const workPackageVersionTable")) {
+      shaCount += countChain(schema, needle);
+      if (!includesChain(schema, "export const workPackageVersionTable")) {
         tableIssues.push("workPackageVersionTable missing from catalog.ts");
       }
     }
@@ -208,9 +209,11 @@ register({
       tableIssues.push(`artifactory schema file not found: ${artifactorySchemaPath}`);
     } else {
       const schema = fs.readFileSync(artifactorySchemaPath, "utf-8");
-      shaCount += schema.split(needle).length - 1;
-      if (!schema.includes("export const componentVersionTable")) {
-        tableIssues.push("componentVersionTable missing from artifactory.ts (D10 — replaces toolVersionTable)");
+      shaCount += countChain(schema, needle);
+      if (!includesChain(schema, "export const componentVersionTable")) {
+        tableIssues.push(
+          "componentVersionTable missing from artifactory.ts (D10 — replaces toolVersionTable)",
+        );
       }
     }
     if (shaCount < 2) {
@@ -236,14 +239,18 @@ register({
     const blockIssues: string[] = [];
     for (const s of wpScans) {
       if (s.block === null) {
-        blockIssues.push(`${s.file}: 'workPackages' present but not an inline array — cannot verify tool pins`);
+        blockIssues.push(
+          `${s.file}: 'workPackages' present but not an inline array — cannot verify tool pins`,
+        );
         continue;
       }
       const toolsCount = (s.block.match(/\btools\s*:/g) ?? []).length;
       const toolVersions = valuesForKey(s.block, "toolVersion");
       const nonSemver = toolVersions.filter((v) => !SEMVER_ISH.test(v));
       if (toolsCount === 0) {
-        blockIssues.push(`${s.file}: workPackages entries missing 'tools' field (no pinned tool versions)`);
+        blockIssues.push(
+          `${s.file}: workPackages entries missing 'tools' field (no pinned tool versions)`,
+        );
       }
       if (toolVersions.length === 0) {
         blockIssues.push(`${s.file}: no 'toolVersion' pins found in workPackages`);

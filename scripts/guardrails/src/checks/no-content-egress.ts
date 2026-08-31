@@ -36,9 +36,7 @@ export interface FieldViolation {
 }
 
 /** Pure function form — used by mutation proofs (§14.2). */
-export function checkNoContentEgress(
-  columnsByTable: Record<string, string[]>,
-): CheckResult {
+export function checkNoContentEgress(columnsByTable: Record<string, string[]>): CheckResult {
   const violations: FieldViolation[] = [];
   for (const [table, cols] of Object.entries(columnsByTable)) {
     for (const col of cols) {
@@ -66,7 +64,8 @@ export function checkNoContentEgress(
 /** Parses `CREATE TABLE ... (col Type, ...) ` blocks out of the SQL into a map. */
 export function parseColumns(sql: string): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  const re = /CREATE TABLE(?:\s+IF NOT EXISTS)?\s+(\w+)\s*\(([\s\S]*?)\)\s*(?:PARTITION|ENGINE|ORDER|$)/g;
+  const re =
+    /CREATE TABLE(?:\s+IF NOT EXISTS)?\s+(\w+)\s*\(([\s\S]*?)\)\s*(?:PARTITION|ENGINE|ORDER|$)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(sql)) !== null) {
     const table = m[1]!;

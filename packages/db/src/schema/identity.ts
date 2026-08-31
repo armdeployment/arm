@@ -11,22 +11,18 @@
  */
 
 import { pgTable, uuid, text, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
-import {
-  organizationTable,
-  tenantTable,
-} from "./org-tree.js";
-import {
-  priorityTierEnum,
-  spawnedByEnum,
-  agentStatusEnum,
-  scopeTypeEnum,
-} from "./enums.js";
+import { organizationTable, tenantTable } from "./org-tree.js";
+import { priorityTierEnum, spawnedByEnum, agentStatusEnum, scopeTypeEnum } from "./enums.js";
 
 /** User — a human in the tenant. */
 export const userTable = pgTable("user", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
-  orgId: uuid("org_id").notNull().references(() => organizationTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
+  orgId: uuid("org_id")
+    .notNull()
+    .references(() => organizationTable.id),
   email: text("email").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -39,7 +35,9 @@ export const userTable = pgTable("user", {
  */
 export const roleTable = pgTable("role", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id").notNull(),
   name: text("name").notNull(),
@@ -57,9 +55,15 @@ export const roleTable = pgTable("role", {
 export const userRoleTable = pgTable(
   "user_role",
   {
-    userId: uuid("user_id").notNull().references(() => userTable.id),
-    roleId: uuid("role_id").notNull().references(() => roleTable.id),
-    tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => userTable.id),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roleTable.id),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
     assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ pk: uniqueIndex("user_role_pk").on(t.userId, t.roleId) }),
@@ -73,7 +77,9 @@ export const userRoleTable = pgTable(
  */
 export const agentTable = pgTable("agent", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
 
   // Accountability: owner may be NULL (scope-owned); stakeholder is NEVER NULL.
   ownerUserId: uuid("owner_user_id").references(() => userTable.id),
@@ -109,9 +115,13 @@ export const agentTable = pgTable("agent", {
  */
 export const subAccountTable = pgTable("sub_account", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   userId: uuid("user_id").references(() => userTable.id),
-  agentId: uuid("agent_id").notNull().references(() => agentTable.id),
+  agentId: uuid("agent_id")
+    .notNull()
+    .references(() => agentTable.id),
   apiKeyHash: text("api_key_hash").notNull(),
   allowedModels: jsonb("allowed_models").$type<string[]>().notNull().default([]),
   quotasJson: jsonb("quotas_json").$type<Record<string, unknown>>(),
@@ -121,7 +131,9 @@ export const subAccountTable = pgTable("sub_account", {
 /** DelegateKey — per-tenant provider key for attribution + enforcement (§7.2). */
 export const delegateKeyTable = pgTable("delegate_key", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   provider: text("provider").notNull(), // anthropic | openai | ...
   keyRef: text("key_ref").notNull(), // opaque reference to vaulted key, never the key itself
   rotatedAt: timestamp("rotated_at", { withTimezone: true }).notNull().defaultNow(),

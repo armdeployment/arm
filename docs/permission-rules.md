@@ -1,6 +1,6 @@
 # Permission Rules — Tiered Delegation & Deny-Overrides
 
-> Skeleton. Cross-referenced by `docs/arm-spec.md` §11 invariant 3 ("Higher-level deny always wins") and §6.1 (Resolution model). Tables finalize once the 1.3 schema is locked. Until then this document records the *contract* implementers must honor so the 1.0/1.2 schema can be written against it.
+> Skeleton. Cross-referenced by `docs/arm-spec.md` §11 invariant 3 ("Higher-level deny always wins") and §6.1 (Resolution model). Tables finalize once the 1.3 schema is locked. Until then this document records the _contract_ implementers must honor so the 1.0/1.2 schema can be written against it.
 
 ## 1. Scope
 
@@ -10,24 +10,25 @@ Applies to the `permission` / access-policy domain only (resource grants). The L
 
 From most authoritative (highest) to least (lowest):
 
-| Rank | Level | Authority |
-|---|---|---|
-| 0 | Org default | broadest; constrains everything below |
-| 1 | Department | may narrow within dept |
-| 2 | Group | may narrow within group |
-| 3 | Team | may narrow within team |
-| 4 | Workstream | may narrow within workstream |
-| 5 | Agent | narrowest; per-resource explicit grants refine defaults |
+| Rank | Level       | Authority                                               |
+| ---- | ----------- | ------------------------------------------------------- |
+| 0    | Org default | broadest; constrains everything below                   |
+| 1    | Department  | may narrow within dept                                  |
+| 2    | Group       | may narrow within group                                 |
+| 3    | Team        | may narrow within team                                  |
+| 4    | Workstream  | may narrow within workstream                            |
+| 5    | Agent       | narrowest; per-resource explicit grants refine defaults |
 
-"Higher" = closer to the Org root (lower rank number). A **deny** at a higher rank overrides **any allow** at a lower rank, *including a lower-rank explicit grant*. An **allow** at a higher rank does **not** constitute a grant at a lower rank; lower ranks may still deny.
+"Higher" = closer to the Org root (lower rank number). A **deny** at a higher rank overrides **any allow** at a lower rank, _including a lower-rank explicit grant_. An **allow** at a higher rank does **not** constitute a grant at a lower rank; lower ranks may still deny.
 
 ## 3. Cross-domain gate (classification → LLM routing)
 
 A resource's `ClassificationLevel.rank` gates which LLM may receive that resource's **content**:
+
 - `restricted` / `confidential` content ⇒ the agent's holding context is tagged; closed external models (Anthropic/OpenAI) are **disallowed** for subsequent turns until the tagged context is dropped.
 - This gate is enforced in the **data plane** (proxy + resource connector), not the control plane, so it survives the metadata-only boundary (invariant 1).
 
-> Decided (D2-a, 2026-07-26): Phase 1 enforcement is per-agent `classification_context` tagging in the data plane — *mint* connectors tag at credential-vending time, *proxy* connectors at response time; the proxy/gateway refuses closed-external-model routing while context ≥ `confidential`. Full mechanism: spec §6.5.
+> Decided (D2-a, 2026-07-26): Phase 1 enforcement is per-agent `classification_context` tagging in the data plane — _mint_ connectors tag at credential-vending time, _proxy_ connectors at response time; the proxy/gateway refuses closed-external-model routing while context ≥ `confidential`. Full mechanism: spec §6.5.
 
 ## 4. Resolution algorithm (per principal × resource × action)
 
@@ -61,22 +62,22 @@ Walk is **top-down**: the first `DENY` encountered (always from the highest appl
 
 ## 5. Constraints vocabulary (initial)
 
-| Constraint | Applies to | Example |
-|---|---|---|
-| `prefix` | S3 / GCS object keys | `/{team}/` |
-| `ttl_seconds` | minted credentials | `900` (15 min) |
-| `max_rows` | DB proxy query | `1000` |
-| `read_only` | any | `true` |
-| `sites[]` | SharePoint/Graph | `["site-A"]` |
-| `classifications[]` | LLM routing gate | `["public","internal"]` |
+| Constraint          | Applies to           | Example                 |
+| ------------------- | -------------------- | ----------------------- |
+| `prefix`            | S3 / GCS object keys | `/{team}/`              |
+| `ttl_seconds`       | minted credentials   | `900` (15 min)          |
+| `max_rows`          | DB proxy query       | `1000`                  |
+| `read_only`         | any                  | `true`                  |
+| `sites[]`           | SharePoint/Graph     | `["site-A"]`            |
+| `classifications[]` | LLM routing gate     | `["public","internal"]` |
 
 ## 6. Enforcement point matrix
 
-| Strategy | Where rules resolved | Where decided | Revocation |
-|---|---|---|---|
-| mint | control plane Policy Engine (cache pushed to data plane) | data plane connector (issues STS/OAuth/signed URL) | TTL expiry (short-lived) |
-| proxy | data plane (per-call) | data plane brokers every call | drop session / close conn |
-| sync | control plane reconciles external perms as grants | external system (Graph/IAM) enforces | drift-detection job reconciles |
+| Strategy | Where rules resolved                                     | Where decided                                      | Revocation                     |
+| -------- | -------------------------------------------------------- | -------------------------------------------------- | ------------------------------ |
+| mint     | control plane Policy Engine (cache pushed to data plane) | data plane connector (issues STS/OAuth/signed URL) | TTL expiry (short-lived)       |
+| proxy    | data plane (per-call)                                    | data plane brokers every call                      | drop session / close conn      |
+| sync     | control plane reconciles external perms as grants        | external system (Graph/IAM) enforces               | drift-detection job reconciles |
 
 ## 7. Audit emission
 
@@ -88,34 +89,39 @@ Every resolution emits an `access_audit_event` (see `docs/arm-spec.md` §4.2) wi
 - [ ] Whether Workstream/Agent levels may issue `ALLOW` at all or only refine/constrain (current assumption: may allow within authority).
 - [ ] Constraint merge conflict policy (e.g., two `prefix` allows → intersection or union?).
 - [ ] JIT grant expiry vs session-bound proxy sessions: shared `expires_at` column?
+
 ## 5. Enforcement Reference (1.3 — as implemented)
 
 The policy resolver in `packages/policy` implements:
 
-| Rule | Behavior |
-|---|---|
-| No matching grant | Default deny |
-| Allow at any level | Allow (unless higher deny exists) |
-| Deny at any level | Denies all lower-level allows |
-| Expired grant | Ignored (treated as no grant) |
-| Wildcard action `*` | Matches any action |
+| Rule                | Behavior                          |
+| ------------------- | --------------------------------- |
+| No matching grant   | Default deny                      |
+| Allow at any level  | Allow (unless higher deny exists) |
+| Deny at any level   | Denies all lower-level allows     |
+| Expired grant       | Ignored (treated as no grant)     |
+| Wildcard action `*` | Matches any action                |
 
 ### S3 Connector
+
 - Strategy: mint (STS AssumeRoleWithWebIdentity)
 - Enforcement: IAM policy templated from grants at credential mint time
 - TTL: ≤15 min default, ≤60 min max (Invariant §11.4)
 
 ### GCS Connector
+
 - Strategy: mint (Workload Identity Federation)
 - Enforcement: Scoped OAuth token with bucket/prefix constraints
 - TTL: ≤15 min default, ≤60 min max
 
 ### DB Connector
+
 - Strategy: proxy (ARM brokers every query)
 - Enforcement: Per-call policy check + query audit
 - Classification: Redacts confidential columns for restricted agents
 
 ### SharePoint Connector
+
 - Strategy: mint + sync hybrid
 - Enforcement: Graph API scoped token + periodic permission drift detection
 - Drift: Stale grants auto-revoked; drift >0 triggers alert

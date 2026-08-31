@@ -25,7 +25,8 @@ export default async function HelpPage({ params }: { params: Promise<{ step: str
           <>
             <div className="onboarding-prompt">We don&apos;t recognize that error code</div>
             <p className="onboarding-help">
-              Run <code>arm doctor</code> from a terminal for a full diagnostic, or contact your IT team.
+              Run <code>arm doctor</code> from a terminal for a full diagnostic, or contact your IT
+              team.
             </p>
           </>
         )}
@@ -34,7 +35,12 @@ export default async function HelpPage({ params }: { params: Promise<{ step: str
         </div>
         <div className="onboarding-options">
           {ARM_ERROR_CODES.map((c) => (
-            <Link key={c} href={`/help/${c}`} className="onboarding-option" data-selected={c === code}>
+            <Link
+              key={c}
+              href={`/help/${c}`}
+              className="onboarding-option"
+              data-selected={c === code}
+            >
               {c.replaceAll("_", " ")}
             </Link>
           ))}

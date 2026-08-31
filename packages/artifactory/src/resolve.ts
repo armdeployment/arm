@@ -72,7 +72,11 @@ export function satisfiesRange(version: string, range: string): boolean {
   if (r.startsWith("~")) {
     const base = parseSemVer(r.slice(1).trim());
     const v = parseSemVer(version);
-    return v.major === base.major && v.minor === base.minor && compareSemVer(version, r.slice(1).trim()) >= 0;
+    return (
+      v.major === base.major &&
+      v.minor === base.minor &&
+      compareSemVer(version, r.slice(1).trim()) >= 0
+    );
   }
   // Bare version — EXACT match only (the pinned-seed convention).
   return version === r;

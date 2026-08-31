@@ -12,6 +12,7 @@
  */
 
 import { register, type CheckResult } from "../types.js";
+import { includesChain } from "../source-match.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -92,7 +93,7 @@ register({
       'uuid("scope_id").notNull()',
       'jsonb("labels")',
     ];
-    const missing = required.filter((needle) => !content.includes(needle));
+    const missing = required.filter((needle) => !includesChain(content, needle));
 
     if (missing.length > 0) {
       return {

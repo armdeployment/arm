@@ -18,7 +18,11 @@
  */
 
 import { register, type CheckResult } from "../types.js";
-import { componentFixtures, componentVersionFixtures, componentBlobFixtures } from "@arm/artifactory";
+import {
+  componentFixtures,
+  componentVersionFixtures,
+  componentBlobFixtures,
+} from "@arm/artifactory";
 
 export interface BlobResidencyRow {
   digest: string;
@@ -54,12 +58,18 @@ register({
     // digest -> the component_version that references it -> its component's source_kind
     const componentById = new Map(componentFixtures.map((c) => [c.id, c]));
     const componentIdByDigest = new Map(
-      componentVersionFixtures.filter((v) => v.blob_digest !== null).map((v) => [v.blob_digest as string, v.component_id]),
+      componentVersionFixtures
+        .filter((v) => v.blob_digest !== null)
+        .map((v) => [v.blob_digest as string, v.component_id]),
     );
     const rows: BlobResidencyRow[] = componentBlobFixtures.map((blob) => {
       const componentId = componentIdByDigest.get(blob.digest);
       const sourceKind = componentId ? componentById.get(componentId)?.source_kind : undefined;
-      return { digest: blob.digest, sourceKind: sourceKind ?? "unknown_dangling_ref", residency: blob.residency };
+      return {
+        digest: blob.digest,
+        sourceKind: sourceKind ?? "unknown_dangling_ref",
+        residency: blob.residency,
+      };
     });
     return checkBlobResidency(rows);
   },

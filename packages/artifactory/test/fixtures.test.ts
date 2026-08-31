@@ -38,9 +38,13 @@ describe("artifactory fixtures", () => {
   });
 
   it("has 40 callable components (mcp/http_api/cli/connector) + installable + 1 tenant-authored", () => {
-    const callable = componentFixtures.filter((c) => ["mcp", "http_api", "cli", "connector"].includes(c.kind));
+    const callable = componentFixtures.filter((c) =>
+      ["mcp", "http_api", "cli", "connector"].includes(c.kind),
+    );
     expect(callable).toHaveLength(40);
-    const installable = componentFixtures.filter((c) => ["skill", "subagent", "template"].includes(c.kind));
+    const installable = componentFixtures.filter((c) =>
+      ["skill", "subagent", "template"].includes(c.kind),
+    );
     expect(installable.length).toBeGreaterThanOrEqual(38);
     const tenantAuthored = componentFixtures.filter((c) => c.source_kind === "tenant_authored");
     expect(tenantAuthored).toHaveLength(1);
@@ -81,7 +85,10 @@ describe("artifactory fixtures", () => {
         (c.data_classification === "confidential" || c.data_classification === "restricted") &&
         c.auth_strategy === "none"
       ) {
-        expect(c.kind, `${c.slug} classified ${c.data_classification} with auth_strategy none must be cli`).toBe("cli");
+        expect(
+          c.kind,
+          `${c.slug} classified ${c.data_classification} with auth_strategy none must be cli`,
+        ).toBe("cli");
       }
     }
   });
@@ -98,10 +105,15 @@ describe("artifactory fixtures", () => {
   it("every blob fixture is referenced by at least one component_version, and vice versa for versions with a blob_digest", () => {
     const blobDigests = new Set(componentBlobFixtures.map((b) => b.digest));
     const versionDigests = new Set(
-      componentVersionFixtures.filter((v) => v.blob_digest !== null).map((v) => v.blob_digest as string),
+      componentVersionFixtures
+        .filter((v) => v.blob_digest !== null)
+        .map((v) => v.blob_digest as string),
     );
     for (const d of versionDigests) {
-      expect(blobDigests.has(d), `version references blob ${d} with no component_blob fixture`).toBe(true);
+      expect(
+        blobDigests.has(d),
+        `version references blob ${d} with no component_blob fixture`,
+      ).toBe(true);
     }
     for (const d of blobDigests) {
       expect(versionDigests.has(d), `blob ${d} has no referencing component_version`).toBe(true);
@@ -111,7 +123,9 @@ describe("artifactory fixtures", () => {
   it("the tenant-authored component's blob has residency 'tenant', never 'control_plane' (Invariant 1)", () => {
     const tenantAuthored = componentFixtures.filter((c) => c.source_kind === "tenant_authored");
     for (const c of tenantAuthored) {
-      const versions = componentVersionFixtures.filter((v) => v.component_id === c.id && v.blob_digest !== null);
+      const versions = componentVersionFixtures.filter(
+        (v) => v.component_id === c.id && v.blob_digest !== null,
+      );
       for (const v of versions) {
         const blob = componentBlobFixtures.find((b) => b.digest === v.blob_digest);
         expect(blob?.residency).toBe("tenant");
@@ -124,7 +138,9 @@ describe("artifactory fixtures", () => {
   });
 
   it("resolve() finds real fixture components by slug", () => {
-    const r = resolve("jira", "1.0.0", fixtureResolvableVersions, { tenantId: "any-tenant-falls-back-to-first-party" });
+    const r = resolve("jira", "1.0.0", fixtureResolvableVersions, {
+      tenantId: "any-tenant-falls-back-to-first-party",
+    });
     expect(r?.componentId).toBe(componentFixturesBySlug["jira"]?.id);
   });
 
@@ -133,7 +149,9 @@ describe("artifactory fixtures", () => {
       tenantId: componentFixturesBySlug["internal-process-notes"]!.tenant_id,
     });
     expect(own).not.toBeNull();
-    const other = resolve("internal-process-notes", "1.0.0", fixtureResolvableVersions, { tenantId: "some-other-tenant" });
+    const other = resolve("internal-process-notes", "1.0.0", fixtureResolvableVersions, {
+      tenantId: "some-other-tenant",
+    });
     expect(other).toBeNull(); // no first-party fallback for tenant-authored content
   });
 

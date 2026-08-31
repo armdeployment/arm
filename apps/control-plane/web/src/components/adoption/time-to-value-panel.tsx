@@ -5,7 +5,16 @@
  * first-metered-call, p50/p90 markers, target line at 10 min.
  */
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+} from "recharts";
 import { DeferredShell, type PanelStatus } from "../deferred-shell";
 import { trpc } from "../../lib/trpc/client";
 import type { ScopeRef } from "../../lib/use-scope";
@@ -40,7 +49,17 @@ function bucketLabel(b: TTVBucket, prev: number): string {
   return b.ltMinutes === Infinity ? `>${prev}m` : `${prev}–${b.ltMinutes}m`;
 }
 
-export function TimeToValuePanelView({ status, buckets, p50, p90, targetMinutes = 10, sampleCount, freshnessMs, sampleData, errorMessage }: TimeToValuePanelViewProps) {
+export function TimeToValuePanelView({
+  status,
+  buckets,
+  p50,
+  p90,
+  targetMinutes = 10,
+  sampleCount,
+  freshnessMs,
+  sampleData,
+  errorMessage,
+}: TimeToValuePanelViewProps) {
   const isEmpty = status === "ready" && (!sampleCount || sampleCount === 0);
   const effectiveStatus: PanelStatus = status === "ready" && isEmpty ? "empty" : status;
 
@@ -77,15 +96,34 @@ export function TimeToValuePanelView({ status, buckets, p50, p90, targetMinutes 
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-              <XAxis dataKey="label" stroke="#94A3B8" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+              <XAxis
+                dataKey="label"
+                stroke="#94A3B8"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#94A3B8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
               <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#F1F5F9" }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={28}>
                 {chartData.map((b, i) => (
                   <Cell key={i} fill={b.ltMinutes <= targetMinutes ? "#15803D" : "#1E3A8A"} />
                 ))}
               </Bar>
-              {typeof p50 === "number" && <ReferenceLine x={chartData.find((b) => p50! <= b.ltMinutes)?.label} stroke="#B45309" strokeDasharray="4 3" label={{ value: "p50", fontSize: 10, fill: "#B45309" }} />}
+              {typeof p50 === "number" && (
+                <ReferenceLine
+                  x={chartData.find((b) => p50! <= b.ltMinutes)?.label}
+                  stroke="#B45309"
+                  strokeDasharray="4 3"
+                  label={{ value: "p50", fontSize: 10, fill: "#B45309" }}
+                />
+              )}
             </BarChart>
           </ResponsiveContainer>
 
@@ -120,7 +158,13 @@ export function TimeToValuePanelView({ status, buckets, p50, p90, targetMinutes 
   );
 }
 
-export function TimeToValuePanel({ scope, jobFunctionKey }: { scope: ScopeRef; jobFunctionKey?: string | null }) {
+export function TimeToValuePanel({
+  scope,
+  jobFunctionKey,
+}: {
+  scope: ScopeRef;
+  jobFunctionKey?: string | null;
+}) {
   const q = trpc.adoption.timeToValue.useQuery({ scope, jobFunctionKey: jobFunctionKey ?? null });
 
   if (q.isLoading) return <TimeToValuePanelView status="loading" />;

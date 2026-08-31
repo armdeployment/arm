@@ -62,7 +62,7 @@ The single bidirectional link between the LLM-policy and access-policy domains: 
 
 ### Work-Type Tag
 
-The per-prompt usage label computed by the Classification Cascade for every metered LLM call: one primary `work_type` (from the agent's department/plant taxonomy, e.g. "bug-fix", "test", "CNC toolpath optimization") plus up to ~5 secondary `usage_tags` (structural, e.g. `tool:web_search`). A tag is never a guess — `unknown` is stored as-is. Distinct from the static per-agent `taskType` (what an agent *is*) and from §6.5 `classification_context` (data *sensitivity* of resources); the three compose: `work_type` × clearance × sensitivity. Tags are enforcement-ready: events carry `classifier_version` + `confidence` + `stage`, so work-type gates (Phase 1.4+) are deterministic and re-labelable. See also: Classification Cascade, Unknown-Is-Not-Guessed, D7.
+The per-prompt usage label computed by the Classification Cascade for every metered LLM call: one primary `work_type` (from the agent's department/plant taxonomy, e.g. "bug-fix", "test", "CNC toolpath optimization") plus up to ~5 secondary `usage_tags` (structural, e.g. `tool:web_search`). A tag is never a guess — `unknown` is stored as-is. Distinct from the static per-agent `taskType` (what an agent _is_) and from §6.5 `classification_context` (data _sensitivity_ of resources); the three compose: `work_type` × clearance × sensitivity. Tags are enforcement-ready: events carry `classifier_version` + `confidence` + `stage`, so work-type gates (Phase 1.4+) are deterministic and re-labelable. See also: Classification Cascade, Unknown-Is-Not-Guessed, D7.
 
 ### Classification Cascade
 
@@ -162,7 +162,7 @@ The per-user signed credential (A4) that lets one signed generic ARM client inst
 
 ### Activation Funnel
 
-The adoption-first metric spine (A1 — agent adoption at scale is the *primary* value prop, ahead of cost saving and on-prem LLM): the ordered `activation_event.step` sequence from `invited` through `questionnaire_started`/`completed` → `token_issued` → `downloaded` → `installed` → `runtime_ready` → `connections_started`/`completed` → `first_metered_call` → `weekly_active`, partitioned `(tenant_id, toYYYYMM(ts))` like every other event table (Invariant 6). Drives the `/adoption` dashboard's funnel, stall detection, time-to-value, and job-function coverage panels — the first-class surface reflecting A1's ordering, not a metric bolted onto spend/cost panels. See also: Setup Token, Metadata-Only Boundary.
+The adoption-first metric spine (A1 — agent adoption at scale is the _primary_ value prop, ahead of cost saving and on-prem LLM): the ordered `activation_event.step` sequence from `invited` through `questionnaire_started`/`completed` → `token_issued` → `downloaded` → `installed` → `runtime_ready` → `connections_started`/`completed` → `first_metered_call` → `weekly_active`, partitioned `(tenant_id, toYYYYMM(ts))` like every other event table (Invariant 6). Drives the `/adoption` dashboard's funnel, stall detection, time-to-value, and job-function coverage panels — the first-class surface reflecting A1's ordering, not a metric bolted onto spend/cost panels. See also: Setup Token, Metadata-Only Boundary.
 
 ### Discovery Candidate
 

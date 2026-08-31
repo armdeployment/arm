@@ -14,8 +14,8 @@ export function SiteFooter() {
         style={{ maxWidth: "var(--content-max)" }}
       >
         <p className="m-0 text-sm" style={{ color: "var(--text-muted)" }}>
-          {siteName} — no invented customers, no fabricated metrics. Every number on
-          this site traces to a source.
+          {siteName} — no invented customers, no fabricated metrics. Every number on this site
+          traces to a source.
         </p>
         <nav aria-label="Footer">
           <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">

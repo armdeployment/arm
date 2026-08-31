@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { GapsPanelView, type GapRow } from "../../src/components/adoption/gaps-panel";
 
-const ROWS: GapRow[] = [{ jobFunctionKey: "process_engineer", name: "Process Engineer", uncoveredWeight: 15 }];
+const ROWS: GapRow[] = [
+  { jobFunctionKey: "process_engineer", name: "Process Engineer", uncoveredWeight: 15 },
+];
 
 describe("GapsPanelView", () => {
   it("loading: renders a skeleton", () => {

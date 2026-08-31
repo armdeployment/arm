@@ -4,16 +4,28 @@ import type { SearchableComponentRow, SearchableWorkPackageRow } from "../src/se
 
 function comp(overrides: Partial<SearchableComponentRow>): SearchableComponentRow {
   return {
-    id: "c1", slug: "jira", name: "Jira", description: "",
-    kind: "mcp", jobFunctions: [], dataClassification: "internal",
-    sourceKind: "first_party", reviewStatus: "approved", installCount: 0,
+    id: "c1",
+    slug: "jira",
+    name: "Jira",
+    description: "",
+    kind: "mcp",
+    jobFunctions: [],
+    dataClassification: "internal",
+    sourceKind: "first_party",
+    reviewStatus: "approved",
+    installCount: 0,
     ...overrides,
   };
 }
 function wp(overrides: Partial<SearchableWorkPackageRow>): SearchableWorkPackageRow {
   return {
-    id: "w1", roleKey: "quality_engineer", name: "Quality Engineer", description: "",
-    mode: "copilot", jobFunctions: [], installCount: 0,
+    id: "w1",
+    roleKey: "quality_engineer",
+    name: "Quality Engineer",
+    description: "",
+    mode: "copilot",
+    jobFunctions: [],
+    installCount: 0,
     ...overrides,
   };
 }
@@ -23,7 +35,12 @@ describe("computeFacets", () => {
     const rows = [
       comp({ slug: "a", kind: "mcp", dataClassification: "internal", sourceKind: "first_party" }),
       comp({ slug: "b", kind: "mcp", dataClassification: "internal", sourceKind: "first_party" }),
-      comp({ slug: "c", kind: "skill", dataClassification: "confidential", sourceKind: "tenant_authored" }),
+      comp({
+        slug: "c",
+        kind: "skill",
+        dataClassification: "confidential",
+        sourceKind: "tenant_authored",
+      }),
       comp({ slug: "d", kind: "skill", reviewStatus: "draft" }), // excluded
     ];
     const facets = computeFacets(rows, []);

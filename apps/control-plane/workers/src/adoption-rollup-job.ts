@@ -24,7 +24,12 @@
  * final report as a contracts gap, not silently dropped.
  */
 
-import { ACTIVATION_STEPS, FIXTURE_POPULATION, isFixtureMode, type ActivationUser } from "@arm/trpc/adoption-router";
+import {
+  ACTIVATION_STEPS,
+  FIXTURE_POPULATION,
+  isFixtureMode,
+  type ActivationUser,
+} from "@arm/trpc/adoption-router";
 
 export interface AdoptionRollupRow {
   tenantId: string;
@@ -58,13 +63,26 @@ export function computeAdoptionRollup(
     for (let i = 0; i <= u.reachedStepIndex; i++) {
       const step = ACTIVATION_STEPS[i]!;
       const key = `${day}:${u.departmentId}:${u.jobFunctionKey}:${step}`;
-      const row = byKey.get(key) ?? { tenantId, day, orgNodeId: u.departmentId, jobFunctionKey: u.jobFunctionKey, step, count: 0 };
+      const row = byKey.get(key) ?? {
+        tenantId,
+        day,
+        orgNodeId: u.departmentId,
+        jobFunctionKey: u.jobFunctionKey,
+        step,
+        count: 0,
+      };
       row.count++;
       byKey.set(key, row);
     }
   }
 
-  return [...byKey.values()].sort((a, b) => a.day.localeCompare(b.day) || a.orgNodeId.localeCompare(b.orgNodeId) || a.jobFunctionKey.localeCompare(b.jobFunctionKey) || ACTIVATION_STEPS.indexOf(a.step) - ACTIVATION_STEPS.indexOf(b.step));
+  return [...byKey.values()].sort(
+    (a, b) =>
+      a.day.localeCompare(b.day) ||
+      a.orgNodeId.localeCompare(b.orgNodeId) ||
+      a.jobFunctionKey.localeCompare(b.jobFunctionKey) ||
+      ACTIVATION_STEPS.indexOf(a.step) - ACTIVATION_STEPS.indexOf(b.step),
+  );
 }
 
 export interface AdoptionRollupJobResult {
@@ -90,7 +108,8 @@ export async function runAdoptionRollupJob(tenantId: string): Promise<AdoptionRo
     // other owned file).
     return {
       status: "skipped",
-      detail: "ARM_FIXTURE_MODE=0: real-mode rollup persistence needs a Postgres rollup table not yet in the frozen schema (guide 00 §3) — see file header.",
+      detail:
+        "ARM_FIXTURE_MODE=0: real-mode rollup persistence needs a Postgres rollup table not yet in the frozen schema (guide 00 §3) — see file header.",
       rowCount: 0,
       rows: [],
     };

@@ -43,10 +43,14 @@ export interface DiagramLayout {
   edges: LaidOutEdge[];
 }
 
-export function layoutDiagram(labels: DiagramLabels, boundaryEdgeIndexes: number[] = []): DiagramLayout {
+export function layoutDiagram(
+  labels: DiagramLabels,
+  boundaryEdgeIndexes: number[] = [],
+): DiagramLayout {
   const marginX = (DIAGRAM_WIDTH - NODE_WIDTH) / 2;
   const rowHeight = NODE_HEIGHT + EDGE_REGION;
-  const height = TOP_PAD * 2 + labels.nodes.length * NODE_HEIGHT + (labels.nodes.length - 1) * EDGE_REGION;
+  const height =
+    TOP_PAD * 2 + labels.nodes.length * NODE_HEIGHT + (labels.nodes.length - 1) * EDGE_REGION;
   const centerX = DIAGRAM_WIDTH / 2;
 
   const nodes: LaidOutNode[] = labels.nodes.map((node, i) => ({

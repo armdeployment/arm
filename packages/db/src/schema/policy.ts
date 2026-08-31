@@ -9,7 +9,9 @@ import { tenantTable } from "./org-tree.js";
 /** Model — an LLM an agent may use. `kind` drives the DLP gate (§6.5). */
 export const modelTable = pgTable("model", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   provider: text("provider").notNull(),
   name: text("name").notNull(),
   kind: modelKindEnum("kind").notNull(),
@@ -31,7 +33,9 @@ export const modelTable = pgTable("model", {
  */
 export const budgetTable = pgTable("budget", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id").notNull(),
   period: text("period").notNull(), // e.g. "monthly:2026-07" (resolution left to policy layer)
@@ -49,7 +53,9 @@ export const budgetTable = pgTable("budget", {
  */
 export const llmPolicyTable = pgTable("llm_policy", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id").notNull(),
   allowedModels: jsonb("allowed_models").$type<string[]>().notNull().default([]),

@@ -20,8 +20,8 @@ Profile preset** (a data bundle applied at tenant creation), **not a runtime
 manifests as normal per-tenant config rows; runtime code reads config, never
 `mode`. The governing rule:
 
-> **Everything that makes ARM good for manufacturing is a *capability* every
-> tenant could have. The profile only ever sets *defaults* — it never gates a
+> **Everything that makes ARM good for manufacturing is a _capability_ every
+> tenant could have. The profile only ever sets _defaults_ — it never gates a
 > capability.**
 
 This keeps hybrid companies (tech + hardware division, manufacturer + large
@@ -30,7 +30,7 @@ flavors, zero migration.
 
 Orthogonal to existing axes: any profile × any delivery model (SaaS /
 self-hosted, §3.4) × any commercial tier. A manufacturing company can be SaaS
-*or* self-hosted; profile is a separate dimension.
+_or_ self-hosted; profile is a separate dimension.
 
 ## Context
 
@@ -38,22 +38,22 @@ The seed tenant is already "Acme Manufacturing Corp" and the simulation already
 runs manufacturing agents (CNC toolpath optimization, defect analysis, demand
 forecast). The governance engine (budgets, tiers, deny-overrides, metering,
 audit) is industry-neutral. What differs between a tech company and a
-manufacturer is ~10 dimensions of *default values* — not engine features:
+manufacturer is ~10 dimensions of _default values_ — not engine features:
 
-| Dimension | Tech preset | Manufacturing preset |
-|---|---|---|
-| Org-tree convention | flat: Eng/Product/Sales/CS/Marketing | deep: Plant → Line/Cell → Station **+ shift dimension** |
-| Personas (spec §2) | engineer, marketer, sales, CS, manager, admin, InfoSec | plant manager, shift lead, maintenance planner, QC/process engineer, supply chain, OT-Security |
-| Resource-type allowlist | s3, gcs, db, sharepoint, onedrive, files + GitHub/Slack/Notion | + mes, erp, scada, historian, plm, cmms, iot |
-| Classification taxonomy | single-axis: public/internal/confidential/restricted | **dual-axis**: sensitivity rank **+ regulatory flag** (ITAR/EAR, GxP) |
-| DLP pattern library | API keys, SSNs, credit cards, PII | + process recipes, CAM/tooling, CAD geometry, customer specs, quote/cost, export-controlled |
-| Priority-tier naming | critical=incident, standard, background=ux/upgrade | critical=**line-blocking/line-down**, standard=CI/engineering, background=optimization/training |
-| Budget-period presets | monthly | **shift / line / batch / monthly** |
-| Model-routing default | cost-steer to open cloud models (GLM/DeepSeek) | **edge/on-prem GPU first** (data residency); geo-restricted for ITAR |
-| Connectivity assumptions | cloud-native, remote=VPN | **air-gapped plants**, plant-local enforcement, offline policy TTL, periodic sync |
-| Stakeholder routing | single human, business hours | single human of-record **+ shift duty roster** for alerts/JIT |
-| Seed/demo agents | code-review, docs, arch, test-gen, security-scan | CNC-toolpath, defect/SPC, demand-forecast, predictive-maintenance, route-opt |
-| UI home panels | spend / org / savings | + line uptime, maintenance backlog, quality holds, shift handover |
+| Dimension                | Tech preset                                                    | Manufacturing preset                                                                            |
+| ------------------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Org-tree convention      | flat: Eng/Product/Sales/CS/Marketing                           | deep: Plant → Line/Cell → Station **+ shift dimension**                                         |
+| Personas (spec §2)       | engineer, marketer, sales, CS, manager, admin, InfoSec         | plant manager, shift lead, maintenance planner, QC/process engineer, supply chain, OT-Security  |
+| Resource-type allowlist  | s3, gcs, db, sharepoint, onedrive, files + GitHub/Slack/Notion | + mes, erp, scada, historian, plm, cmms, iot                                                    |
+| Classification taxonomy  | single-axis: public/internal/confidential/restricted           | **dual-axis**: sensitivity rank **+ regulatory flag** (ITAR/EAR, GxP)                           |
+| DLP pattern library      | API keys, SSNs, credit cards, PII                              | + process recipes, CAM/tooling, CAD geometry, customer specs, quote/cost, export-controlled     |
+| Priority-tier naming     | critical=incident, standard, background=ux/upgrade             | critical=**line-blocking/line-down**, standard=CI/engineering, background=optimization/training |
+| Budget-period presets    | monthly                                                        | **shift / line / batch / monthly**                                                              |
+| Model-routing default    | cost-steer to open cloud models (GLM/DeepSeek)                 | **edge/on-prem GPU first** (data residency); geo-restricted for ITAR                            |
+| Connectivity assumptions | cloud-native, remote=VPN                                       | **air-gapped plants**, plant-local enforcement, offline policy TTL, periodic sync               |
+| Stakeholder routing      | single human, business hours                                   | single human of-record **+ shift duty roster** for alerts/JIT                                   |
+| Seed/demo agents         | code-review, docs, arch, test-gen, security-scan               | CNC-toolpath, defect/SPC, demand-forecast, predictive-maintenance, route-opt                    |
+| UI home panels           | spend / org / savings                                          | + line uptime, maintenance backlog, quality holds, shift handover                               |
 
 None of the right column is a new engine feature — it is defaults plus a few new
 resource types, plant/line/shift scoping, and dual-axis classification.
@@ -68,7 +68,7 @@ resource types, plant/line/shift scoping, and dual-axis classification.
   resource-type allowlist, DLP patterns, tier display names, budget-period
   presets, persona→home-panel mapping, seed agents). Selected in an onboarding
   wizard at tenant creation; materialized as per-tenant config rows. Runtime code
-  reads config, never `mode`. The UI may *display* the profile but no behavior
+  reads config, never `mode`. The UI may _display_ the profile but no behavior
   branches on it. **(recommended)**
 - **(c) Hybrid — (b) for behavioral config + a lightweight `uiExperience` label
   for navigation/persona presentation only**, with the presentation also
@@ -88,11 +88,11 @@ resource types, plant/line/shift scoping, and dual-axis classification.
    ARM fit manufacturing — OT resources, air-gapped enforcement, dual-axis
    classification, shift-awareness — are capabilities any tenant may enable.
    Hardcoding them behind a mode gate would force a hybrid company to lose one
-   flavor's defaults. A profile of *defaults* lets any tenant turn on any
+   flavor's defaults. A profile of _defaults_ lets any tenant turn on any
    capability; "Custom" is the à-la-carte path.
 3. **Fits existing machinery.** §6.6 already has scope-admin-authored
    "templates" with `spawned_by ENUM('user','automation','template')`. An
-   Industry Profile is the *tenant-level* analog of an agent template — same
+   Industry Profile is the _tenant-level_ analog of an agent template — same
    pattern, lifted one level. The `tenantTable` already carries `tier`,
    `deployment`, `licenseJson`; `industryProfile` is a natural sibling.
 4. **Auditable & explicit.** Each tenant's config is real rows (classifications,
@@ -107,6 +107,7 @@ resource types, plant/line/shift scoping, and dual-axis classification.
 ## Consequences
 
 ### Data model
+
 - New `tenant.industryProfile` column (`tech` | `manufacturing` | `custom`) on
   `tenantTable` (`packages/db/src/schema/org-tree.ts`). **Default-source only**;
   never branched on at runtime. Paired with `profileAppliedAt`.
@@ -119,21 +120,24 @@ resource types, plant/line/shift scoping, and dual-axis classification.
   roster.
 
 ### Code
+
 - New `packages/profiles` (leaf, no internal imports — sits beside
   `proto`/`config`): declarative preset definitions
   (`tech.profile.ts`, `manufacturing.profile.ts`) as pure data.
 - Provisioning step applies a preset → seeds config rows for that tenant.
-- Web UI: onboarding "What kind of company?" step (the *selector* users ask for,
+- Web UI: onboarding "What kind of company?" step (the _selector_ users ask for,
   one-time at tenant creation) + a **registry pattern** for personas/home panels
   keyed by profile. No `if (mode)` in proxy/policy/enforcement.
 
 ### Guardrail
+
 - New `guardrails/no-profile-branching`: fails if `industryProfile` is read
   inside proxy / policy / enforcement paths (only UI presentation + provisioning
   may read it). Mutation-proofed per §14.2 (inject a `mode` branch, watch it go
   red, restore). This is the guard that keeps the hybrid-company rule true.
 
 ### Phased plan
+
 - **Phase 1 (quick win):** `industryProfile` column + `packages/profiles` with
   two pure-data presets; onboarding applies the preset (classifications, roles,
   DLP patterns, allowlist, demo agents, UI panel set); UI reads profile for
@@ -142,11 +146,12 @@ resource types, plant/line/shift scoping, and dual-axis classification.
   personas / OT resources / dual-axis classification / shift budgets on first
   load; a tech tenant shows the current experience.
 - **Phase 2 (clean target):** complete the move-hardcoded→config migration so
-  the profile is a *pure* default bundle; manufacturing capabilities are
+  the profile is a _pure_ default bundle; manufacturing capabilities are
   tenant-toggleable; "Custom" is first-class; a hybrid tenant configures tech
   defaults at org level + manufacturing capabilities for a plant subtree.
 
 ### Docs (Spec Travel Rule — same PR as implementation)
+
 - `docs/CONCEPTS.md`: add `Industry Profile`, `Preset`,
   `Capability Toggle` vs `Profile Default`.
 - `docs/arm-spec.md` §3.4: profile axis (independent of delivery + tier).
@@ -170,9 +175,9 @@ resource types, plant/line/shift scoping, and dual-axis classification.
   `guardrails/no-profile-branching` (mutation-proofed).
 - **Two sources of truth** during Phase 1–2 transition (some defaults still
   hardcoded while others moved to config) → mitigate by completing Phase 2 and
-  requiring each preset to *own* every value it claims to own.
+  requiring each preset to _own_ every value it claims to own.
 - **Migration tax from picking the wrong shape** → exactly why this record
-  locks the profile-over-mode shape *before* code lands.
+  locks the profile-over-mode shape _before_ code lands.
 
 ## Status
 

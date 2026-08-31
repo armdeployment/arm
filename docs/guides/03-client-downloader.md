@@ -124,14 +124,14 @@ an email.
 
 Replace the guide-00 placeholder. Use `jose` (already a dependency of `@arm/auth`).
 
-| Procedure | Behaviour |
-|---|---|
-| `getQuestionnaire` | published definition for the tenant's industry profile |
-| `submitResponse` | zod-validate against `questionnaireAnswerSchema` (structured only), store, return recommendations |
-| `recommend` | pure re-run without storing (used by "something else") |
-| `issueSetupToken` | mint JWT per `setupTokenClaimsSchema`; store **sha256 of the token** + a unique 6-char activation code; TTL **15 minutes**; single use |
-| `redeemSetupToken` | verify signature, expiry, and unredeemed state; mark redeemed with the client version; return the package manifest + connections manifest |
-| `resolveActivationCode` | code → token, same rate-limited redemption path |
+| Procedure               | Behaviour                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `getQuestionnaire`      | published definition for the tenant's industry profile                                                                                    |
+| `submitResponse`        | zod-validate against `questionnaireAnswerSchema` (structured only), store, return recommendations                                         |
+| `recommend`             | pure re-run without storing (used by "something else")                                                                                    |
+| `issueSetupToken`       | mint JWT per `setupTokenClaimsSchema`; store **sha256 of the token** + a unique 6-char activation code; TTL **15 minutes**; single use    |
+| `redeemSetupToken`      | verify signature, expiry, and unredeemed state; mark redeemed with the client version; return the package manifest + connections manifest |
+| `resolveActivationCode` | code → token, same rate-limited redemption path                                                                                           |
 
 Rules:
 
@@ -154,7 +154,7 @@ Keep everything that exists. Add, do not replace:
 
 ```ts
 export async function resolveFromSetupToken(args: {
-  token: string;                 // raw JWT or 6-char activation code
+  token: string; // raw JWT or 6-char activation code
   controlPlaneUrl: string;
 }): Promise<SetupArgs>;
 ```
@@ -232,10 +232,10 @@ packaging/
 
 ## 8. Guardrails you own
 
-| Guard | Asserts | Mutation proof |
-|---|---|---|
+| Guard                       | Asserts                                                                                                                                                                   | Mutation proof                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `questionnaire-determinism` | `packages/questionnaire` imports only `proto`/`config`; no `fetch`/`Date.now`/`Math.random`/`crypto.randomUUID`/`process.env` reachable from `score.ts` or `recommend.ts` | add `Date.now()` to `score.ts` → red → restore |
-| `no-content-in-activation` | `activationEventSchema` and `questionnaireAnswerSchema` expose no free-text field; no question node has `kind: "text"` in any shipped graph | add a text node to a graph → red |
+| `no-content-in-activation`  | `activationEventSchema` and `questionnaireAnswerSchema` expose no free-text field; no question node has `kind: "text"` in any shipped graph                               | add a text node to a graph → red               |
 
 Both red on empty input.
 

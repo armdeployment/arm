@@ -168,11 +168,7 @@ export function canMutateOrgNode(
 ): boolean {
   // reparent + delete are admin-only: the role must be granted at the org root.
   if (verb === "org_node:reparent" || verb === "org_node:delete") {
-    return roles.some(
-      (r) =>
-        r.scopeType === "org" &&
-        hasPermission([r], verb),
-    );
+    return roles.some((r) => r.scopeType === "org" && hasPermission([r], verb));
   }
   // create + rename: any role at-or-above the target scope that carries the verb.
   return hasPermission(roles, verb);
@@ -302,13 +298,13 @@ export function verifySAMLAssertion(assertionXml: string): SAMLAssertion {
  * Every real company uses one of these — ARM integrates with all of them.
  */
 export type IdPProvider =
-  | "entra"       // Microsoft Entra ID (Azure AD)
-  | "okta"        // Okta Workforce Identity
-  | "google"      // Google Cloud Identity / Workspace
-  | "aws"         // AWS IAM Identity Center
-  | "auth0"       // Auth0 by Okta
-  | "oidc"        // Generic OpenID Connect
-  | "saml";       // Generic SAML 2.0
+  | "entra" // Microsoft Entra ID (Azure AD)
+  | "okta" // Okta Workforce Identity
+  | "google" // Google Cloud Identity / Workspace
+  | "aws" // AWS IAM Identity Center
+  | "auth0" // Auth0 by Okta
+  | "oidc" // Generic OpenID Connect
+  | "saml"; // Generic SAML 2.0
 
 /** Per-provider configuration. Stored in tenant IdP config (encrypted at rest). */
 export interface IdPConfig {
@@ -338,17 +334,17 @@ export interface IdPConfig {
 /** Maps external IdP claims to ARM internal attributes. */
 export interface IdPClaimMapping {
   /** Which claim contains the user's email (primary identifier). */
-  emailClaim: string;              // e.g. "email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+  emailClaim: string; // e.g. "email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
   /** Which claim contains the display name. */
-  displayNameClaim?: string;       // e.g. "name", "displayName"
+  displayNameClaim?: string; // e.g. "name", "displayName"
   /** Which claim contains the department (maps to ARM org tree). */
-  departmentClaim?: string;        // e.g. "department", "https://acme.com/claims/department"
+  departmentClaim?: string; // e.g. "department", "https://acme.com/claims/department"
   /** Which claim contains the group memberships (maps to ARM roles). */
-  groupsClaim?: string;            // e.g. "groups", "https://acme.com/claims/groups"
+  groupsClaim?: string; // e.g. "groups", "https://acme.com/claims/groups"
   /** Which claim contains the employee ID (for HR sync). */
-  employeeIdClaim?: string;        // e.g. "employee_id", "workerId"
+  employeeIdClaim?: string; // e.g. "employee_id", "workerId"
   /** Which claim contains the job title (informational). */
-  titleClaim?: string;             // e.g. "jobTitle", "title"
+  titleClaim?: string; // e.g. "jobTitle", "title"
 }
 
 /** Pre-built claim mappings for common providers. */
@@ -434,7 +430,10 @@ export function routeIdP(email: string, idps: IdPConfig[]): IdPConfig | null {
  * Maps raw IdP claims to ARM internal claims using the provider's claim mapping.
  * This is how "department: Engineering" in Entra becomes a scope reference in ARM.
  */
-export function mapIdPClaims(rawClaims: Record<string, unknown>, mapping: IdPClaimMapping): ARMClaims {
+export function mapIdPClaims(
+  rawClaims: Record<string, unknown>,
+  mapping: IdPClaimMapping,
+): ARMClaims {
   const email = String(rawClaims[mapping.emailClaim!] ?? "");
   const tenant_id = "tn_demo"; // TODO: resolve from org context
   return {
@@ -515,8 +514,9 @@ export async function bootstrapAgent(req: AgentOnboardingRequest): Promise<Agent
     apiKey,
     delegateKeyRef: `dk_arm_${subAccountId}`,
     configuredBaseUrl: "https://data.arm.acme.com/v1",
-    message: effectiveTier !== req.requestedTier
-      ? `Agent created at '${effectiveTier}' tier. 'critical' tier requires scope-admin approval (Invariant §11.8).`
-      : `Agent '${req.agentName}' onboarded successfully.`,
+    message:
+      effectiveTier !== req.requestedTier
+        ? `Agent created at '${effectiveTier}' tier. 'critical' tier requires scope-admin approval (Invariant §11.8).`
+        : `Agent '${req.agentName}' onboarded successfully.`,
   };
 }

@@ -16,7 +16,9 @@ const OFFICE_VERSION_ID = "40000000-0000-4000-8000-000000000004"; // approval_re
 
 async function issueToken() {
   const caller = appRouter.createCaller(
-    createContext({ claims: { sub: "u1", tenant_id: "d9d9d9d9-0000-4000-8000-000000000001", email: "e@acme.com" } }),
+    createContext({
+      claims: { sub: "u1", tenant_id: "d9d9d9d9-0000-4000-8000-000000000001", email: "e@acme.com" },
+    }),
   );
   return caller.onboarding.issueSetupToken({ packageVersionIds: [OFFICE_VERSION_ID] });
 }
@@ -32,7 +34,9 @@ function jsonRequest(url: string, body: unknown): Request {
 describe("POST /api/setup/redeem", () => {
   it("redeems a fresh token and returns a manifest that verifies client-side", async () => {
     const issued = await issueToken();
-    const res = await redeemPost(jsonRequest("http://localhost/api/setup/redeem", { token: issued.token }));
+    const res = await redeemPost(
+      jsonRequest("http://localhost/api/setup/redeem", { token: issued.token }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("ok");
@@ -59,7 +63,9 @@ describe("POST /api/setup/redeem", () => {
   it("a second redemption of the same token returns already_used", async () => {
     const issued = await issueToken();
     await redeemPost(jsonRequest("http://localhost/api/setup/redeem", { token: issued.token }));
-    const second = await redeemPost(jsonRequest("http://localhost/api/setup/redeem", { token: issued.token }));
+    const second = await redeemPost(
+      jsonRequest("http://localhost/api/setup/redeem", { token: issued.token }),
+    );
     const body = await second.json();
     expect(body.status).toBe("already_used");
   });
@@ -77,13 +83,17 @@ describe("POST /api/setup/resolve-code", () => {
   });
 
   it("responds status:invalid for a code that isn't 6 characters", async () => {
-    const res = await resolveCodePost(jsonRequest("http://localhost/api/setup/resolve-code", { code: "ABC" }));
+    const res = await resolveCodePost(
+      jsonRequest("http://localhost/api/setup/resolve-code", { code: "ABC" }),
+    );
     const body = await res.json();
     expect(body.status).toBe("invalid");
   });
 
   it("responds status:invalid for an unknown code", async () => {
-    const res = await resolveCodePost(jsonRequest("http://localhost/api/setup/resolve-code", { code: "ZZZZZZ" }));
+    const res = await resolveCodePost(
+      jsonRequest("http://localhost/api/setup/resolve-code", { code: "ZZZZZZ" }),
+    );
     const body = await res.json();
     expect(body.status).toBe("invalid");
   });

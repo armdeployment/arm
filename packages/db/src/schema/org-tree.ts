@@ -29,7 +29,9 @@ export const tenantTable = pgTable("tenant", {
 /** Organization — top of the org tree within a tenant. */
 export const organizationTable = pgTable("organization", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   name: text("name").notNull(),
   idpConfig: jsonb("idp_config").$type<Record<string, unknown>>(), // SSO/federation config
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -43,8 +45,12 @@ export const organizationTable = pgTable("organization", {
  */
 export const departmentTable = pgTable("department", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orgId: uuid("org_id").notNull().references(() => organizationTable.id),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
+  orgId: uuid("org_id")
+    .notNull()
+    .references(() => organizationTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id), // denormalized for mandatory filter (D1-b)
   parentDepartmentId: uuid("parent_department_id"), // self-reference for hierarchical nesting (D6/D7)
   nodeType: text("node_type"), // "hq" | "plant" | "department" | "line" — for UI presentation only
   location: text("location"), // physical location (e.g. "Detroit, MI")
@@ -55,8 +61,12 @@ export const departmentTable = pgTable("department", {
 /** Group. */
 export const groupTable = pgTable("group", {
   id: uuid("id").primaryKey().defaultRandom(),
-  deptId: uuid("dept_id").notNull().references(() => departmentTable.id),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  deptId: uuid("dept_id")
+    .notNull()
+    .references(() => departmentTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -64,8 +74,12 @@ export const groupTable = pgTable("group", {
 /** Team. */
 export const teamTable = pgTable("team", {
   id: uuid("id").primaryKey().defaultRandom(),
-  groupId: uuid("group_id").notNull().references(() => groupTable.id),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groupTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -73,8 +87,12 @@ export const teamTable = pgTable("team", {
 /** Workstream — lowest authority level in the inheritance chain (§6.1). */
 export const workstreamTable = pgTable("workstream", {
   id: uuid("id").primaryKey().defaultRandom(),
-  teamId: uuid("team_id").notNull().references(() => teamTable.id),
-  tenantId: uuid("tenant_id").notNull().references(() => tenantTable.id),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teamTable.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id),
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

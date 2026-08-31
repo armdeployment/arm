@@ -25,8 +25,15 @@ const H = 1080;
 
 // Scene durations (seconds)
 const D = {
-  intro: 3, profiles: 6, workType: 6, network: 4,
-  workstations: 5, server: 4, blocking: 3, dashboard: 4, outro: 4,
+  intro: 3,
+  profiles: 6,
+  workType: 6,
+  network: 4,
+  workstations: 5,
+  server: 4,
+  blocking: 3,
+  dashboard: 4,
+  outro: 4,
 };
 const T = 12; // transition overlap frames
 
@@ -38,23 +45,94 @@ const T = 12; // transition overlap frames
 // NOT sum + transitions (that leaves a black tail at the end).
 // Verified empirically with a 3-color probe composition.
 const totalFrames =
-  (D.intro + D.profiles + D.workType + D.network + D.workstations +
-   D.server + D.blocking + D.dashboard + D.outro) * FPS -
+  (D.intro +
+    D.profiles +
+    D.workType +
+    D.network +
+    D.workstations +
+    D.server +
+    D.blocking +
+    D.dashboard +
+    D.outro) *
+    FPS -
   8 * T;
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
       <Folder name="Scenes">
-        <Composition id="Intro" component={SceneIntro} durationInFrames={D.intro * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Profiles" component={SceneProfiles} durationInFrames={D.profiles * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="WorkType" component={SceneWorkType} durationInFrames={D.workType * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Network" component={SceneNetwork} durationInFrames={D.network * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Workstations" component={SceneWorkstations} durationInFrames={D.workstations * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Server" component={SceneServer} durationInFrames={D.server * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Blocking" component={SceneBlocking} durationInFrames={D.blocking * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Dashboard" component={SceneDashboard} durationInFrames={D.dashboard * FPS} fps={FPS} width={W} height={H} />
-        <Composition id="Outro" component={SceneOutro} durationInFrames={D.outro * FPS} fps={FPS} width={W} height={H} />
+        <Composition
+          id="Intro"
+          component={SceneIntro}
+          durationInFrames={D.intro * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Profiles"
+          component={SceneProfiles}
+          durationInFrames={D.profiles * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="WorkType"
+          component={SceneWorkType}
+          durationInFrames={D.workType * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Network"
+          component={SceneNetwork}
+          durationInFrames={D.network * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Workstations"
+          component={SceneWorkstations}
+          durationInFrames={D.workstations * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Server"
+          component={SceneServer}
+          durationInFrames={D.server * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Blocking"
+          component={SceneBlocking}
+          durationInFrames={D.blocking * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Dashboard"
+          component={SceneDashboard}
+          durationInFrames={D.dashboard * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
+        <Composition
+          id="Outro"
+          component={SceneOutro}
+          durationInFrames={D.outro * FPS}
+          fps={FPS}
+          width={W}
+          height={H}
+        />
       </Folder>
       <Composition
         id="ArmVideo"

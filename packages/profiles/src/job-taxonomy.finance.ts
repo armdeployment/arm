@@ -10,11 +10,54 @@
 import type { JobFunctionSeed } from "./types.js";
 
 export const FINANCE_JOB_FUNCTIONS: JobFunctionSeed[] = [
-  { key: "financial_analyst", name: "Financial Analyst", functionFamily: "Finance", aliases: ["financial analyst", "fp&a analyst"], headcountWeight: 14 },
-  { key: "controller", name: "Controller", functionFamily: "Finance", aliases: ["controller"], headcountWeight: 4 },
-  { key: "treasury_analyst", name: "Treasury Analyst", functionFamily: "Finance", aliases: ["treasury analyst"], headcountWeight: 8 },
-  { key: "internal_auditor", name: "Internal Auditor", functionFamily: "Finance", aliases: ["internal auditor"], headcountWeight: 8 },
-  { key: "compliance_officer", name: "Compliance Officer", functionFamily: "Finance", aliases: ["compliance officer"], headcountWeight: 4 },
-  { key: "executive_assistant", name: "Executive Assistant", functionFamily: "Business Services", aliases: ["ea", "exec assistant"], headcountWeight: 6 },
-  { key: "senior_manager", name: "Senior Manager", functionFamily: "Business Services", aliases: ["department head", "senior manager", "team lead"], headcountWeight: 6, marketTier: "beachhead" },
+  {
+    key: "financial_analyst",
+    name: "Financial Analyst",
+    functionFamily: "Finance",
+    aliases: ["financial analyst", "fp&a analyst"],
+    headcountWeight: 14,
+  },
+  {
+    key: "controller",
+    name: "Controller",
+    functionFamily: "Finance",
+    aliases: ["controller"],
+    headcountWeight: 4,
+  },
+  {
+    key: "treasury_analyst",
+    name: "Treasury Analyst",
+    functionFamily: "Finance",
+    aliases: ["treasury analyst"],
+    headcountWeight: 8,
+  },
+  {
+    key: "internal_auditor",
+    name: "Internal Auditor",
+    functionFamily: "Finance",
+    aliases: ["internal auditor"],
+    headcountWeight: 8,
+  },
+  {
+    key: "compliance_officer",
+    name: "Compliance Officer",
+    functionFamily: "Finance",
+    aliases: ["compliance officer"],
+    headcountWeight: 4,
+  },
+  {
+    key: "executive_assistant",
+    name: "Executive Assistant",
+    functionFamily: "Business Services",
+    aliases: ["ea", "exec assistant"],
+    headcountWeight: 6,
+  },
+  {
+    key: "senior_manager",
+    name: "Senior Manager",
+    functionFamily: "Business Services",
+    aliases: ["department head", "senior manager", "team lead"],
+    headcountWeight: 6,
+    marketTier: "beachhead",
+  },
 ];

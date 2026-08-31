@@ -72,9 +72,13 @@ export function ingestEvent(raw: unknown): { accepted: boolean; reason?: string 
 }
 
 /** Returns buffer health metrics. */
-export function getBufferHealth(): Pick<BufferState, "totalBytes" | "oldestAgeMs" | "droppedCount"> & { eventCount: number; status: "ok" | "warning" | "critical" } {
+export function getBufferHealth(): Pick<
+  BufferState,
+  "totalBytes" | "oldestAgeMs" | "droppedCount"
+> & { eventCount: number; status: "ok" | "warning" | "critical" } {
   const ageHours = state.oldestAgeMs / 3600000;
-  const status = state.droppedCount > 100 ? "critical" : ageHours > MAX_AGE_HOURS ? "warning" : "ok";
+  const status =
+    state.droppedCount > 100 ? "critical" : ageHours > MAX_AGE_HOURS ? "warning" : "ok";
   return {
     eventCount: state.events.length,
     totalBytes: state.totalBytes,

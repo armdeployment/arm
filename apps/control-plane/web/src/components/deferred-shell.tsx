@@ -48,7 +48,12 @@ export function DeferredShell({
   const stale = typeof freshnessMs === "number" && freshnessMs > STALE_THRESHOLD_MS;
 
   return (
-    <div className="inst-card p-5" style={{ minHeight }} data-panel-status={status} data-testid="deferred-shell">
+    <div
+      className="inst-card p-5"
+      style={{ minHeight }}
+      data-panel-status={status}
+      data-testid="deferred-shell"
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="label-meta">{title}</h2>
@@ -75,7 +80,10 @@ export function DeferredShell({
       {status === "loading" && <SkeletonBody />}
 
       {status === "error" && (
-        <div role="alert" className="flex min-h-[140px] flex-col items-center justify-center gap-1 text-center">
+        <div
+          role="alert"
+          className="flex min-h-[140px] flex-col items-center justify-center gap-1 text-center"
+        >
           <span className="text-sm font-medium" style={{ color: "var(--danger)" }}>
             Couldn&apos;t load this panel
           </span>
@@ -101,9 +109,18 @@ export function DeferredShell({
 function SkeletonBody() {
   return (
     <div className="space-y-2.5" aria-hidden="true" data-testid="panel-skeleton">
-      <div className="h-4 w-3/4 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-      <div className="h-4 w-1/2 animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-      <div className="h-24 w-full animate-pulse rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+      <div
+        className="h-4 w-3/4 animate-pulse rounded"
+        style={{ backgroundColor: "var(--bg-elevated)" }}
+      />
+      <div
+        className="h-4 w-1/2 animate-pulse rounded"
+        style={{ backgroundColor: "var(--bg-elevated)" }}
+      />
+      <div
+        className="h-24 w-full animate-pulse rounded"
+        style={{ backgroundColor: "var(--bg-elevated)" }}
+      />
     </div>
   );
 }

@@ -27,9 +27,10 @@ surface first), never an eligibility gate — consistent with D6's "profiles
 set defaults, never gate a capability."
 
 Concretely:
+
 - **`senior_manager`** (beachhead) — added to all four profiles
   (tech/manufacturing/finance/holding), each with a matching `WorkPackageSeed`:
-  dashboards + approvals-inbox + web-search, framed around *their* ARM
+  dashboards + approvals-inbox + web-search, framed around _their_ ARM
   adoption funnel, budget/spend, and approvals — not hands-on tool use. In
   manufacturing, `plant_manager` was also tagged beachhead (already an exact
   fit).
@@ -111,7 +112,7 @@ modules, none of which make a network call or import `@arm/questionnaire`
   table, threshold-filtered so one stray file isn't a signal. Only
   `extensionCounts`/paths are local-only detail; `tags` is what's meant to
   be shared.
-- `plugin-scan.ts` — `scanInstalledTools()` checks for the *presence* of
+- `plugin-scan.ts` — `scanInstalledTools()` checks for the _presence_ of
   known per-platform install paths (Teamcenter, Windchill, SolidWorks,
   MATLAB, STAR-CCM+, VS Code, Docker, Slack, ...) — never opens or reads
   them. `pathExists` is injectable so tests never touch a real filesystem.

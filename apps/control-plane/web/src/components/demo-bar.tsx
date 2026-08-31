@@ -64,7 +64,11 @@ export function DemoBar() {
             if (persona && persona.landingRoute !== pathname) router.push(persona.landingRoute);
           }}
           className="rounded border px-1.5 py-0.5 text-[11px]"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)" }}
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-primary)",
+          }}
           aria-label="View as persona"
         >
           {DEMO_PERSONAS.map((p) => (
