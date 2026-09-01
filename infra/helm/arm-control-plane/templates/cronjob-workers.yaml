@@ -1,0 +1,53 @@
+{{- if .Values.workers.enabled }}
+{{- range $name, $schedule := dict "daily" $.Values.workers.dailySchedule "hourly" $.Values.workers.hourlySchedule }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "arm-control-plane.fullname" $ }}-workers-{{ $name }}
+  labels:
+    {{- include "arm-control-plane.labels" $ | nindent 4 }}
+    app.kubernetes.io/name: arm-workers
+    app.kubernetes.io/component: workers-{{ $name }}
+spec:
+  schedule: {{ $schedule | quote }}
+  # A run that overruns its next schedule must not be joined by a second one:
+  # two concurrent runs would process the same tenants twice, and the jobs are
+  # not idempotent against a provider's usage API.
+  concurrencyPolicy: Forbid
+  # A cluster that was down at the scheduled time should pick the run up when
+  # it comes back, not skip it silently — but only within a sensible window.
+  startingDeadlineSeconds: {{ $.Values.workers.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: {{ $.Values.workers.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "arm-control-plane.selectorLabels" (dict "ctx" $ "component" (printf "workers-%s" $name)) | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "arm-control-plane.serviceAccountName" $ }}
+          securityContext:
+            {{- toYaml $.Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: workers
+              image: "{{ $.Values.workers.image.repository }}:{{ $.Values.workers.image.tag }}"
+              imagePullPolicy: {{ $.Values.workers.image.pullPolicy }}
+              securityContext:
+                {{- toYaml $.Values.containerSecurityContext | nindent 16 }}
+              args: [{{ $name | quote }}]
+              env:
+                {{- include "arm-control-plane.appEnv" $ | nindent 16 }}
+              resources:
+                {{- toYaml $.Values.workers.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
+{{- end }}
+{{- end }}

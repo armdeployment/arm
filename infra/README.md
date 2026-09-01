@@ -138,6 +138,13 @@ entrypoint is `set -e` and refuses to start with either URL missing — a hook
 that half-migrates and exits 0 is worse than no hook. `migrate.seed=true` adds
 the demo tenant's fixtures; leave it off for anything holding real data.
 
+Two CronJobs run the scheduled workers (`arm/workers`), daily and hourly.
+`adoption_rollup` does real work; the provider usage-pull and reconciliation
+jobs report `skipped` with the reason until Anthropic/OpenAI Admin API
+credentials exist, rather than reporting success for doing nothing. Both use
+`concurrencyPolicy: Forbid` — two concurrent runs would process the same
+tenants twice, and the jobs are not idempotent against a provider's usage API.
+
 Identity is passed through to both apps, and the images set
 `NODE_ENV=production`, so with no `oidc.*` configured they **refuse** every
 authenticated request rather than serving one shared identity.
@@ -200,7 +207,7 @@ Being explicit, so nobody discovers these halfway through a rollout:
 
 - **No published images.** Nothing pushes `arm/closed-proxy`,
   `arm/open-gateway`, `arm/meter-agent`, `arm/control-plane-web`,
-  `arm/onboarding` or `arm/migrate` to a registry. Build them from
+  `arm/onboarding`, `arm/migrate` or `arm/workers` to a registry. Build them from
   `docker/` yourself and point `image.repository` at wherever you put them.
 - **Proxy quota is per-replica.** Consumption is written through to disk so a
   restart no longer resets it, but the file is process-local. With the default

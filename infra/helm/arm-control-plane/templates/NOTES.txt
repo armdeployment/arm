@@ -3,6 +3,7 @@ ARM control plane {{ .Chart.AppVersion }} installed as {{ .Release.Name }} in {{
 What is running:
 {{ if .Values.web.enabled }}  dashboard    {{ include "arm-control-plane.fullname" . }}-web        :{{ .Values.service.webPort }}  ({{ .Values.web.replicas }} replicas)
 {{ end }}{{ if .Values.onboarding.enabled }}  onboarding   {{ include "arm-control-plane.fullname" . }}-onboarding :{{ .Values.service.onboardingPort }}  ({{ .Values.onboarding.replicas }} replicas)
+{{ end }}{{ if .Values.workers.enabled }}  workers      {{ include "arm-control-plane.fullname" . }}-workers-daily  ({{ .Values.workers.dailySchedule }}) and -hourly ({{ .Values.workers.hourlySchedule }})
 {{ end }}
 Data mode: {{ if .Values.fixtureMode }}FIXTURES (in-memory, no database){{ else }}REAL (Postgres + ClickHouse){{ end }}
 

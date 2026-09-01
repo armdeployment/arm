@@ -78,6 +78,27 @@ migrate:
     requests: { cpu: "100m", memory: "256Mi" }
     limits: { cpu: "500m", memory: "512Mi" }
 
+# ── Scheduled workers ──
+# Two CronJobs from one image. `adoption_rollup` does real work; the usage-pull
+# and reconciliation jobs report `skipped` with a reason until provider
+# credentials exist, rather than reporting success for doing nothing.
+workers:
+  enabled: true
+  image:
+    repository: arm/workers
+    tag: latest
+    pullPolicy: IfNotPresent
+  # 03:00 and on the hour, UTC.
+  dailySchedule: "0 3 * * *"
+  hourlySchedule: "0 * * * *"
+  # A missed run inside this window is picked up when the cluster returns
+  # rather than skipped silently.
+  startingDeadlineSeconds: 600
+  backoffLimit: 2
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits: { cpu: "500m", memory: "512Mi" }
+
 # ── Identity (docs/sso-setup.md) ──
 # With none of issuer/jwks/audience set, both apps REFUSE every authenticated
 # request under NODE_ENV=production rather than silently serving one shared

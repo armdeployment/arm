@@ -231,6 +231,9 @@ importers:
       '@types/node':
         specifier: 26.1.1
         version: 26.1.1
+      tsx:
+        specifier: 4.20.6
+        version: 4.20.6
 
   apps/data-plane/artifact-cache:
     dependencies:
