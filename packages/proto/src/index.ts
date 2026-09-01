@@ -485,6 +485,19 @@ export const componentPullEventSchema = z.object({
 });
 export type ComponentPullEvent = z.infer<typeof componentPullEventSchema>;
 
+/**
+ * What the artifact cache POSTs to the control plane's component-pull ingest.
+ *
+ * Mirrors `meteringBatchSchema` deliberately: the two ingest paths share auth,
+ * the Invariant 1 boundary check and the fixture-mode contract, so having them
+ * share a batch shape too means one thing to learn rather than two.
+ */
+export const componentPullBatchSchema = z.object({
+  source_id: z.string().min(1).max(200),
+  events: z.array(componentPullEventSchema).min(1).max(1000),
+});
+export type ComponentPullBatch = z.infer<typeof componentPullBatchSchema>;
+
 // ── Aggregates / exports for convenience ───────────────────────────────────
 
 export const eventSchemas = {

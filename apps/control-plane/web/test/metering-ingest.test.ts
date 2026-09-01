@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { assertMetadataOnly, checkIngestAuth } from "../src/app/api/ingest/metering/route.js";
+import { assertMetadataOnly, checkIngestAuth, findBoundaryViolations } from "../src/lib/ingest.js";
 
 const validEvent = {
   ts: new Date().toISOString(),
@@ -86,6 +86,23 @@ describe("checkIngestAuth", () => {
 
   it("accepts unauthenticated in development, so the local pipeline needs no config", () => {
     expect(checkIngestAuth(null, undefined, "development")).toEqual({ ok: true });
+  });
+});
+
+describe("findBoundaryViolations — both ingest routes share this", () => {
+  it("names every offending event by index", () => {
+    const raw = {
+      source_id: "x",
+      events: [validEvent, { ...validEvent, prompt: "leak" }, validEvent],
+    };
+    const violations = findBoundaryViolations(raw);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.index).toBe(1);
+  });
+
+  it("is quiet on a clean batch, and on a malformed one", () => {
+    expect(findBoundaryViolations({ source_id: "x", events: [validEvent] })).toEqual([]);
+    expect(findBoundaryViolations({ nope: true })).toEqual([]);
   });
 });
 

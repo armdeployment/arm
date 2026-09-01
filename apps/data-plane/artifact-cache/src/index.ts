@@ -21,7 +21,8 @@ import { Hono } from "hono";
 import { DIGEST_RE, verifyDigest } from "./digest.js";
 import { LocalArtifactCache } from "./cache.js";
 import { httpSource, fetchFromSources, type ArtifactSource } from "./sources.js";
-import { recordPull, getPullEventBuffer } from "./events.js";
+import { config } from "@arm/config";
+import { recordPull, getPullEventBuffer, flushPullEvents } from "./events.js";
 
 // ── Config (env-driven, mirrors the plugin-ingest/proxy pattern of local
 //    process.env reads for app-specific settings not in the shared @arm/config
@@ -167,6 +168,22 @@ const isEntrypoint =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isEntrypoint) {
+  // Pull events buffer in memory and drain on a timer, the same shape as the
+  // meter-agent. Without a control plane configured they accumulate to the
+  // bound and are reported as undrainable rather than silently discarded.
+  if (!config.ARM_CONTROL_PLANE_URL) {
+    console.warn(
+      "[artifact-cache] ARM_CONTROL_PLANE_URL is not set — component pull events will buffer and never drain.",
+    );
+  }
+  const flushTimer = setInterval(() => {
+    void flushPullEvents().then((r) => {
+      if (r.flushed > 0) console.log(`[artifact-cache] flushed ${r.flushed} pull event(s)`);
+      else if (r.error) console.warn(`[artifact-cache] pull-event flush failed: ${r.error}`);
+    });
+  }, config.METER_AGENT_FLUSH_INTERVAL_MS);
+  flushTimer.unref();
+
   createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
