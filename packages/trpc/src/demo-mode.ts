@@ -28,14 +28,42 @@ interface RegisteredStore {
 
 const registry: RegisteredStore[] = [];
 
+/**
+ * Deep copy for snapshots.
+ *
+ * `[...store]` and `new Map(store)` are SHALLOW: they copy the container and
+ * share every element. That was invisible while routers only ever pushed and
+ * spliced, and wrong the moment one mutated a field on an existing object —
+ * `request.status = "approved"` changes the object the snapshot is holding
+ * too, so "restore" puts the mutated object straight back.
+ *
+ * ARM_DEMO's promise is that every mutation is rolled back. A shallow
+ * snapshot quietly narrowed that to "every mutation that replaces an element",
+ * which is not a distinction anyone writing a resolver would think to make.
+ *
+ * `structuredClone` falls back to the shallow copy for anything it cannot
+ * clone (a store holding functions or class instances), because a demo store
+ * that throws on snapshot would take down every mutation in the app. The
+ * fixture stores this guards are all plain JSON-shaped data.
+ */
+function deepSnapshot<T>(value: T, shallow: () => T): T {
+  try {
+    return structuredClone(value);
+  } catch {
+    return shallow();
+  }
+}
+
 /** Register a mutable array (the `const store: T[] = [...]` pattern used
  *  by every router's in-memory fixture store) for demo-mode reset. */
 export function registerDemoArray<T>(store: T[]): void {
   registry.push({
-    snapshot: () => [...store],
+    snapshot: () => deepSnapshot(store, () => [...store]),
     restore: (snap) => {
       store.length = 0;
-      store.push(...(snap as T[]));
+      // Cloned again on restore: without this, two successive mutations would
+      // both restore from — and mutate — the same snapshot objects.
+      store.push(...deepSnapshot(snap as T[], () => [...(snap as T[])]));
     },
   });
 }
@@ -44,10 +72,11 @@ export function registerDemoArray<T>(store: T[]): void {
  *  rate-limit counters) for demo-mode reset. */
 export function registerDemoMap<K, V>(store: Map<K, V>): void {
   registry.push({
-    snapshot: () => new Map(store),
+    snapshot: () => deepSnapshot(store, () => new Map(store)),
     restore: (snap) => {
       store.clear();
-      for (const [k, v] of snap as Map<K, V>) store.set(k, v);
+      const restored = deepSnapshot(snap as Map<K, V>, () => new Map(snap as Map<K, V>));
+      for (const [k, v] of restored) store.set(k, v);
     },
   });
 }

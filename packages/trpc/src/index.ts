@@ -21,7 +21,12 @@ import { catalogRouter } from "./catalog-router.js";
 import { libraryRouter } from "./library-router.js";
 import { onboardingRouter } from "./onboarding-router.js";
 import { adoptionRouter, isFixtureMode, queryClickHouseJSON } from "./adoption-router.js";
-import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
+import {
+  isDemoMode,
+  registerDemoArray,
+  snapshotAllDemoStores,
+  restoreAllDemoStores,
+} from "./demo-mode.js";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -1290,7 +1295,27 @@ function agentFilterSQL(agentIds: string[] | null): string {
   return ` AND agent_id IN (${agentIds.map(chLiteral).join(", ")})`;
 }
 
-const FIXTURE_ACCESS_REQUESTS = [
+/**
+ * JIT access requests awaiting a decision.
+ *
+ * `let`, and registered with demo-mode below, because `approve`/`deny` now
+ * actually change it. They used to return `{ status: "approved" }` and mutate
+ * nothing at all — so the dashboard said "approved", and the request was still
+ * sitting in the queue after a refresh.
+ */
+interface FixtureAccessRequest {
+  id: string;
+  agentId: string;
+  resourceId: string;
+  status: "pending" | "approved" | "denied";
+  action: string;
+  reason: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  denialReason?: string;
+}
+
+const FIXTURE_ACCESS_REQUESTS: FixtureAccessRequest[] = [
   {
     id: "req_01",
     agentId: "cad-assistant",
@@ -1308,6 +1333,78 @@ const FIXTURE_ACCESS_REQUESTS = [
     reason: "Monthly cost variance analysis",
   },
 ];
+
+// ARM_DEMO rolls every mutation back, so a public demo cannot be emptied of
+// approvals by the first visitor who clicks the button.
+registerDemoArray(FIXTURE_ACCESS_REQUESTS);
+
+/**
+ * Records a decision on an access request.
+ *
+ * Shared by `approve` and `deny` so both enforce the same rule: only a
+ * `pending` request can be decided. Without that, approving an
+ * already-denied request would silently succeed and the audit trail would
+ * show two contradictory decisions with no indication which one held.
+ */
+function decideAccessRequest(
+  requestId: string,
+  decision: "approved" | "denied",
+  decidedBy: string,
+  denialReason?: string,
+): FixtureAccessRequest {
+  const request = FIXTURE_ACCESS_REQUESTS.find((r) => r.id === requestId);
+  if (!request) {
+    throw new TRPCError({ code: "NOT_FOUND", message: `No access request ${requestId}.` });
+  }
+  if (request.status !== "pending") {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: `Access request ${requestId} was already ${request.status}${
+        request.decidedAt ? ` at ${request.decidedAt}` : ""
+      }.`,
+    });
+  }
+  request.status = decision;
+  request.decidedAt = new Date().toISOString();
+  request.decidedBy = decidedBy;
+  if (denialReason) request.denialReason = denialReason;
+  return request;
+}
+
+/**
+ * Real-mode decision: one conditional UPDATE.
+ *
+ * `status = 'pending'` is in the WHERE clause rather than checked first,
+ * so two approvers racing on the same request cannot both win — the second
+ * update matches no rows and is reported as a conflict.
+ */
+async function decideAccessRequestInDb(
+  tenantId: string,
+  requestId: string,
+  decision: "approved" | "denied",
+  approverId: string,
+): Promise<void> {
+  const { getDb, accessRequestTable } = await import("@arm/db");
+  const { eq, and } = await import("drizzle-orm");
+  const updated = await getDb()
+    .update(accessRequestTable)
+    .set({ status: decision, approverId, decidedAt: new Date() })
+    .where(
+      and(
+        eq(accessRequestTable.id, requestId),
+        eq(accessRequestTable.tenantId, tenantId),
+        eq(accessRequestTable.status, "pending"),
+      ),
+    )
+    .returning({ id: accessRequestTable.id });
+
+  if (updated.length === 0) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: `Access request ${requestId} is not pending, or does not belong to this tenant.`,
+    });
+  }
+}
 
 const telemetryState = initTelemetry("control-plane");
 
@@ -1676,7 +1773,7 @@ const spendRouter = t.router({
       budgetCap: scope.budgetCap,
       budgetUtilPct: Math.round((spend / scope.budgetCap) * 100),
       proxiedTrafficPct: 84,
-      pendingApprovals: FIXTURE_ACCESS_REQUESTS.length,
+      pendingApprovals: FIXTURE_ACCESS_REQUESTS.filter((r) => r.status === "pending").length,
       tierBreakdown: [
         { tier: "critical", count: tiers.critical, color: "#e11d48" },
         { tier: "standard", count: tiers.standard, color: "#2563eb" },
@@ -1911,7 +2008,13 @@ const agentsRouter = t.router({
 
 const accessRouter = t.router({
   pendingApprovals: tenantProcedure.input(z.object({ scope: scopeInput })).query(async (opts) => {
-    return { tenantId: opts.ctx.tenantId!, requests: FIXTURE_ACCESS_REQUESTS };
+    // Pending only — the queue is a list of things still needing a decision.
+    // Returning decided requests here is what made approve/deny look like it
+    // had done nothing: the row came straight back on the next refresh.
+    return {
+      tenantId: opts.ctx.tenantId!,
+      requests: FIXTURE_ACCESS_REQUESTS.filter((r) => r.status === "pending"),
+    };
   }),
 
   requestAccess: tenantProcedure
@@ -1926,13 +2029,30 @@ const accessRouter = t.router({
       return { id: "req_new", tenantId: opts.ctx.tenantId!, status: "pending" };
     }),
 
-  /** Approve a JIT access request. */
+  /** Approve a JIT access request. Records the decision; deciding twice fails. */
   approve: tenantProcedure.input(z.object({ requestId: z.string() })).mutation(async (opts) => {
-    // TODO(Phase 2): UPDATE access_request SET status='approved', decided_at=NOW()
+    const decidedBy = opts.ctx.claims!.sub;
+    if (!isFixtureMode()) {
+      await decideAccessRequestInDb(
+        opts.ctx.tenantId!,
+        opts.input.requestId,
+        "approved",
+        decidedBy,
+      );
+      return {
+        id: opts.input.requestId,
+        status: "approved" as const,
+        message: `Request ${opts.input.requestId} approved.`,
+      };
+    }
+    const request = decideAccessRequest(opts.input.requestId, "approved", decidedBy);
     return {
-      id: opts.input.requestId,
-      status: "approved",
-      message: `Request ${opts.input.requestId} approved. Short-lived credential issued (15-min TTL).`,
+      id: request.id,
+      status: request.status,
+      decidedAt: request.decidedAt,
+      // The credential itself is data-plane work and is not minted here — say
+      // so rather than claiming a 15-minute TTL nothing issues.
+      message: `Request ${request.id} approved. Credential issuance is enforced at the data plane on next use.`,
     };
   }),
 
@@ -1940,10 +2060,31 @@ const accessRouter = t.router({
   deny: tenantProcedure
     .input(z.object({ requestId: z.string(), reason: z.string().optional() }))
     .mutation(async (opts) => {
+      const decidedBy = opts.ctx.claims!.sub;
+      if (!isFixtureMode()) {
+        await decideAccessRequestInDb(
+          opts.ctx.tenantId!,
+          opts.input.requestId,
+          "denied",
+          decidedBy,
+        );
+        return {
+          id: opts.input.requestId,
+          status: "denied" as const,
+          message: `Request ${opts.input.requestId} denied.`,
+        };
+      }
+      const request = decideAccessRequest(
+        opts.input.requestId,
+        "denied",
+        decidedBy,
+        opts.input.reason,
+      );
       return {
-        id: opts.input.requestId,
-        status: "denied",
-        message: `Request ${opts.input.requestId} denied. ${opts.input.reason ?? "Access not granted."}`,
+        id: request.id,
+        status: request.status,
+        decidedAt: request.decidedAt,
+        message: `Request ${request.id} denied. ${opts.input.reason ?? "Access not granted."}`,
       };
     }),
 });

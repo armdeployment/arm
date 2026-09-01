@@ -73,7 +73,11 @@ Bearer` tokens against your IdP's JWKS when `ARM_OIDC_ISSUER_URL`,
   Ingest refuses under `NODE_ENV=production` when the token is unset, because
   an open ingest endpoint lets anyone forge any tenant's spend.
 - **`ARM_DEMO` read-only mode covers fixture-mode mutations only.** It does
-  not roll back writes made against a real Postgres.
+  not roll back writes made against a real Postgres. Within fixture mode the
+  rollback is now genuinely complete: snapshots were shallow copies that
+  shared their elements, so a resolver mutating a field on an existing object
+  (rather than replacing it) survived the "rollback". They are deep copies
+  now.
 
 ## Supported versions
 

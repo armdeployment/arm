@@ -86,3 +86,71 @@ describe("ARM_DEMO end to end (library.rejectCandidate)", () => {
     expect(same!.status).toBe("new");
   });
 });
+
+describe("snapshots are DEEP — the rollback covers in-place mutation", () => {
+  // The bug this pins: `registerDemoArray` snapshotted with `[...store]`,
+  // which copies the array and shares every element. That was invisible while
+  // routers only pushed and spliced, and wrong the moment one mutated a field
+  // on an existing object — `request.status = "approved"` also mutated the
+  // object inside the snapshot, so restore put the mutated object back.
+  //
+  // ARM_DEMO promises every mutation is rolled back. Shallow copying quietly
+  // narrowed that to "every mutation that replaces an element", which is not a
+  // distinction anyone writing a resolver would think to make.
+  it("rolls back a FIELD mutation on an existing element", async () => {
+    const { registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } =
+      await import("../src/demo-mode.js");
+    const store = [{ id: "a", status: "pending" as string }];
+    registerDemoArray(store);
+
+    const snap = snapshotAllDemoStores();
+    store[0]!.status = "approved";
+    restoreAllDemoStores(snap);
+
+    expect(store[0]!.status).toBe("pending");
+  });
+
+  it("rolls back a nested mutation", async () => {
+    const { registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } =
+      await import("../src/demo-mode.js");
+    const store = [{ id: "a", meta: { tags: ["one"] } }];
+    registerDemoArray(store);
+
+    const snap = snapshotAllDemoStores();
+    store[0]!.meta.tags.push("two");
+    restoreAllDemoStores(snap);
+
+    expect(store[0]!.meta.tags).toEqual(["one"]);
+  });
+
+  it("survives restoring from the same snapshot twice", async () => {
+    // Restore also clones. Without that, the first restore would hand the
+    // store the snapshot's own objects, and the next mutation would corrupt
+    // the snapshot it is supposed to be able to restore from again.
+    const { registerDemoArray, snapshotAllDemoStores, restoreAllDemoStores } =
+      await import("../src/demo-mode.js");
+    const store = [{ id: "a", status: "pending" as string }];
+    registerDemoArray(store);
+    const snap = snapshotAllDemoStores();
+
+    store[0]!.status = "approved";
+    restoreAllDemoStores(snap);
+    store[0]!.status = "denied";
+    restoreAllDemoStores(snap);
+
+    expect(store[0]!.status).toBe("pending");
+  });
+
+  it("rolls back a field mutation inside a Map value too", async () => {
+    const { registerDemoMap, snapshotAllDemoStores, restoreAllDemoStores } =
+      await import("../src/demo-mode.js");
+    const store = new Map<string, { hits: number }>([["k", { hits: 0 }]]);
+    registerDemoMap(store);
+
+    const snap = snapshotAllDemoStores();
+    store.get("k")!.hits = 99;
+    restoreAllDemoStores(snap);
+
+    expect(store.get("k")!.hits).toBe(0);
+  });
+});
