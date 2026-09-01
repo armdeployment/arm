@@ -10,6 +10,7 @@
  * NOT db. Callers pass role/permission data from the DB layer.
  */
 
+import { randomBytes } from "node:crypto";
 import { jwtVerify, createRemoteJWKSet, type JWTPayload } from "jose";
 import { z } from "zod";
 
@@ -868,9 +869,14 @@ export async function bootstrapAgent(req: AgentOnboardingRequest): Promise<Agent
   // TODO(1.1): INSERT INTO sub_account (...) VALUES (...)
   // TODO(1.1): INSERT INTO delegate_key (...) VALUES (...)
 
-  const agentId = `agt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  // `randomBytes`, not `Math.random`. `apiKey` is a credential: V8's PRNG is
+  // not cryptographically secure, and its state is recoverable from enough
+  // observed output, so `Math.random().toString(36)` produced keys that were
+  // predictable from other keys. That this path returns fixture credentials
+  // today is not a reason to mint guessable ones — the shape gets copied.
+  const agentId = `agt_${Date.now()}_${randomBytes(4).toString("hex")}`;
   const subAccountId = `sa_${agentId}`;
-  const apiKey = `arm_sk_${agentId}_${Math.random().toString(36).slice(2, 16)}`;
+  const apiKey = `arm_sk_${agentId}_${randomBytes(24).toString("base64url")}`;
 
   // Tier enforcement: critical requires scope-admin approval
   const effectiveTier = req.requestedTier === "critical" ? "standard" : req.requestedTier;

@@ -453,7 +453,10 @@ function clickHouseRequestTarget(rawUrl: string): { url: string; headers: Record
   return { url: parsed.toString().replace(/\/+$/, ""), headers };
 }
 
-async function queryClickHouseJSON<T>(sql: string): Promise<T[]> {
+/** Exported so `src/index.ts`'s spend panels can read `token_usage_event`
+ *  through the same client rather than growing a second copy of the
+ *  credentials-in-URL handling and the JSONEachRow parsing. */
+export async function queryClickHouseJSON<T>(sql: string): Promise<T[]> {
   if (!config.CLICKHOUSE_URL) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

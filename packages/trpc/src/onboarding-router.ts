@@ -49,7 +49,7 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID, createHash, randomInt } from "node:crypto";
 import { SignJWT, jwtVerify, decodeJwt } from "jose";
 import type { ARMContext } from "./index.js";
 import {
@@ -406,10 +406,12 @@ function newActivationCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code: string;
   do {
-    code = Array.from(
-      { length: 6 },
-      () => alphabet[Math.floor(Math.random() * alphabet.length)],
-    ).join("");
+    // `randomInt`, not `Math.random`. An activation code is what stands
+    // between a stranger and someone else's agent setup, and V8's PRNG is not
+    // cryptographically secure: observing enough outputs recovers its state
+    // and predicts the rest. `randomInt` also samples the 32-glyph alphabet
+    // without the modulo bias that `Math.floor(rand * len)` introduces.
+    code = Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join("");
   } while (activationCodeIndex.has(code));
   return code;
 }

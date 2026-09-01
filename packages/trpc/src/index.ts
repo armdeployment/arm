@@ -20,7 +20,7 @@ import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 import { catalogRouter } from "./catalog-router.js";
 import { libraryRouter } from "./library-router.js";
 import { onboardingRouter } from "./onboarding-router.js";
-import { adoptionRouter } from "./adoption-router.js";
+import { adoptionRouter, isFixtureMode, queryClickHouseJSON } from "./adoption-router.js";
 import { isDemoMode, snapshotAllDemoStores, restoreAllDemoStores } from "./demo-mode.js";
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -1211,6 +1211,85 @@ const FIXTURE_MODEL_SPEND = [
   { model: "DeepSeek V3", provider: "Self-hosted", spend: 340, kind: "self_hosted" as const },
 ];
 
+// ── Model identity (shared by the fixture and ClickHouse spend paths) ──────
+
+/**
+ * Classifies a raw `model_id` into the display name, provider and openness
+ * the spend panels show.
+ *
+ * ClickHouse stores whatever the proxy was called with —
+ * `claude-sonnet-4-20250514`, `gpt-4o`, `glm-5.2` — while the fixtures carry
+ * marketing names. Both paths route through here so the two modes tell the
+ * same story, which is the repo's standing rule for fixture vs real.
+ *
+ * `kind` is the load-bearing field: `self_hosted` is what lets a confidential
+ * or restricted workload run at all, so an unrecognised model is deliberately
+ * NOT assumed to be self-hosted. Unknown means closed, because guessing the
+ * other way would understate the exposure of traffic nobody has classified.
+ */
+export function classifyModel(modelId: string): {
+  model: string;
+  provider: string;
+  kind: "closed" | "self_hosted";
+  /** Bucket the trend chart plots. */
+  bucket: "claude" | "gpt" | "glm";
+} {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("claude")) {
+    return { model: modelId, provider: "Anthropic", kind: "closed", bucket: "claude" };
+  }
+  if (id.startsWith("gpt") || /^o[1-9]/.test(id)) {
+    return { model: modelId, provider: "OpenAI", kind: "closed", bucket: "gpt" };
+  }
+  if (id.startsWith("glm") || id.startsWith("deepseek") || id.startsWith("qwen")) {
+    return { model: modelId, provider: "Self-hosted", kind: "self_hosted", bucket: "glm" };
+  }
+  return { model: modelId, provider: "Unknown", kind: "closed", bucket: "gpt" };
+}
+
+/**
+ * SQL-quotes a string for the ClickHouse queries below. Every value that
+ * reaches these queries is either a `tenant_id` resolved by `tenantProcedure`
+ * or an agent id read back from Postgres — never raw client input — but the
+ * quoting is here so that stays true if a caller changes.
+ */
+function chLiteral(v: string): string {
+  return `'${v.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+/**
+ * Resolves a scope to the agent ids under it, for filtering `token_usage_event`.
+ *
+ * `token_usage_event` carries `tenant_id`, `agent_id` and `sub_account_id` but
+ * no org-node column — the org tree lives in Postgres. So a scoped spend query
+ * is a two-store question: which agents are under this node (Postgres), then
+ * what did those agents cost (ClickHouse).
+ *
+ * Returns null for the org root, meaning "no agent filter, tenant only".
+ */
+async function agentIdsInScope(
+  tenantId: string,
+  scope: { type: string; id: string } | null | undefined,
+): Promise<string[] | null> {
+  if (!scope || scope.type === "org") return null;
+  const { getDb, agentTable } = await import("@arm/db");
+  const { eq, and } = await import("drizzle-orm");
+  const rows = await getDb()
+    .select({ id: agentTable.id })
+    .from(agentTable)
+    .where(and(eq(agentTable.tenantId, tenantId), eq(agentTable.scopeId, scope.id)));
+  return rows.map((r) => r.id);
+}
+
+/** `AND agent_id IN (…)`, or empty when the scope covers the whole tenant. */
+function agentFilterSQL(agentIds: string[] | null): string {
+  if (agentIds === null) return "";
+  // An empty scope must match nothing, not everything — `IN ()` is a syntax
+  // error in ClickHouse, so this is spelled out rather than left to chance.
+  if (agentIds.length === 0) return " AND 1 = 0";
+  return ` AND agent_id IN (${agentIds.map(chLiteral).join(", ")})`;
+}
+
 const FIXTURE_ACCESS_REQUESTS = [
   {
     id: "req_01",
@@ -1606,13 +1685,55 @@ const spendRouter = t.router({
     };
   }),
 
+  /** Spend per model. Real mode reads `token_usage_event` — the table the
+   *  proxy → meter-agent → ingest pipeline writes to. */
   byModel: tenantProcedure.input(z.object({ scope: scopeInput })).query(async (opts) => {
-    // TODO(1.1): scope-filter from ClickHouse
+    if (!isFixtureMode()) {
+      const tenantId = opts.ctx.tenantId!;
+      const agentIds = await agentIdsInScope(tenantId, opts.input.scope);
+      const rows = await queryClickHouseJSON<{ model_id: string; spend: string }>(
+        `SELECT model_id, sum(cost_usd) AS spend
+           FROM token_usage_event
+          WHERE tenant_id = ${chLiteral(tenantId)}${agentFilterSQL(agentIds)}
+          GROUP BY model_id
+          ORDER BY spend DESC
+          LIMIT 20`,
+      );
+      return {
+        tenantId,
+        models: rows.map((r) => {
+          const { model, provider, kind } = classifyModel(r.model_id);
+          return { model, provider, spend: Number(r.spend), kind };
+        }),
+      };
+    }
     return { tenantId: opts.ctx.tenantId!, models: FIXTURE_MODEL_SPEND };
   }),
 
+  /** Daily spend split into the three buckets the trend chart plots. */
   trend: tenantProcedure.input(z.object({ scope: scopeInput })).query(async (opts) => {
-    // TODO(1.1): scope-filter from ClickHouse
+    if (!isFixtureMode()) {
+      const tenantId = opts.ctx.tenantId!;
+      const agentIds = await agentIdsInScope(tenantId, opts.input.scope);
+      const rows = await queryClickHouseJSON<{ d: string; model_id: string; spend: string }>(
+        `SELECT toDate(ts) AS d, model_id, sum(cost_usd) AS spend
+           FROM token_usage_event
+          WHERE tenant_id = ${chLiteral(tenantId)}
+            AND ts >= now() - INTERVAL 30 DAY${agentFilterSQL(agentIds)}
+          GROUP BY d, model_id
+          ORDER BY d ASC`,
+      );
+      // Bucket by day so the chart's shape is identical in both modes. A day
+      // with traffic from only one provider still emits zeros for the others,
+      // otherwise the line chart draws gaps where the answer is "nothing".
+      const byDay = new Map<string, { date: string; claude: number; gpt: number; glm: number }>();
+      for (const row of rows) {
+        const point = byDay.get(row.d) ?? { date: row.d, claude: 0, gpt: 0, glm: 0 };
+        point[classifyModel(row.model_id).bucket] += Number(row.spend);
+        byDay.set(row.d, point);
+      }
+      return { tenantId, points: [...byDay.values()] };
+    }
     return { tenantId: opts.ctx.tenantId!, points: FIXTURE_SPEND_TREND };
   }),
 
@@ -1621,13 +1742,22 @@ const spendRouter = t.router({
     const agents = agentsInScope(scope);
     const byModel = new Map<string, { count: number; spend: number }>();
     for (const a of agents) {
-      // Simulate: confidential/restricted agents use self-hosted, others mixed
+      // Confidential/restricted agents must use self-hosted; the rest are
+      // split across the two closed models.
+      //
+      // That split used to be `Math.random() > 0.5`, evaluated per request —
+      // so the model-mix panel showed different numbers on every refresh and
+      // no two screenshots of the same tenant ever agreed. Deriving it from
+      // the agent id keeps the same spread while making the panel stable,
+      // which is also what makes it screenshottable for the demo.
+      const closedModel =
+        [...a.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 2147483647, 7) % 2 === 0
+          ? "Claude Sonnet 4.5"
+          : "GPT-4o";
       const model =
         a.classificationClearance === "confidential" || a.classificationClearance === "restricted"
           ? "GLM-5.2"
-          : Math.random() > 0.5
-            ? "Claude Sonnet 4.5"
-            : "GPT-4o";
+          : closedModel;
       const entry = byModel.get(model) ?? { count: 0, spend: 0 };
       entry.count++;
       entry.spend += a.monthlySpend;
