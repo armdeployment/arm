@@ -40,36 +40,115 @@ describe("GCS connector — mint strategy", () => {
 });
 
 describe("DB connector — proxy strategy", () => {
-  it("proxies a query and returns audit result", async () => {
-    const result = await proxyDBQuery({
-      agentId: "agt_01",
-      tenantId: "tn_01",
-      dbType: "postgres",
-      database: "analytics",
-      query: "SELECT 1",
-      classificationClearance: "internal",
-    });
-    expect(result.columns.length).toBeGreaterThan(0);
-    expect(result.auditId).toContain("audit_db");
+  it("REFUSES rather than returning an empty result and a fabricated audit id", async () => {
+    // This test used to assert `result.auditId).toContain("audit_db")` — an id
+    // for an audit record that was never written. A fabricated audit id is
+    // worse than none: it survives into logs and incident reviews as evidence
+    // of something that did not happen.
+    await expect(
+      proxyDBQuery({
+        agentId: "agt_01",
+        tenantId: "tn_01",
+        dbType: "postgres",
+        database: "analytics",
+        query: "SELECT 1",
+        classificationClearance: "internal",
+      }),
+    ).rejects.toThrow(/not configured/i);
   });
 });
 
 describe("SharePoint connector — mint+sync hybrid", () => {
-  it("mints a scoped Graph API token", async () => {
-    const token = await mintSharePointToken({
-      agentId: "agt_01",
-      tenantId: "tn_01",
-      siteUrl: "https://acme.sharepoint.com/sites/eng",
-      scopes: ["sites.read", "files.read"],
-      classificationClearance: "internal",
-    });
-    expect(token.accessToken).toContain("EwC");
-    expect(new Date(token.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  const spReq = {
+    agentId: "agt_01",
+    tenantId: "tn_01",
+    siteUrl: "https://acme.sharepoint.com/sites/eng",
+    scopes: ["sites.read", "files.read"] as ("sites.read" | "files.read")[],
+    classificationClearance: "internal" as const,
+  };
+
+  it("exchanges client credentials for a real Graph token", async () => {
+    // It used to return `EwC_MOCK_...` unconditionally, and this test asserted
+    // the mock prefix.
+    const token = await mintSharePointToken(
+      spReq,
+      { tenantId: "t", clientId: "c", clientSecret: "s" },
+      async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: "real.graph.token", expires_in: 3600 }),
+        text: async () => "",
+      }),
+    );
+    expect(token.simulated).toBe(false);
+    expect(token.accessToken).toBe("real.graph.token");
   });
-  it("syncs permissions with drift detection", async () => {
+
+  it("never hands on a lifetime longer than Graph granted", async () => {
+    const token = await mintSharePointToken(
+      { ...spReq, ttlMinutes: 60 },
+      { tenantId: "t", clientId: "c", clientSecret: "s" },
+      async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: "t", expires_in: 300 }),
+        text: async () => "",
+      }),
+    );
+    expect(new Date(token.expiresAt).getTime()).toBeLessThanOrEqual(Date.now() + 300_000 + 2000);
+  });
+
+  it("marks an unconfigured token as simulated and never claims otherwise", async () => {
+    const token = await mintSharePointToken(spReq, {});
+    expect(token.simulated).toBe(true);
+    expect(token.accessToken).toBe("SIMULATED_NOT_A_TOKEN");
+  });
+  it("REFUSES to report no-drift without contacting Graph", async () => {
+    // The old behaviour, which this test used to assert: `syncedGrants: 12,
+    // driftDetected: false` from a function that made no network call. A
+    // drift detector reporting "clean" without looking is a false negative on
+    // a security control.
     const result = await syncSharePointPermissions("https://acme.sharepoint.com/sites/eng");
-    expect(result.syncedGrants).toBe(12);
-    expect(result.driftDetected).toBe(false);
+    expect(result.status).toBe("not_checked");
+    expect(result.statusDetail).toContain("NOT evaluated");
+    expect(result.syncedGrants).toBe(0);
+  });
+
+  it("reports not_checked when a simulated token is passed", async () => {
+    const token = await mintSharePointToken(spReq, {});
+    const result = await syncSharePointPermissions(spReq.siteUrl, token);
+    expect(result.status).toBe("not_checked");
+  });
+
+  it("counts the permissions Graph actually returned", async () => {
+    const result = await syncSharePointPermissions(
+      spReq.siteUrl,
+      { accessToken: "real", expiresAt: "", siteUrl: spReq.siteUrl, scopes: [], simulated: false },
+      async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          value: [
+            { id: "p1", grantedToV2: { user: { displayName: "Ada" } } },
+            { id: "p2", grantedToV2: { user: { displayName: "Grace" } } },
+          ],
+        }),
+        text: async () => "",
+      }),
+    );
+    expect(result.status).toBe("checked");
+    expect(result.syncedGrants).toBe(2);
+    expect(result.driftDetails).toEqual(["Ada", "Grace"]);
+  });
+
+  it("reports not_checked when Graph errors, rather than clean", async () => {
+    const result = await syncSharePointPermissions(
+      spReq.siteUrl,
+      { accessToken: "real", expiresAt: "", siteUrl: spReq.siteUrl, scopes: [], simulated: false },
+      async () => ({ ok: false, status: 403, json: async () => ({}), text: async () => "denied" }),
+    );
+    expect(result.status).toBe("not_checked");
+    expect(result.statusDetail).toContain("403");
   });
 });
 

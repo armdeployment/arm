@@ -11,6 +11,14 @@
 
 export type DBType = "postgres" | "mysql" | "snowflake";
 
+/** Thrown by connector paths that are declared but have no implementation. */
+export class NotConfiguredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotConfiguredError";
+  }
+}
+
 export interface DBQueryRequest {
   agentId: string;
   tenantId: string;
@@ -40,20 +48,25 @@ export interface DBQueryResult {
  *   4. Execute the query with a timeout + row limit
  *   5. Audit: log the query (not the result) to access_audit_event
  *
- * Stub: returns an empty result set with an audit trail.
+ * NOT CONFIGURED — throws. See the note in the body: an empty result set with
+ * an invented audit id is indistinguishable from a query that ran and found
+ * nothing, which is the wrong thing for a path that exists to enforce policy.
  */
 export async function proxyDBQuery(req: DBQueryRequest): Promise<DBQueryResult> {
-  // TODO(1.4): Real connection pool + Policy Engine enforcement.
-  // Validate the agent has "db:read" or "db:write" grant for this database.
-  // If confidential/restricted clearance, redact classified columns.
-
-  const auditId = `audit_db_${req.agentId}_${Date.now()}`;
-
-  return {
-    columns: ["id", "name", "value"],
-    rows: [],
-    rowCount: 0,
-    truncated: false,
-    auditId,
-  };
+  // This used to return `columns: ["id","name","value"], rows: []` with an
+  // `auditId` it invented — a value implying an audit record exists when none
+  // was written. A fabricated audit id is worse than no audit id: it survives
+  // into logs and incident reviews as evidence of something that never
+  // happened.
+  //
+  // The real implementation needs a tenant connection pool and the Policy
+  // Engine, neither of which this app has: enforcement lives in the control
+  // plane and the data-plane boundary (proto/config/client-core) keeps it
+  // out of here. Until the pool exists, refusing is the honest answer.
+  throw new NotConfiguredError(
+    "DB query proxying is not configured: it needs a tenant connection pool and Policy " +
+      "Engine enforcement (classification-aware column redaction, grant validation, and an " +
+      `access_audit_event write). Refusing rather than returning an empty result set and a ` +
+      `fabricated audit id for agent '${req.agentId}'.`,
+  );
 }
