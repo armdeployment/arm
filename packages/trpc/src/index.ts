@@ -15,7 +15,7 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { ARMClaims } from "@arm/auth";
 import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 import { catalogRouter } from "./catalog-router.js";
@@ -1399,6 +1399,69 @@ async function grantRoleInDb(
     .onConflictDoNothing();
 }
 
+/**
+ * Creates an Agent and its paired SubAccount.
+ *
+ * Invariant 2 pairs every Agent 1:1 with a SubAccount — two stable ids for
+ * the same agent — so this is two inserts that must both land or neither.
+ * They are circular by nature (`agent.sub_account_id` points at the
+ * sub-account, `sub_account.agent_id` points back), which is resolved by
+ * minting the sub-account id up front rather than by a deferred constraint.
+ *
+ * Invariant 4: the raw API key is returned exactly once, here, and never
+ * stored. Only its sha256 is persisted. A caller that loses it has to rotate
+ * rather than look it up, which is the property that makes the hash useful.
+ */
+async function createAgentInDb(
+  tenantId: string,
+  input: {
+    name: string;
+    scopeType: "org" | "department" | "group" | "team" | "workstream";
+    scopeId: string;
+    stakeholderUserId: string;
+    type: string;
+    priorityTier: "critical" | "standard" | "background";
+  },
+): Promise<{ id: string; subAccountId: string; apiKey: string; tenantId: string }> {
+  const { getDb, agentTable, subAccountTable } = await import("@arm/db");
+  const { createHash, randomBytes, randomUUID: uuid } = await import("node:crypto");
+
+  const subAccountId = uuid();
+  const apiKey = `arm_sk_${randomBytes(24).toString("base64url")}`;
+  const apiKeyHash = createHash("sha256").update(apiKey, "utf8").digest("hex");
+
+  const db = getDb();
+  const agentId = await db.transaction(async (tx) => {
+    const [agent] = await tx
+      .insert(agentTable)
+      .values({
+        tenantId,
+        stakeholderUserId: input.stakeholderUserId,
+        scopeType: input.scopeType,
+        scopeId: input.scopeId,
+        name: input.name,
+        type: input.type,
+        priorityTier: input.priorityTier,
+        // Created through the dashboard by a human. `automation`/`template`
+        // are for scope-owned agents spawned without one, which arrive by a
+        // different path and carry a null owner.
+        spawnedBy: "user",
+        subAccountId,
+      })
+      .returning({ id: agentTable.id });
+
+    await tx.insert(subAccountTable).values({
+      id: subAccountId,
+      tenantId,
+      agentId: agent!.id,
+      apiKeyHash,
+    });
+    return agent!.id;
+  });
+
+  return { id: agentId, subAccountId, apiKey, tenantId };
+}
+
 /** Real-mode revoke. Reports when the grant was not there to remove. */
 async function revokeRoleInDb(
   tenantId: string,
@@ -2174,25 +2237,7 @@ const agentsRouter = t.router({
       // creates returned the same one. Real mode inserts; fixture mode
       // registers it in the in-memory list so the registry actually shows it.
       if (!isFixtureMode()) {
-        // Deliberately refused rather than half-written. Creating an agent for
-        // real is not one INSERT:
-        //
-        //   - `agent` has no `name` column, so the display name this input
-        //     takes has nowhere to go. Writing the row anyway would silently
-        //     drop it and produce agents the registry shows as unnamed.
-        //   - Invariant 2 pairs every Agent 1:1 with a SubAccount, whose
-        //     `api_key_hash` is NOT NULL — so creating an agent means minting
-        //     a credential, which belongs with `bootstrapAgent` in @arm/auth
-        //     rather than duplicated here.
-        //
-        // An honest 501 beats a row that looks created and is not usable.
-        throw new TRPCError({
-          code: "NOT_IMPLEMENTED",
-          message:
-            "Creating an agent against a real database is not implemented: `agent` has no name " +
-            "column, and Invariant 2 requires a paired SubAccount with a minted credential. " +
-            "Use the onboarding flow (setup token -> redemption), which provisions both.",
-        });
+        return await createAgentInDb(opts.ctx.tenantId!, opts.input);
       }
 
       const scope = SCOPES.find((n) => n.id === opts.input.scopeId);
@@ -2224,7 +2269,17 @@ const agentsRouter = t.router({
         classificationClearance: "internal",
       };
       AGENTS.push(agent);
-      return { id: agent.id, tenantId: opts.ctx.tenantId!, ...opts.input };
+      // Same shape as real mode, deliberately. A caller must not have to know
+      // which mode the server is in to read the response — that is the repo's
+      // standing rule for fixture vs real, and it is the reason this returns a
+      // sub-account id and a key here too. The key is well-formed and
+      // authenticates nothing; fixture mode has no proxy to present it to.
+      return {
+        id: agent.id,
+        subAccountId: `sa_${agent.id}`,
+        apiKey: `arm_sk_${randomBytes(24).toString("base64url")}`,
+        tenantId: opts.ctx.tenantId!,
+      };
     }),
 });
 

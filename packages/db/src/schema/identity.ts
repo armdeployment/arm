@@ -93,6 +93,20 @@ export const agentTable = pgTable("agent", {
   // Cross-cutting reporting dimension, NOT a tree level (spec §4.1 comment).
   projectTag: text("project_tag"),
 
+  /**
+   * Human-readable name, the one shown in the agent registry.
+   *
+   * Added 2026-09-01. Its absence was why `agents.create` could not be
+   * implemented against a real database: the procedure takes a name, and
+   * there was nowhere to put it, so a real-mode insert would have silently
+   * dropped it and produced agents the registry showed as unnamed.
+   *
+   * Not unique — two teams may each run a "release-notes-writer", and forcing
+   * tenant-wide uniqueness on a display name would make the second one fail
+   * for no reason a user could act on.
+   */
+  name: text("name").notNull(),
+
   type: text("type").notNull(), // opencode / claude code / copilot / pi / custom
   status: agentStatusEnum("status").notNull().default("active"),
 

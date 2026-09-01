@@ -29,3 +29,9 @@ apps/*/*/public/
 # not to format this" and "format:check is permanently red".
 infra/helm/*/templates/
 packaging/windows/*.wxs
+
+# drizzle-kit's generated migration metadata. Regenerated verbatim by
+# `db:generate`, and the contract-check workflow asserts `git diff --exit-code`
+# on this directory — reformatting it would make that check fail on a clean
+# tree.
+packages/db/drizzle/meta/
