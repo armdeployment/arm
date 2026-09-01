@@ -4,6 +4,8 @@ import { reconcile, type ProviderUsageResult } from "../src/index.js";
 describe("reconcile", () => {
   const providerResult: ProviderUsageResult = {
     provider: "anthropic",
+    // Real-API data: reconcile only computes drift against this source.
+    source: "provider_api",
     days: [
       {
         date: "2026-07-01",

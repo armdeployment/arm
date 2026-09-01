@@ -797,6 +797,9 @@ importers:
       '@arm/auth':
         specifier: workspace:*
         version: link:../auth
+      '@arm/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@arm/catalog':
         specifier: workspace:*
         version: link:../catalog

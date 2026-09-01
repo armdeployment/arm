@@ -2220,10 +2220,41 @@ const spendRouter = t.router({
     };
   }),
 
-  /** Reconciliation — provider bill vs proxy metering (spec §7.3). */
+  /**
+   * Reconciliation — provider bill vs proxy metering (spec §7.3).
+   *
+   * Real mode reads the proxy side from `token_usage_event` (what the metering
+   * pipeline actually recorded) and the provider side from the billing
+   * connectors. When no provider admin credential resolves, the connectors
+   * return simulated usage and `reconcile` reports `not_comparable` rather
+   * than a drift percentage computed against invented numbers — the panel says
+   * it cannot compare instead of showing a reassuring 2.0%.
+   */
   reconciliation: tenantProcedure.query(async (opts) => {
-    // TODO(1.1): call billing.anthropicConnector.fetchUsage + billing.reconcile
-    // with real proxy totals from ClickHouse.
+    if (!isFixtureMode()) {
+      const tenantId = opts.ctx.tenantId!;
+      const { anthropicConnector, reconcile } = await import("@arm/billing");
+      const end = new Date();
+      const start = new Date(end.getTime() - 30 * 86400_000);
+
+      const rows = await queryClickHouseJSON<{ model_id: string; spend: string }>(
+        `SELECT model_id, sum(cost_usd) AS spend
+           FROM token_usage_event
+          WHERE tenant_id = ${chLiteral(tenantId)}
+            AND ts >= now() - INTERVAL 30 DAY
+          GROUP BY model_id`,
+      );
+      const proxyByModel: Record<string, number> = {};
+      for (const row of rows) proxyByModel[row.model_id] = Number(row.spend);
+      const proxyTotal = Object.values(proxyByModel).reduce((n, v) => n + v, 0);
+
+      const usage = await anthropicConnector.fetchUsage(
+        { apiKeyRef: process.env.ARM_ANTHROPIC_ADMIN_KEY_REF ?? "vault:unset" },
+        start,
+        end,
+      );
+      return { tenantId, ...reconcile(usage, proxyTotal, proxyByModel) };
+    }
     return {
       tenantId: opts.ctx.tenantId!,
       providerTotalUsd: 16170,
