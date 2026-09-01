@@ -87,3 +87,37 @@ describe("access decisions", () => {
     expect((await caller().spend.summary({ scope: null })).pendingApprovals).toBe(before - 1);
   });
 });
+
+describe("access.requestAccess", () => {
+  it("puts the request in front of an approver", async () => {
+    // It used to return `id: "req_new"` and enqueue nothing, so a requested
+    // access never reached anyone — the other half of approve/deny being a
+    // no-op. Every request also came back with the same id.
+    const before = (await pending()).length;
+    const created = await caller().access.requestAccess({
+      resourceId: "s3://finance/forecasts/",
+      actions: ["read"],
+      reason: "quarterly close",
+    });
+    expect(created.id).not.toBe("req_new");
+    expect(created.status).toBe("pending");
+
+    const after = await pending();
+    expect(after).toHaveLength(before + 1);
+    const mine = after.find((r) => r.id === created.id)!;
+    expect(mine.resourceId).toBe("s3://finance/forecasts/");
+    expect(mine.reason).toBe("quarterly close");
+  });
+
+  it("gives two requests different ids", async () => {
+    const a = await caller().access.requestAccess({ resourceId: "r1", actions: ["read"] });
+    const b = await caller().access.requestAccess({ resourceId: "r2", actions: ["read"] });
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it("closes the loop: request, then approve, and it leaves the queue", async () => {
+    const created = await caller().access.requestAccess({ resourceId: "r3", actions: ["query"] });
+    await caller().access.approve({ requestId: created.id });
+    expect((await pending()).find((r) => r.id === created.id)).toBeUndefined();
+  });
+});

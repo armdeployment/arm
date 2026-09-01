@@ -2248,7 +2248,19 @@ const accessRouter = t.router({
       }),
     )
     .mutation(async (opts) => {
-      return { id: "req_new", tenantId: opts.ctx.tenantId!, status: "pending" };
+      // Returned `id: "req_new"` and enqueued nothing, so a requested access
+      // never reached an approver — the other half of approve/deny doing
+      // nothing. Every request returned the same id, too.
+      const request: FixtureAccessRequest = {
+        id: `req_${randomUUID().slice(0, 8)}`,
+        agentId: opts.ctx.claims!.agent_id ?? opts.ctx.claims!.sub,
+        resourceId: opts.input.resourceId,
+        status: "pending",
+        action: opts.input.actions.join(", "),
+        reason: opts.input.reason ?? "",
+      };
+      FIXTURE_ACCESS_REQUESTS.push(request);
+      return { id: request.id, tenantId: opts.ctx.tenantId!, status: request.status };
     }),
 
   /** Approve a JIT access request. Records the decision; deciding twice fails. */
