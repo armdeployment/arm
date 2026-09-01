@@ -351,8 +351,14 @@ function resolveComponents(
 }
 
 /** The `CatalogIndex` `@arm/questionnaire`'s pure `recommend()` consumes —
- *  built fresh per call from the fixtures above (no eligibility engine yet,
- *  so every package is eligible; TODO(1.1): real per-user/org eligibility). */
+ *  built fresh per call from the fixtures above.
+ *
+ *  `eligible: true` for every package, and that is correct rather than
+ *  pending: ARM has no per-user or per-org entitlement data to filter on.
+ *  There is no table of who may install what, so marking everything eligible
+ *  reports the actual state instead of inventing restrictions. Approval —
+ *  which IS modelled — gates tool access after install (A6), not the
+ *  recommendation. */
 function buildCatalogIndex(): CatalogIndex {
   const packages: CatalogPackageEntry[] = PACKAGE_VERSION_FIXTURES.map((v1) => {
     const pkg = PACKAGE_FIXTURES.find((p) => p.id === v1.package_id);
