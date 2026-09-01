@@ -187,6 +187,65 @@ const DEFAULT_PROXY_URL = process.env["ARM_PROXY_URL"] ?? "http://localhost:8787
 
 const SETUP_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes (guide 03 §4)
 
+/** Agent + catalog tokens the client receives on redemption (Invariant 4:
+ *  short-lived). One hour: long enough for an install to finish, short enough
+ *  that a leaked `.arm-env` stops working the same afternoon. */
+const AGENT_TOKEN_TTL_SECONDS = 60 * 60;
+
+/**
+ * Mints the credentials an installed agent uses to call ARM.
+ *
+ * These were `catalog_dev_${jti}` and `arm_mtr_dev_${jti}` — strings derived
+ * from the setup token's jti, which is returned to the client. Anyone holding
+ * a redemption response could construct the other token, and neither ever
+ * expired. They are written to `<agent-home>/.arm-env` and used against the
+ * proxy, so they are real credentials in every sense except being signed.
+ *
+ * Now signed JWTs with an hour's life, carrying the claim shape @arm/auth's
+ * `buildAgentTokenPayload` defines and `verifyOIDCToken` already knows how to
+ * read. They use the same secret as setup tokens, so `resolveSetupTokenSecret`
+ * refuses the well-known development value under NODE_ENV=production here too.
+ *
+ * Still open, and stated rather than implied: the data-plane proxy does not
+ * yet VERIFY these — it reads `X-ARM-*` headers and trusts them. Minting real
+ * tokens is the half that belongs to this router; the enforcement half is the
+ * proxy's, and is not built.
+ */
+async function mintAgentTokens(input: {
+  tenantId: string;
+  agentId: string;
+  subAccountId: string;
+  userId: string;
+}): Promise<{ agent_token: string; catalog_token: string }> {
+  const key = setupTokenKey();
+  const now = Math.floor(Date.now() / 1000);
+
+  const base = {
+    sub: input.userId,
+    tenant_id: input.tenantId,
+    agent_id: input.agentId,
+    sub_account_id: input.subAccountId,
+    priority_tier: "standard" as const,
+  };
+
+  const sign = (scope: string, audience: string) =>
+    new SignJWT({ ...base, scope })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuer("arm-control-plane")
+      .setAudience(audience)
+      .setSubject(input.userId)
+      .setIssuedAt(now)
+      .setExpirationTime(now + AGENT_TOKEN_TTL_SECONDS)
+      .setJti(randomUUID())
+      .sign(key);
+
+  const [agent_token, catalog_token] = await Promise.all([
+    sign("proxy:invoke", "arm-proxy"),
+    sign("catalog:read", "arm-catalog"),
+  ]);
+  return { agent_token, catalog_token };
+}
+
 /** Local-time ISO string (no offset) — matches `datetime({ local: true })`. */
 function localNowIso(): string {
   return new Date().toISOString().slice(0, 19);
@@ -509,10 +568,10 @@ function redemptionFailure(
  *  (after JWT verification) and `resolveActivationCode` (after a direct
  *  store lookup by code; there is no raw token to verify there, since only
  *  its hash is ever stored — Invariant 4). */
-function completeRedemption(
+async function completeRedemption(
   stored: StoredSetupToken,
   clientVersion: string | undefined,
-): RedemptionResult {
+): Promise<RedemptionResult> {
   if (stored.redeemedAt !== null) {
     return redemptionFailure(
       "already_used",
@@ -565,20 +624,26 @@ function completeRedemption(
   });
   assignmentStore.push(assignment);
 
+  const subAccountId = `sa_${stored.userId}`;
+  const tokens = await mintAgentTokens({
+    tenantId: stored.tenantId,
+    // `assignee_id` is the agent for an agent-type assignment.
+    agentId: assignment.assignee_type === "agent" ? assignment.assignee_id : stored.userId,
+    subAccountId,
+    userId: stored.userId,
+  });
+
   return {
     status: "ok",
     message: "",
     manifest,
     connections,
-    sub_account_id: `sa_${stored.userId}`,
+    sub_account_id: subAccountId,
     tenant_id: stored.tenantId,
     proxy_url: stored.proxyUrl,
     data_plane_url: stored.dataPlaneUrl,
-    // TODO(1.1): mint real short-lived tokens via @arm/billing + @arm/auth
-    // (Invariant 4). Dev-mode placeholders — this scaffold has no live
-    // catalog/proxy auth path yet, matching every other router here.
-    catalog_token: `catalog_dev_${stored.jti}`,
-    agent_token: `arm_mtr_dev_${stored.jti}`,
+    catalog_token: tokens.catalog_token,
+    agent_token: tokens.agent_token,
     pending_approval: !approved,
   };
 }
@@ -748,7 +813,7 @@ export const onboardingRouter = t.router({
         return redemptionFailure("invalid", "this setup link is invalid");
       }
 
-      return completeRedemption(stored, clientVersion);
+      return await completeRedemption(stored, clientVersion);
     }),
 
   /** Resolve a 6-char activation code to its setup token, then redeem it via
@@ -767,7 +832,7 @@ export const onboardingRouter = t.router({
         return redemptionFailure("invalid", "this activation code is invalid");
       }
 
-      return completeRedemption(stored, opts.input.clientVersion);
+      return await completeRedemption(stored, opts.input.clientVersion);
     }),
 });
 

@@ -11,6 +11,7 @@ import { createContext, appRouter } from "../src/index.js";
 import type { ARMClaims } from "@arm/auth";
 import { verifyManifestIntegrity } from "@arm/client-core";
 import { __test } from "../src/onboarding-router.js";
+import { decodeJwt } from "jose";
 
 // package_assignment.tenant_id is UUID-constrained (proto, frozen) — unlike
 // some other fixture routers in this codebase, a plain "tn_01"-style id
@@ -262,5 +263,71 @@ describe("issueSetupToken + redeemSetupToken (A4)", () => {
       lastMessage = r.message;
     }
     expect(lastMessage).toMatch(/too many attempts/);
+  });
+});
+
+describe("redemption mints real short-lived agent credentials", () => {
+  // These were `catalog_dev_${jti}` and `arm_mtr_dev_${jti}` — derived from
+  // the setup token's jti, which is returned to the client, so anyone holding
+  // one redemption response could construct the other token. Neither expired.
+  // They are written to <agent-home>/.arm-env and used against the proxy, so
+  // they are credentials in every sense except being signed.
+  async function redeem() {
+    const caller = appRouter.createCaller(
+      createContext({
+        claims: {
+          sub: "70000000-0000-4000-8000-000000000001",
+          tenant_id: "d9d9d9d9-0000-4000-8000-000000000001",
+          email: "eng@acme.com",
+        },
+      }),
+    );
+    // office_worker_general — approval_required: false, so redemption
+    // completes without an approval step.
+    const issued = await caller.onboarding.issueSetupToken({
+      packageVersionIds: ["40000000-0000-4000-8000-000000000004"],
+    });
+    return { caller, issued };
+  }
+
+  /** Redeems and returns the two minted tokens, failing loudly if absent. */
+  async function redeemTokens(): Promise<{ agent: string; catalog: string }> {
+    const { caller, issued } = await redeem();
+    const r = await caller.onboarding.redeemSetupToken({ token: issued.token });
+    if (r.status !== "ok") throw new Error(`redemption failed: ${r.message}`);
+    if (!r.agent_token || !r.catalog_token) throw new Error("redemption minted no tokens");
+    return { agent: r.agent_token, catalog: r.catalog_token };
+  }
+
+  it("returns signed JWTs, not strings derived from the jti", async () => {
+    const { agent, catalog } = await redeemTokens();
+
+    for (const token of [agent, catalog]) {
+      expect(token.split(".")).toHaveLength(3); // header.payload.signature
+      expect(token).not.toContain("_dev_");
+    }
+    // The old shape made one token derivable from the other.
+    expect(agent).not.toBe(catalog);
+  });
+
+  it("gives them an expiry (Invariant 4 — short-lived)", async () => {
+    const { agent } = await redeemTokens();
+    const claims = decodeJwt(agent);
+    expect(claims.exp).toBeDefined();
+    const lifetimeSeconds = claims.exp! - claims.iat!;
+    expect(lifetimeSeconds).toBeGreaterThan(0);
+    expect(lifetimeSeconds).toBeLessThanOrEqual(3600);
+  });
+
+  it("scopes the two tokens differently", async () => {
+    const { agent, catalog } = await redeemTokens();
+    expect(decodeJwt(agent).aud).toBe("arm-proxy");
+    expect(decodeJwt(catalog).aud).toBe("arm-catalog");
+    expect(decodeJwt(agent).scope).toBe("proxy:invoke");
+  });
+
+  it("carries the tenant, so the proxy can scope what it authorises", async () => {
+    const { agent } = await redeemTokens();
+    expect(decodeJwt(agent).tenant_id).toBe("d9d9d9d9-0000-4000-8000-000000000001");
   });
 });
