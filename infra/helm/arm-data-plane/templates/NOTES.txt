@@ -3,6 +3,7 @@ ARM data plane {{ .Chart.AppVersion }} installed as {{ .Release.Name }} in {{ .R
 What is running:
 {{ if .Values.proxy.enabled }}  closed-proxy   {{ include "arm-data-plane.fullname" . }}-proxy   :{{ .Values.service.proxyPort }}{{ if .Values.proxy.autoscaling.enabled }}  ({{ .Values.proxy.autoscaling.minReplicas }}-{{ .Values.proxy.autoscaling.maxReplicas }} replicas, HPA){{ else }}  ({{ .Values.proxy.replicas }} replicas){{ end }}
 {{ end }}{{ if .Values.openGateway.enabled }}  open-gateway   {{ include "arm-data-plane.fullname" . }}-gateway :{{ .Values.service.gatewayPort }}  ({{ .Values.openGateway.replicas }} replicas)
+{{ end }}{{ if .Values.meterAgent.enabled }}  meter-agent    {{ include "arm-data-plane.fullname" . }}-meter-agent :{{ .Values.service.meterAgentPort }}  (1 replica, cluster-internal)
 {{ end }}
 Check it is healthy:
 
@@ -20,12 +21,32 @@ material, so the secret must already exist or the pods will stay Pending:
   kubectl -n {{ .Release.Namespace }} get secret {{ .Values.tls.controlPlaneMTLS.certSecretName }}
 {{- end }}
 
-{{- if and .Values.persistence.enabled (or .Values.proxy.autoscaling.enabled (gt (int .Values.proxy.replicas) 1)) }}
+{{- if and .Values.meterAgent.enabled (not .Values.persistence.enabled) }}
 
-WARNING — the meter buffer PVC is ReadWriteOnce and you are running more than
-one proxy replica. Replicas past the first will not schedule unless your
-storage class supports multi-attach. Use a ReadWriteMany class, or set
-persistence.enabled=false and accept that a restart drops buffered events.
+WARNING — meterAgent is enabled but persistence is off, so its event buffer is
+an emptyDir. Unflushed metering events die with the pod. The buffer is on disk
+precisely so a restart does not lose spend; set persistence.enabled=true.
+{{- end }}
+
+{{- if and .Values.meterAgent.enabled (not .Values.meterAgent.ingestTokenSecret.name) }}
+
+WARNING — no meterAgent.ingestTokenSecret.name is set, so the agent will POST
+to the control plane unauthenticated. The control plane REFUSES that under
+NODE_ENV=production, and events will pile up in the buffer undelivered
+(/health reports degraded, and says so in lastFlushError). Create the secret
+and point at it:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic arm-ingest-token --from-literal=token=<value>
+{{- end }}
+
+{{- if or .Values.proxy.autoscaling.enabled (gt (int .Values.proxy.replicas) 1) }}
+
+NOTE — the proxy is running {{ if .Values.proxy.autoscaling.enabled }}up to {{ .Values.proxy.autoscaling.maxReplicas }}{{ else }}{{ .Values.proxy.replicas }}{{ end }} replicas, and each holds
+its own quota state on a local emptyDir. Daily caps are therefore enforced PER
+REPLICA, so the effective cap is up to that many times the configured one.
+Quota surviving a process restart is new; quota shared across replicas needs a
+shared store and is not built yet. Run a single replica if the cap must be
+exact.
 {{- end }}
 
 {{- if not .Values.ingress.enabled }}

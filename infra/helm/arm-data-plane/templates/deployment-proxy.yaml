@@ -43,15 +43,15 @@ spec:
             - name: PROXY_PERFORMANCE_BUDGET_MS
               value: {{ .Values.proxy.env.PROXY_PERFORMANCE_BUDGET_MS | quote }}
             {{- include "arm-data-plane.controlPlaneEnv" . | nindent 12 }}
-            # The buffer the proxy writes metering events into. @arm/config
-            # reads these three; the drainer that would ship them onward is
-            # not deployed — see meterAgent in values.yaml.
-            - name: METER_AGENT_BUFFER_DIR
-              value: {{ .Values.meterAgent.buffer.dir | quote }}
-            - name: METER_AGENT_BUFFER_MAX_BYTES
-              value: {{ .Values.meterAgent.buffer.maxBytes | quote }}
-            - name: METER_AGENT_BUFFER_MAX_AGE_HOURS
-              value: {{ .Values.meterAgent.buffer.maxAgeHours | quote }}
+            {{- if .Values.meterAgent.enabled }}
+            # Where the proxy ships metering events. Unset, the proxy keeps a
+            # small in-process debug window and nothing reaches the control
+            # plane — which is what "the dashboard shows no spend" looks like.
+            - name: METER_AGENT_URL
+              value: "http://{{ include "arm-data-plane.fullname" . }}-meter-agent:{{ .Values.service.meterAgentPort }}"
+            {{- end }}
+            - name: PROXY_QUOTA_STATE_DIR
+              value: /var/lib/arm/quota
           livenessProbe:
             httpGet:
               path: /health
@@ -73,8 +73,14 @@ spec:
             # startup rather than at some later write.
             - name: tmp
               mountPath: /tmp
-            - name: meter-buffer
-              mountPath: {{ .Values.meterAgent.buffer.dir }}
+            # Quota consumption, so a restarting pod does not hand every agent
+            # its daily cap back. emptyDir, not the buffer PVC: the proxy
+            # autoscales, and each replica needs its own writable path.
+            # Consequence, stated plainly because it is easy to miss — with
+            # more than one replica the cap is enforced PER REPLICA. NOTES.txt
+            # says so at install time.
+            - name: quota-state
+              mountPath: /var/lib/arm/quota
             {{- if .Values.tls.controlPlaneMTLS.enabled }}
             - name: control-plane-mtls
               mountPath: /etc/arm/mtls
@@ -83,13 +89,8 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        - name: meter-buffer
-          {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "arm-data-plane.fullname" . }}-meter-buffer
-          {{- else }}
+        - name: quota-state
           emptyDir: {}
-          {{- end }}
         {{- if .Values.tls.controlPlaneMTLS.enabled }}
         - name: control-plane-mtls
           secret:

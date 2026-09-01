@@ -50,9 +50,28 @@ function loadConfig() {
         .default("0")
         .transform((v) => v === "1"),
       PROXY_PORT: z.coerce.number().int().positive().default(8787),
+      /** Where the proxy persists today's quota consumption across restarts. */
+      PROXY_QUOTA_STATE_DIR: z.string().default("./.arm-proxy-state"),
       METER_AGENT_BUFFER_DIR: z.string().default("./.meter-buffer"),
       METER_AGENT_BUFFER_MAX_BYTES: z.coerce.number().int().positive().default(1_073_741_024),
       METER_AGENT_BUFFER_MAX_AGE_HOURS: z.coerce.number().int().positive().default(24),
+      METER_AGENT_PORT: z.coerce.number().int().positive().default(8789),
+      /** Where the proxy ships metering events. Unset = buffer locally only. */
+      METER_AGENT_URL: z.string().url().optional(),
+      METER_AGENT_FLUSH_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+      /**
+       * Control plane the meter-agent flushes to. Unset = the agent buffers
+       * and never drains, which it reports as `degraded` rather than `ok`.
+       */
+      ARM_CONTROL_PLANE_URL: z.string().url().optional(),
+      /**
+       * Shared secret the data plane presents to the control plane's metering
+       * ingest endpoint. The spec's answer is mTLS; this is the in-application
+       * equivalent for deployments that terminate TLS at an ingress. Ingest
+       * refuses under NODE_ENV=production when unset — an open ingest endpoint
+       * lets anyone forge another tenant's spend.
+       */
+      ARM_INGEST_TOKEN: z.string().optional(),
       OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
       ARM_FAIL_MODE: z.enum(["fail_open", "fail_closed"]).default("fail_closed"),
     })

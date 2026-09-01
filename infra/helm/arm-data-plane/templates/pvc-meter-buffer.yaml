@@ -1,4 +1,4 @@
-{{- if and .Values.persistence.enabled .Values.proxy.enabled }}
+{{- if and .Values.persistence.enabled .Values.meterAgent.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -7,11 +7,11 @@ metadata:
     {{- include "arm-data-plane.labels" . | nindent 4 }}
 spec:
   accessModes:
-    # ReadWriteOnce, and note what that implies: with proxy.replicas > 1 or
-    # autoscaling on, replicas beyond the first will fail to schedule unless
-    # the storage class supports multi-attach. Either use a RWX class or run
-    # the proxy with persistence.enabled=false and accept that a restart
-    # loses buffered events.
+    # ReadWriteOnce is correct here, unlike where this claim used to be
+    # mounted. It was on the proxy Deployment, which autoscales 2-10 — every
+    # replica past the first would have failed to attach. It now belongs to
+    # the meter-agent, which is deliberately a single replica with a Recreate
+    # strategy for exactly this reason.
     - ReadWriteOnce
   resources:
     requests:

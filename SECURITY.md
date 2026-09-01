@@ -55,8 +55,19 @@ Bearer` tokens against your IdP's JWKS when `ARM_OIDC_ISSUER_URL`,
   and `verifySAMLAssertion` in `packages/auth` return fixture data without
   contacting or validating anything. Do not point an IdP's provisioning
   push at them.
-- **The data-plane proxy's quota store is in-memory.** Restarting the proxy
-  resets consumption; it is not yet a durable enforcement boundary.
+- **The data-plane proxy's quota store is per-replica.** Consumption is now
+  written through to disk (`PROXY_QUOTA_STATE_DIR`) and reloaded on start, so
+  restarting the proxy no longer hands every agent its daily cap back, and
+  the day key rolls the cap over without a scheduled job. It is still
+  process-local: run more than one replica and the cap is enforced **per
+  replica**, so the effective cap is that multiple of the configured one. A
+  shared store is not built yet; the Helm chart says so at install time.
+- **Metering ingest is authenticated by a shared secret, not mTLS.** The
+  control plane's `/api/ingest/metering` accepts a bearer token
+  (`ARM_INGEST_TOKEN`); the spec's answer is mTLS, and this is the
+  in-application equivalent for deployments terminating TLS at an ingress.
+  Ingest refuses under `NODE_ENV=production` when the token is unset, because
+  an open ingest endpoint lets anyone forge any tenant's spend.
 - **`ARM_DEMO` read-only mode covers fixture-mode mutations only.** It does
   not roll back writes made against a real Postgres.
 

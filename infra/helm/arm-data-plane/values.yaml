@@ -50,20 +50,19 @@ openGateway:
 
 # ── Meter agent ──
 #
-# NOT DEPLOYED. There is no meter-agent Deployment in this chart and no
-# `arm/meter-agent` image to run one from: apps/data-plane/meter-agent is a
-# library (it exports ingestEvent/flushToControlPlane and has no entrypoint),
-# nothing imports it, and infra/docker has no Dockerfile for it.
+# The only path by which what an agent costs reaches the dashboard:
+#   proxy → meter-agent (disk buffer) → control plane → ClickHouse
 #
-# What IS wired: `buffer.*` below becomes the METER_AGENT_BUFFER_* environment
-# the proxy container reads via @arm/config, and `buffer.dir` is where the
-# meter-buffer volume mounts. So events accumulate in the buffer and nothing
-# drains them to the control plane yet.
+# Deliberately ONE replica with a Recreate strategy — it owns a ReadWriteOnce
+# buffer volume, and a second replica would either fail to attach or hold
+# events nothing else can drain. It is not on the request path (the proxy
+# ships asynchronously and never blocks a call on it), so one is enough.
 #
-# The image/resources keys are kept as a record of the intended shape. They
-# are not read by any template.
+# `persistence.enabled: false` makes the buffer an emptyDir, which throws away
+# exactly the durability the disk buffer exists to provide. NOTES.txt warns.
 meterAgent:
-  enabled: false
+  enabled: true
+  port: 8789
   image:
     repository: arm/meter-agent
     tag: latest
@@ -72,6 +71,14 @@ meterAgent:
     maxBytes: 1073741024 # 1 GB (spec §5.2)
     maxAgeHours: 24
     dir: /data/meter-buffer
+  flushIntervalMs: 30000
+  # Shared secret presented to the control plane's ingest endpoint. NOT
+  # created by this chart — the chart never holds key material. Leave `name`
+  # empty and the agent sends unauthenticated, which the control plane refuses
+  # under NODE_ENV=production.
+  ingestTokenSecret:
+    name: ""
+    key: token
   resources:
     requests: { cpu: "100m", memory: "128Mi" }
     limits: { cpu: "500m", memory: "256Mi" }
@@ -90,6 +97,7 @@ service:
   type: ClusterIP
   proxyPort: 8787
   gatewayPort: 8788
+  meterAgentPort: 8789
 
 # ── Ingress (optional) ──
 # hosts entries take the shape:
@@ -107,8 +115,9 @@ ingress:
   tls: []
 
 # ── Persistence ──
-# ReadWriteOnce. With more than one proxy replica this only works on a storage
-# class that supports multi-attach — see the warning NOTES.txt prints.
+# Backs the meter-agent's event buffer. ReadWriteOnce is fine because the
+# meter-agent is a single replica by design; the proxy no longer mounts this
+# (it ships over HTTP), which is what made a RWO claim workable at all.
 persistence:
   enabled: true
   storageClass: ""

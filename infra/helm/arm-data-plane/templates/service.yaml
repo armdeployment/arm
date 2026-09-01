@@ -1,4 +1,11 @@
+{{/*
+Each block opens with its own `---`. A leading document separator is valid
+YAML even on the first document, which avoids the "emit --- only if some
+earlier component is also enabled" logic that gets subtly wrong every time a
+component is added or disabled.
+*/}}
 {{- if .Values.proxy.enabled }}
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,10 +23,8 @@ spec:
   selector:
     {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "closed-proxy") | nindent 4 }}
 {{- end }}
-{{- if and .Values.openGateway.enabled .Values.proxy.enabled }}
----
-{{- end }}
 {{- if .Values.openGateway.enabled }}
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -36,4 +41,25 @@ spec:
       protocol: TCP
   selector:
     {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "open-gateway") | nindent 4 }}
+{{- end }}
+{{- if .Values.meterAgent.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-meter-agent
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: meter-agent
+spec:
+  # ClusterIP always, and never in the Ingress: the proxy posts to it and
+  # nothing outside the data plane has any business reaching it.
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.service.meterAgentPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "meter-agent") | nindent 4 }}
 {{- end }}

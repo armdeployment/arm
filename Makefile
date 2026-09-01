@@ -15,8 +15,8 @@ install:
 dev: ## Start control-plane web in production mode (fixes Turbopack dev hang)
 	pnpm dev
 
-dev-data-plane: ## Start the data-plane services: proxy (8787) + artifact cache (8788)
-	pnpm --parallel --filter @arm-app/proxy --filter @arm-app/artifact-cache run dev
+dev-data-plane: ## Start the data-plane services: proxy (8787), artifact cache (8788), meter agent (8789)
+	pnpm --parallel --filter @arm-app/proxy --filter @arm-app/artifact-cache --filter @arm-app/meter-agent run dev
 
 mock-idp: ## Local OIDC issuer (9999) for testing SSO without an IdP tenant — docs/sso-setup.md
 	pnpm --filter @arm/auth mock-idp

@@ -1,0 +1,103 @@
+{{- if .Values.meterAgent.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "arm-data-plane.fullname" . }}-meter-agent
+  labels:
+    {{- include "arm-data-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: arm-meter-agent
+    app.kubernetes.io/component: meter-agent
+spec:
+  # Deliberately 1, and not autoscaled. Each replica owns its own disk buffer
+  # and its own ReadWriteOnce claim; a second replica would either fail to
+  # attach or hold events nothing else can drain. Throughput here is a batched
+  # HTTP POST every METER_AGENT_FLUSH_INTERVAL_MS, not a per-request path.
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: the new pod cannot attach the buffer volume
+    # until the old one releases it, and a rollout that leaves buffered events
+    # stranded on a detached volume is worse than a few seconds of downtime.
+    # The proxy tolerates this — a failed ship is logged and the request still
+    # succeeds.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "meter-agent") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "arm-data-plane.selectorLabels" (dict "ctx" . "component" "meter-agent") | nindent 8 }}
+        app.kubernetes.io/component: meter-agent
+    spec:
+      serviceAccountName: {{ include "arm-data-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # The buffer holds unflushed spend. Give the agent time to drain on
+      # SIGTERM before the kubelet escalates to SIGKILL.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: meter-agent
+          image: "{{ .Values.meterAgent.image.repository }}:{{ .Values.meterAgent.image.tag }}"
+          imagePullPolicy: {{ .Values.meterAgent.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.meterAgent.port }}
+              protocol: TCP
+          env:
+            - name: METER_AGENT_PORT
+              value: "{{ .Values.meterAgent.port }}"
+            - name: METER_AGENT_BUFFER_DIR
+              value: {{ .Values.meterAgent.buffer.dir | quote }}
+            - name: METER_AGENT_BUFFER_MAX_BYTES
+              value: {{ .Values.meterAgent.buffer.maxBytes | quote }}
+            - name: METER_AGENT_BUFFER_MAX_AGE_HOURS
+              value: {{ .Values.meterAgent.buffer.maxAgeHours | quote }}
+            - name: METER_AGENT_FLUSH_INTERVAL_MS
+              value: {{ .Values.meterAgent.flushIntervalMs | quote }}
+            {{- include "arm-data-plane.controlPlaneEnv" . | nindent 12 }}
+            {{- if .Values.meterAgent.ingestTokenSecret.name }}
+            - name: ARM_INGEST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.meterAgent.ingestTokenSecret.name }}
+                  key: {{ .Values.meterAgent.ingestTokenSecret.key }}
+            {{- end }}
+          livenessProbe:
+            # /health returns 503 when the buffer is critical, which includes
+            # "buffering with nowhere to drain". That is a real outage of the
+            # metering path, so let the kubelet restart it rather than leaving
+            # a pod that looks up while spend silently accumulates on disk.
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.meterAgent.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: meter-buffer
+              mountPath: {{ .Values.meterAgent.buffer.dir }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: meter-buffer
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "arm-data-plane.fullname" . }}-meter-buffer
+          {{- else }}
+          # No persistence means the buffer dies with the pod — the exact data
+          # loss the disk buffer exists to prevent. NOTES.txt warns about it.
+          emptyDir: {}
+          {{- end }}
+{{- end }}

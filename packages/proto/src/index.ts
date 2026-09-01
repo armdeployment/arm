@@ -69,6 +69,39 @@ export const tokenUsageEventSchema = z.object({
 
 export type TokenUsageEvent = z.infer<typeof tokenUsageEventSchema>;
 
+/**
+ * What the data plane POSTs to the control plane's metering ingest endpoint.
+ *
+ * This is the one contract three separate processes have to agree on — the
+ * proxy that emits, the meter-agent that buffers and forwards, and the
+ * control-plane route that writes to ClickHouse. It lives here because
+ * `@arm/proto` is the only package all three are allowed to import: the
+ * data-plane trust boundary (AGENTS.md, `boundaries` guardrail) restricts
+ * those apps to proto/config/client-core.
+ *
+ * It has drifted before. The meter-agent carried its own camelCase copy
+ * (`subAccountId`, `model`, `costUsd`) while the ClickHouse table and this
+ * schema use snake_case (`sub_account_id`, `model_id`, `cost_usd`), so the
+ * two could never have exchanged an event even once they were connected.
+ */
+export const meteringBatchSchema = z.object({
+  /** Identifies the sending data plane in control-plane logs. */
+  source_id: z.string().min(1).max(200),
+  events: z.array(tokenUsageEventSchema).min(1).max(1000),
+});
+
+export type MeteringBatch = z.infer<typeof meteringBatchSchema>;
+
+export const meteringIngestResultSchema = z.object({
+  accepted: z.number().int().nonnegative(),
+  /** Events rejected for failing validation, with the index that failed. */
+  rejected: z.array(z.object({ index: z.number().int(), reason: z.string() })).default([]),
+  /** Whether the batch reached durable storage or was accepted in fixture mode. */
+  persisted: z.boolean(),
+});
+
+export type MeteringIngestResult = z.infer<typeof meteringIngestResultSchema>;
+
 // ── access_audit_event (spec §4.2) ──────────────────────────────────────────
 
 export const accessDecisionSchema = z.enum(["allow", "deny", "jit_grant"]);

@@ -91,13 +91,12 @@ Two honest caveats:
   because the images it names (`arm/closed-proxy`, `arm/open-gateway`)
   are not published anywhere — build and push them from
   `docker/*.Dockerfile` first, then override `image.repository`.
-- **There is no meter-agent.** `values.yaml` still carries a `meterAgent`
-  block and the proxy still mounts a meter buffer, but no Deployment is
-  templated for it and no image exists:
-  `apps/data-plane/meter-agent` is a library with no entrypoint that
-  nothing imports. Events accumulate in the buffer and nothing drains them
-  to the control plane. `meterAgent.enabled` now defaults to `false` to
-  stop that reading as a shipped component.
+- **The meter-agent now runs** (2026-09-01) and the chart deploys it:
+  `deployment-meter-agent.yaml`, a ClusterIP Service, and the buffer PVC,
+  which moved off the proxy. That claim is ReadWriteOnce and used to be
+  mounted on the proxy Deployment — which autoscales 2-10, so every replica
+  past the first would have failed to attach. The meter-agent is one replica
+  with a `Recreate` strategy for exactly that reason.
 
 ## Terraform
 
@@ -150,9 +149,13 @@ Being explicit, so nobody discovers these halfway through a rollout:
   in the sandbox, but has no chart or production manifest. Note that image
   sets `NODE_ENV=production`, so without OIDC configured it refuses every
   authenticated request by design — see [`../docs/sso-setup.md`](../docs/sso-setup.md).
-- **No published images.** Nothing pushes `arm/closed-proxy` or
-  `arm/open-gateway` to a registry. Build them from `docker/` yourself and
-  point `image.repository` at wherever you put them.
+- **No published images.** Nothing pushes `arm/closed-proxy`,
+  `arm/open-gateway` or `arm/meter-agent` to a registry. Build them from
+  `docker/` yourself and point `image.repository` at wherever you put them.
+- **Proxy quota is per-replica.** Consumption is written through to disk so a
+  restart no longer resets it, but the file is process-local. With the default
+  HPA the daily cap is enforced per replica. `NOTES.txt` prints this at
+  install time; a shared quota store is not built.
 - **No secret management.** `ARM_SETUP_TOKEN_SECRET` and database
   credentials have no documented delivery mechanism beyond environment
   variables. See [`.env.example`](../.env.example).

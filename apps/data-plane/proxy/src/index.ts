@@ -13,7 +13,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { z } from "zod";
-import type { TokenUsageEvent } from "@arm/proto";
+import * as nodeFs from "node:fs";
+import * as nodePath from "node:path";
+import { tokenUsageEventSchema, type TokenUsageEvent } from "@arm/proto";
 import { config } from "@arm/config";
 
 // ── App Setup ──────────────────────────────────────────────────────────────
@@ -77,9 +79,88 @@ export function validateDelegateKey(tenantId: string, keyRef: string): boolean {
   return new Date(stored.expiresAt) > new Date() && stored.keyRef === keyRef;
 }
 
-// ── In-Memory Quota Store (real impl uses Redis/Postgres) ─────────────────
+// ── Quota store (disk-backed, day-keyed) ──────────────────────────────────
+//
+// This was a bare Map, so restarting the proxy reset every agent's
+// consumption to zero — a quota that anyone could clear by causing a crash,
+// or that a routine rolling deploy cleared on its own. SECURITY.md listed it
+// as a known gap ("not yet a durable enforcement boundary").
+//
+// It is now written through to disk on every change and reloaded on start.
+// That is deliberately not Redis or Postgres: the proxy's boundary allows
+// proto/config/client-core only, and a local file gives the property that
+// actually matters here — consumption survives the process. A multi-replica
+// deployment still needs shared state, and infra/README says so rather than
+// this pretending otherwise.
+//
+// State is keyed by UTC day, so the daily cap resets by the key changing
+// rather than by a scheduled job that might not run.
 
 const quotaStore = new Map<string, { dailyCapUsd: number; usedTodayUsd: number }>();
+
+const QUOTA_STATE_DIR = config.PROXY_QUOTA_STATE_DIR;
+const QUOTA_STATE_FILE = nodePath.join(QUOTA_STATE_DIR, "quota.json");
+
+/** UTC day key. The cap is daily; deriving the day from the clock means a
+ *  restart at 00:01 starts a fresh day without a reset job. */
+function currentDayKey(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+let quotaDay = currentDayKey();
+
+/** Reloads consumption from disk, discarding state from a previous day. */
+export function loadQuotaState(now: Date = new Date()): { restored: number; day: string } {
+  quotaDay = currentDayKey(now);
+  quotaStore.clear();
+  if (!nodeFs.existsSync(QUOTA_STATE_FILE)) return { restored: 0, day: quotaDay };
+  try {
+    const parsed = JSON.parse(nodeFs.readFileSync(QUOTA_STATE_FILE, "utf8")) as {
+      day?: string;
+      quotas?: Record<string, { dailyCapUsd: number; usedTodayUsd: number }>;
+    };
+    // Yesterday's file is not today's consumption. Dropping it is the reset.
+    if (parsed.day !== quotaDay) return { restored: 0, day: quotaDay };
+    for (const [key, value] of Object.entries(parsed.quotas ?? {})) {
+      if (typeof value?.usedTodayUsd === "number" && typeof value?.dailyCapUsd === "number") {
+        quotaStore.set(key, { ...value });
+      }
+    }
+  } catch {
+    // A corrupt state file must not stop the proxy from serving. Starting at
+    // zero is the same position the old in-memory store was always in.
+    return { restored: 0, day: quotaDay };
+  }
+  return { restored: quotaStore.size, day: quotaDay };
+}
+
+function persistQuotaState(): void {
+  try {
+    nodeFs.mkdirSync(QUOTA_STATE_DIR, { recursive: true });
+    const tmp = `${QUOTA_STATE_FILE}.tmp`;
+    nodeFs.writeFileSync(
+      tmp,
+      JSON.stringify({ day: quotaDay, quotas: Object.fromEntries(quotaStore) }),
+    );
+    nodeFs.renameSync(tmp, QUOTA_STATE_FILE);
+  } catch (err) {
+    // Enforcement continues on the in-memory copy; losing durability is worth
+    // reporting but not worth refusing traffic over.
+    console.error(
+      `[proxy] quota state persist failed: ${err instanceof Error ? err.message : err}`,
+    );
+  }
+}
+
+/** Rolls the store over when the UTC day changes under a long-lived process. */
+function ensureCurrentDay(): void {
+  const today = currentDayKey();
+  if (today !== quotaDay) {
+    quotaDay = today;
+    for (const quota of quotaStore.values()) quota.usedTodayUsd = 0;
+    persistQuotaState();
+  }
+}
 
 /**
  * Resolves agent context from request headers.
@@ -92,7 +173,7 @@ function resolveAgent(req: Request): AgentContext {
   const agentId = req.headers.get("X-ARM-AgentId") ?? "agt_demo";
   const tenantId = req.headers.get("X-ARM-TenantId") ?? "tn_demo";
 
-  // Stub: resolve quota from local store (or default)
+  ensureCurrentDay();
   const quotaKey = subAccountId;
   if (!quotaStore.has(quotaKey)) {
     quotaStore.set(quotaKey, { dailyCapUsd: 50, usedTodayUsd: 0 });
@@ -269,16 +350,72 @@ async function generateResponse(
 // ── Metering Event Emission ───────────────────────────────────────────────
 
 const meteringBuffer: MeteringEvent[] = [];
+/** Kept bounded — this is a debug window, not the delivery path. */
+const METERING_DEBUG_WINDOW = 100;
+
+/**
+ * Converts the proxy's internal event to the wire contract in @arm/proto.
+ *
+ * The two differ in case and in one name (`model` → `model_id`), which is why
+ * the meter-agent's own camelCase schema could never have accepted these.
+ * Everything the D7/D9 columns want is defaulted by the schema rather than
+ * invented here — an unclassified call is `work_type: null`, stored as-is and
+ * never guessed.
+ */
+export function toTokenUsageEvent(event: MeteringEvent): TokenUsageEvent {
+  return tokenUsageEventSchema.parse({
+    ts: event.ts,
+    tenant_id: event.tenantId,
+    sub_account_id: event.subAccountId,
+    agent_id: event.agentId,
+    priority_tier: event.priorityTier,
+    model_id: event.model,
+    input_tokens: event.inputTokens,
+    output_tokens: event.outputTokens,
+    cost_usd: event.costUsd,
+    source: event.source,
+  });
+}
+
+/**
+ * Ships one event to the meter-agent.
+ *
+ * Deliberately not awaited by the request path: metering must never add
+ * latency to a proxied call (the chart carries a 25 ms p50 budget), and must
+ * never fail one. A send that fails is logged and dropped here — durability
+ * is the meter-agent's job, and it holds a disk buffer for exactly that
+ * reason. With METER_AGENT_URL unset the proxy keeps its debug window and
+ * nothing is shipped, which is the documented single-process dev setup.
+ */
+function shipToMeterAgent(event: TokenUsageEvent): void {
+  const url = config.METER_AGENT_URL;
+  if (!url) return;
+  void fetch(`${url.replace(/\/+$/, "")}/events`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(event),
+  }).catch((err) => {
+    console.error(
+      `[meter] ship failed (event dropped): ${err instanceof Error ? err.message : err}`,
+    );
+  });
+}
 
 function emitMeteringEvent(event: MeteringEvent): void {
   meteringBuffer.push(event);
-  // Update in-memory quota (TODO: persist to ClickHouse via meter-agent)
-  const key = event.subAccountId;
-  const quota = quotaStore.get(key);
+  if (meteringBuffer.length > METERING_DEBUG_WINDOW) meteringBuffer.shift();
+
+  ensureCurrentDay();
+  const quota = quotaStore.get(event.subAccountId);
   if (quota) {
     quota.usedTodayUsd += event.costUsd;
+    // Written through on every charge. A crash between the charge and the
+    // next request must not give the quota back.
+    persistQuotaState();
   }
-  // In production: push to local event buffer → meter-agent → control plane
+
+  shipToMeterAgent(toTokenUsageEvent(event));
+
   console.debug(
     `[meter] ${event.agentId} | ${event.model} | $${event.costUsd.toFixed(4)} | ${event.inputTokens}+${event.outputTokens}tk`,
   );
@@ -404,8 +541,14 @@ export { checkQuota, checkModelAccess, resolveAgent, type AgentContext, type Met
 
 // ── Server start (sandbox entry point — zero deps, uses node:http) ──
 import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 const PORT = parseInt(process.env.PROXY_PORT ?? "8787");
-createServer(async (req, res) => {
+
+/** Guarded, so importing this module for a test does not bind port 8787. */
+const isEntrypoint =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
     const headers = new Headers();
@@ -437,4 +580,19 @@ createServer(async (req, res) => {
     res.writeHead(500);
     res.end(JSON.stringify({ error: "proxy_internal_error" }));
   }
-}).listen(PORT, () => console.log(`[closed-proxy] http://localhost:${PORT}`));
+});
+
+if (isEntrypoint) {
+  const { restored, day } = loadQuotaState();
+  if (restored > 0) {
+    console.log(`[closed-proxy] restored quota for ${restored} sub-account(s) for ${day}`);
+  }
+  if (!config.METER_AGENT_URL) {
+    console.warn(
+      "[closed-proxy] METER_AGENT_URL is not set — metering events stay in this process and never reach the control plane.",
+    );
+  }
+  server.listen(PORT, () => console.log(`[closed-proxy] http://localhost:${PORT}`));
+}
+
+export { server as proxyServer };
