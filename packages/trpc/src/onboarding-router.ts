@@ -125,14 +125,57 @@ const publicProcedure = t.procedure.use(async (opts) => {
   }
 });
 
-// ── Dev-mode signing config (TODO(1.1): real KMS-backed signing key, real
-//    tenant→industry-profile lookup, real short-lived catalog/agent tokens
-//    from @arm/billing + @arm/auth — this scaffold has no live DB, matching
-//    every other router here) ─────────────────────────────────────────────
+// ── Setup-token signing ───────────────────────────────────────────────────
+//
+// A setup token is what stands between a stranger and an agent install: it is
+// the credential a brand-new machine presents, with no prior ARM session (A4).
+// The fallback below is a well-known public string, so a deployment that never
+// set ARM_SETUP_TOKEN_SECRET can have tokens minted by anyone who has read
+// this file.
+//
+// SECURITY.md listed exactly that as a known gap. It is now refused rather
+// than merely documented: under NODE_ENV=production, minting or verifying a
+// token with the fallback throws. Same fail-closed shape as `resolveAuthMode`
+// and the metering ingest.
+//
+// Still deferred, and genuinely so: a KMS-backed signing key (this is an HMAC
+// secret, not a managed key) and per-user/org package eligibility.
 
-const SETUP_TOKEN_SECRET =
-  process.env["ARM_SETUP_TOKEN_SECRET"] ?? "dev-only-setup-token-secret-do-not-use-in-prod";
-const setupTokenSigningKey = new TextEncoder().encode(SETUP_TOKEN_SECRET);
+const DEV_SETUP_TOKEN_SECRET = "dev-only-setup-token-secret-do-not-use-in-prod";
+
+/** Exported for the test that proves production refuses the fallback. */
+export function resolveSetupTokenSecret(
+  env: string | undefined = process.env["ARM_SETUP_TOKEN_SECRET"],
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): string {
+  if (env && env.length > 0 && env !== DEV_SETUP_TOKEN_SECRET) return env;
+  if (nodeEnv === "production") {
+    throw new Error(
+      "ARM_SETUP_TOKEN_SECRET is unset (or still the development value) under " +
+        "NODE_ENV=production. Setup tokens would be signed with a well-known public " +
+        "string, so anyone could mint one and redeem an agent install. Set it to a long " +
+        "random value — the arm-control-plane chart's secrets.setupToken wires it in.",
+    );
+  }
+  return DEV_SETUP_TOKEN_SECRET;
+}
+
+/**
+ * Resolved lazily, per use — NOT at module load.
+ *
+ * `next build` sets NODE_ENV=production and evaluates route modules while
+ * collecting page data, so throwing at module scope fails the build on a
+ * machine that has no business holding a production secret. `resolveAuthMode`
+ * avoids exactly this trap for the same reason; this initially did not, and
+ * `pnpm build` caught it.
+ *
+ * Deferring to first mint or verify keeps the guard where it matters — a
+ * running deployment refuses to issue or accept a token signed with a
+ * well-known string — while a build stays a build.
+ */
+function setupTokenKey(): Uint8Array {
+  return new TextEncoder().encode(resolveSetupTokenSecret());
+}
 
 const FIXTURE_TENANT_ID = "d9d9d9d9-0000-4000-8000-000000000001";
 const FIXTURE_OWNER_ID = "60000000-0000-4000-8000-000000000001";
@@ -630,7 +673,7 @@ export const onboardingRouter = t.router({
 
       const token = await new SignJWT(claims)
         .setProtectedHeader({ alg: "HS256" })
-        .sign(setupTokenSigningKey);
+        .sign(setupTokenKey());
 
       const activationCode = newActivationCode();
       const stored: StoredSetupToken = {
@@ -686,7 +729,7 @@ export const onboardingRouter = t.router({
 
       let claims: SetupTokenClaims;
       try {
-        const { payload } = await jwtVerify(token, setupTokenSigningKey, {
+        const { payload } = await jwtVerify(token, setupTokenKey(), {
           audience: "arm-client",
         });
         claims = setupTokenClaimsSchema.parse(payload);

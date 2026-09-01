@@ -38,9 +38,14 @@ guardrails (`pnpm guardrails`) rather than convention:
 These are deliberate, documented limitations of the current state, not
 oversights:
 
-- **`ARM_SETUP_TOKEN_SECRET` has a well-known development fallback.** If
-  you do not set it, setup tokens are signed with a public string. Set it
-  to a long random value in any deployment reachable by anyone else.
+- **`ARM_SETUP_TOKEN_SECRET` must be set in production, and now is
+  enforced.** The development fallback is a well-known public string, so a
+  deployment using it can have setup tokens minted by anyone who has read
+  the source — and a setup token is the credential a brand-new machine
+  presents with no prior session. Under `NODE_ENV=production` ARM now
+  **refuses to mint or accept** a setup token signed with the fallback (or
+  with the fallback copied into the env var), rather than issuing one. Set it to a long random
+  value; the `arm-control-plane` chart's `secrets.setupToken` wires it in.
 - **OIDC verification is live, but only bearer-token verification.**
   `apps/control-plane/web` and `apps/onboarding` verify `Authorization:
 Bearer` tokens against your IdP's JWKS when `ARM_OIDC_ISSUER_URL`,

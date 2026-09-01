@@ -4,7 +4,7 @@
  *
  * There is no live DB client anywhere in this repo yet (every package/router
  * in the 1.0/D10 scaffold operates on injected or fixture data —
- * `packages/trpc/src/index.ts`'s own header: "FIXTURE DATA ... TODO(1.1):
+ * `packages/trpc/src/index.ts`'s own header, which used to read "FIXTURE DATA ... TODO(1.1):
  * replace with real Postgres/ClickHouse queries"). This pipeline follows the
  * same shape: it is written against a small `ComponentRepoPort` so it is
  * fully unit-testable today (an in-memory fake repo — see

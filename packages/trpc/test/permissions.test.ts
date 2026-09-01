@@ -71,3 +71,38 @@ describe("requirePermission", () => {
     expect(() => requirePermission(createContext({ claims }), "tool:publish")).not.toThrow();
   });
 });
+
+describe("setup-token signing secret", () => {
+  // SECURITY.md listed this as a known gap: "If you do not set it, setup
+  // tokens are signed with a public string." A setup token is the credential
+  // a brand-new machine presents with no prior session, so a well-known
+  // signing key means anyone who has read the source can mint an agent
+  // install. Documented is not the same as defended.
+  it("accepts a real secret", async () => {
+    const { resolveSetupTokenSecret } = await import("../src/onboarding-router.js");
+    expect(resolveSetupTokenSecret("a-long-random-value", "production")).toBe(
+      "a-long-random-value",
+    );
+  });
+
+  it("REFUSES to start in production with no secret set", async () => {
+    const { resolveSetupTokenSecret } = await import("../src/onboarding-router.js");
+    expect(() => resolveSetupTokenSecret(undefined, "production")).toThrow(
+      /ARM_SETUP_TOKEN_SECRET is unset/,
+    );
+  });
+
+  it("REFUSES the development value even when explicitly set in production", async () => {
+    // Copying the fallback out of the source into an env var is the obvious
+    // way to "fix" a startup error, and it fixes nothing.
+    const { resolveSetupTokenSecret } = await import("../src/onboarding-router.js");
+    expect(() =>
+      resolveSetupTokenSecret("dev-only-setup-token-secret-do-not-use-in-prod", "production"),
+    ).toThrow(/still the development value/);
+  });
+
+  it("falls back in development, so a fresh clone needs no configuration", async () => {
+    const { resolveSetupTokenSecret } = await import("../src/onboarding-router.js");
+    expect(resolveSetupTokenSecret(undefined, "development")).toContain("dev-only");
+  });
+});

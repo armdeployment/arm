@@ -22,7 +22,8 @@
  * implementation used by tests and by `library-router.ts` today — the same
  * "no live DB, fixture-driven" pattern every other router/package in this
  * repo already follows (`packages/trpc/src/index.ts`'s own header: "FIXTURE
- * DATA... TODO(1.1): replace with real Postgres/ClickHouse queries"). Its
+ * DATA..."). That header has since been corrected — spend, access and roles
+ * read real stores when ARM_FIXTURE_MODE=0. Its
  * ranking/filtering semantics mirror the SQL: substring/trigram-ish match on
  * name/slug/description, filtered by kind/jobFunction/classification/mode.
  */
