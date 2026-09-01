@@ -9,14 +9,22 @@
  * it defaults to the org root (CEO view). When set to a department, it returns
  * that department's rolled-up data (department-head view). And so on down.
  *
- * FIXTURE DATA: routers return inline fixture data for the 1.0 scaffold.
- * TODO(1.1): replace with real Postgres/ClickHouse queries.
+ * DATA MODE. `ARM_FIXTURE_MODE=1` (the default) serves the inline fixtures
+ * below — the zero-configuration path a fresh clone gets. With it set to `0`:
+ *
+ *   real data   spend (ClickHouse `token_usage_event`), access decisions and
+ *               role grants (Postgres), plus catalog, library and adoption in
+ *               their own routers.
+ *   fixtures    policy, security, GPU and anomaly still return the inline data
+ *               in BOTH modes. They are the panels nothing has been wired to
+ *               yet — worth knowing before reading those numbers as
+ *               measurements rather than illustrations.
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomBytes, randomUUID } from "node:crypto";
-import type { ARMClaims } from "@arm/auth";
+import { hasPermission, type ARMClaims, type ScopedRole } from "@arm/auth";
 import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 import { catalogRouter } from "./catalog-router.js";
 import { libraryRouter } from "./library-router.js";
@@ -34,11 +42,59 @@ import {
 export interface ARMContext {
   claims: ARMClaims | null;
   tenantId: string | null;
+  /**
+   * Roles resolved for this request, which permission checks read.
+   *
+   * This did not exist, and its absence is why every authorization gate in
+   * the codebase was a no-op — `requireToolPublish()` in library-router.ts
+   * was literally `// dev mode: always authorized`, with a TODO waiting for
+   * "once ARMContext carries resolved roles". It carries them now.
+   *
+   * Resolution deliberately stays outside this package: @arm/auth maps an
+   * IdP `groups` claim onto roles a tenant configured (`resolveRolesFromGroups`),
+   * and the group→role rules live in the DB, which this layer's caller owns.
+   * A caller that resolves nothing gets an empty set, which denies rather
+   * than allows.
+   */
+  roles: ScopedRole[];
 }
 
-export function createContext(opts: { claims?: ARMClaims | null }): ARMContext {
+export function createContext(opts: {
+  claims?: ARMClaims | null;
+  roles?: ScopedRole[];
+}): ARMContext {
   const claims = opts.claims ?? null;
-  return { claims, tenantId: claims?.tenant_id ?? null };
+  return { claims, tenantId: claims?.tenant_id ?? null, roles: opts.roles ?? [] };
+}
+
+/**
+ * Asserts the request carries a permission, or throws FORBIDDEN.
+ *
+ * Development convenience with a hard boundary: with no roles resolved at
+ * all, this allows in fixture mode and DENIES under NODE_ENV=production. A
+ * fresh clone therefore still works with zero configuration, while a
+ * production deployment that has not wired role resolution fails closed
+ * instead of authorizing everyone — the same shape as `resolveAuthMode`.
+ */
+export function requirePermission(ctx: ARMContext, permission: string): void {
+  if (ctx.roles.length === 0) {
+    if (process.env.NODE_ENV === "production" && !isFixtureMode()) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message:
+          `No roles resolved for this request, so '${permission}' cannot be granted. ` +
+          "Map your IdP groups to ARM roles (docs/sso-setup.md) — refusing rather than " +
+          "authorizing every caller.",
+      });
+    }
+    return;
+  }
+  if (!hasPermission(ctx.roles, permission)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: `This request does not carry '${permission}'.`,
+    });
+  }
 }
 
 // ── tRPC setup ─────────────────────────────────────────────────────────────

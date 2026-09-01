@@ -4,7 +4,8 @@
  *
  * Work Package listing + package assignments. Package version fixtures come
  * from @arm/catalog (plain-data fixtures) and are parsed through the
- * @arm/proto zod contracts at module load. No live DB — TODO(1.1): replace
+ * @arm/proto zod contracts at module load. Live Postgres since Wave 3 when
+ * ARM_FIXTURE_MODE=0 (was: "No live DB — TODO(1.1): replace")
  * fixtures with Postgres.
  *
  * D10 MECHANICAL UPDATE (contracts, Wave 0 — NOT a reimplementation): `tool`

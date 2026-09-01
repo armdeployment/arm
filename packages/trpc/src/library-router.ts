@@ -13,7 +13,8 @@
  * MUTABLE IN-MEMORY COPIES of `@arm/artifactory`'s component fixtures and
  * `@arm/catalog`'s package-version fixtures, exactly the pattern
  * `catalog-router.ts`'s `assignmentStore` already establishes.
- * TODO(1.1): replace the in-memory stores with real Postgres reads/writes;
+ * Wave 3 replaced the in-memory stores with real Postgres reads/writes when
+ * ARM_FIXTURE_MODE=0; the fixtures remain as the zero-configuration path.
  * `@arm/artifactory`'s `publishComponentVersion`/`ComponentRepoPort` and
  * `@arm/discovery`'s `syncSource`/`promoteCandidate` are already written
  * against injectable ports for exactly this swap.
@@ -26,7 +27,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { eq, and } from "drizzle-orm";
-import type { ARMContext } from "./index.js";
+import { requirePermission, type ARMContext } from "./index.js";
 import {
   isDemoMode,
   registerDemoArray,
@@ -117,15 +118,17 @@ const tenantProcedure = t.procedure
 
 /**
  * `tool:publish` gate (D8/D9 verb, unrenamed — guide 00 §1). Real role
- * resolution isn't wired into `ARMContext` yet anywhere in this codebase
- * (every tenantProcedure in `catalog-router.ts`/`index.ts` is similarly
- * "dev mode always authorized" pending a real RBAC context — see
- * `orgTreeRouter.mutate`'s identical note in `packages/trpc/src/index.ts`).
- * TODO(1.1): call `@arm/auth`'s `hasPermission(resolvedRoles, "tool:publish")`
- * once `ARMContext` carries resolved roles.
+ * resolution now IS wired into `ARMContext` (`ctx.roles`), populated by the
+ * caller from `@arm/auth`'s `resolveRolesFromGroups`.
+ * Resolved 2026-09-01: `ARMContext` now carries `roles`, so this is a real
+ * check rather than a comment describing one. `requirePermission` allows when
+ * no roles were resolved at all in development — a fresh clone still works
+ * with no configuration — and DENIES that same case under NODE_ENV=production,
+ * so a deployment that has not wired role resolution fails closed instead of
+ * authorizing every caller.
  */
-function requireToolPublish(): void {
-  // dev mode: always authorized. Production: real RBAC check here.
+function requireToolPublish(ctx: ARMContext): void {
+  requirePermission(ctx, "tool:publish");
 }
 
 // ── In-memory stores (mutable copies of the shipped fixtures) ──────────────
@@ -739,7 +742,7 @@ export const libraryRouter = t.router({
       }),
     )
     .mutation(async (opts) => {
-      requireToolPublish();
+      requireToolPublish(opts.ctx);
       const result = await publishComponentVersion(
         {
           componentId: opts.input.componentId,
@@ -819,7 +822,7 @@ export const libraryRouter = t.router({
       }),
     )
     .mutation(async (opts) => {
-      requireToolPublish();
+      requireToolPublish(opts.ctx);
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();
@@ -945,7 +948,7 @@ export const libraryRouter = t.router({
   rejectCandidate: tenantProcedure
     .input(z.object({ candidateId: z.string().uuid(), reason: z.string().default("") }))
     .mutation(async (opts) => {
-      requireToolPublish();
+      requireToolPublish(opts.ctx);
       const tenantId = opts.ctx.tenantId!;
       if (!isFixtureMode()) {
         const db = getDb();

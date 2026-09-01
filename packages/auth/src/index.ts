@@ -865,9 +865,14 @@ export interface AgentOnboardingResult {
  * Stub: returns fixture credentials.
  */
 export async function bootstrapAgent(req: AgentOnboardingRequest): Promise<AgentOnboardingResult> {
-  // TODO(1.1): INSERT INTO agent (...) VALUES (...)
-  // TODO(1.1): INSERT INTO sub_account (...) VALUES (...)
-  // TODO(1.1): INSERT INTO delegate_key (...) VALUES (...)
+  // Superseded 2026-09-01: the real Agent + SubAccount insert now lives in
+  // `agents.create` (packages/trpc/src/index.ts), which is where it belongs —
+  // this package is layer-2 and may not import @arm/db (AGENTS.md), so it
+  // could never have done the writes these TODOs described.
+  //
+  // What stays here is the token/claims shape and the tier rule. The
+  // credentials below are FIXTURES: well-formed, and they authenticate
+  // nothing. `agents.create` is the path that returns a usable key.
 
   // `randomBytes`, not `Math.random`. `apiKey` is a credential: V8's PRNG is
   // not cryptographically secure, and its state is recoverable from enough
