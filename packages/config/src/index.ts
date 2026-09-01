@@ -40,6 +40,12 @@ function loadConfig() {
       /** Claim carrying the user's email. Entra/Okta/Google all use `email`. */
       ARM_OIDC_EMAIL_CLAIM: z.string().default("email"),
       /**
+       * Claim carrying group memberships, mapped onto ARM roles by
+       * `resolveRolesFromGroups`. Entra/Okta/Google use `groups`; Auth0 rules
+       * usually namespace it (e.g. https://acme.com/groups).
+       */
+      ARM_OIDC_GROUPS_CLAIM: z.string().default("groups"),
+      /**
        * Serve the built-in development identity even under NODE_ENV=production.
        * Without OIDC configured, production otherwise refuses every request
        * rather than silently authenticating everyone as the same fixed user.

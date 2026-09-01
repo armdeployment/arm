@@ -48,13 +48,17 @@ Bearer` tokens against your IdP's JWKS when `ARM_OIDC_ISSUER_URL`,
   [`docs/sso-setup.md`](docs/sso-setup.md). With none of them set they fall
   back to a fixed development identity, and under `NODE_ENV=production`
   they **refuse every authenticated request** rather than doing so silently.
-  What is still missing: ARM does not run the browser login flow that
-  obtains a token (put a reverse proxy in front of it), and the `groups`
-  claim is not yet mapped to ARM roles.
-- **SCIM and SAML are stubs.** `provisionSCIMUser`, `provisionSCIMGroup`
-  and `verifySAMLAssertion` in `packages/auth` return fixture data without
-  contacting or validating anything. Do not point an IdP's provisioning
-  push at them.
+  IdP groups map onto ARM roles via `resolveRolesFromGroups`. What is still
+  missing: ARM does not run the browser login flow that obtains a token — put
+  a reverse proxy that does in front of it.
+- **No SCIM or SAML.** `provisionSCIMUser`, `provisionSCIMGroup` and
+  `verifySAMLAssertion` in `packages/auth` throw `NotImplementedError`.
+  They previously returned fixture data that looked like success —
+  `verifySAMLAssertion` in particular returned a complete, valid assertion
+  for `user@acme.com` given any input at all, which would have been an
+  authentication bypass for its first caller. Nothing called them, which is
+  the only reason it was never exploitable. Use OIDC, and map IdP groups to
+  roles with `resolveRolesFromGroups` ([`docs/sso-setup.md`](docs/sso-setup.md)).
 - **The data-plane proxy's quota store is per-replica.** Consumption is now
   written through to disk (`PROXY_QUOTA_STATE_DIR`) and reloaded on start, so
   restarting the proxy no longer hands every agent its daily cap back, and

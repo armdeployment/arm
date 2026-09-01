@@ -107,6 +107,45 @@ writes it anywhere. It has no login UI, no authorization code flow and no
 client authentication — it signs whatever you ask it to. It is a test double.
 Never run it anywhere that matters.
 
+## Mapping groups to roles
+
+A verified user arrives with a subject, an email, a tenant — and their group
+memberships, if your IdP emits them. `ARM_OIDC_GROUPS_CLAIM` says which claim
+carries them (default `groups`; Auth0 rules usually namespace it, e.g.
+`https://acme.com/groups`). Array, comma-separated string and absent are all
+accepted, because providers disagree.
+
+Groups become ARM roles through rules your tenant configures:
+
+```ts
+import { resolveRolesFromGroups, hasPermission } from "@arm/auth";
+
+const rules = [
+  { group: "arm-admins", role: { name: "org_admin", permissions: ["*"] } },
+  {
+    group: "plant-7-leads",
+    role: { name: "plant_lead", permissions: ["agent:create", "budget:read"] },
+    scopeType: "plant",
+    scopeId: "plant_7",
+  },
+];
+
+const roles = resolveRolesFromGroups(claims.groups ?? [], rules);
+hasPermission(roles, "agent:create"); // true for a plant-7 lead
+```
+
+Two things worth knowing. Group matching is **case-insensitive**, because
+Entra returns group names with the directory's casing and nobody reproduces
+it by hand. And a group with no rule grants **nothing**, silently — most
+directories are full of groups that have nothing to do with ARM, and that is
+not an error worth failing a login over.
+
+The rules are tenant configuration read from `roleTable`, not something
+`@arm/auth` resolves: it is a layer-2 package and may not import `@arm/db`
+(AGENTS.md), so the caller loads the rules and passes them in. This is also
+why group membership grants roles but does not _create_ them — authority
+still flows from roles a tenant admin defined, never from a group name.
+
 ## Microsoft Entra ID (Azure AD)
 
 Register ARM as an app, then:
@@ -156,13 +195,14 @@ Being explicit, so none of it is discovered mid-rollout:
   authorization code redirect that obtains one. A reverse proxy that performs
   login and forwards the token (oauth2-proxy, an ingress auth annotation, your
   API gateway) is the assumed deployment shape.
-- **Claims are not mapped to roles yet.** A verified user gets a subject, an
-  email and a tenant. The `groups` claim is not yet read into ARM roles —
-  `PRESET_CLAIM_MAPPINGS` in `packages/auth` records the intended mapping per
-  provider, but nothing consumes it. RBAC still resolves from `roleTable`.
-- **SCIM and SAML are stubs.** `provisionSCIMUser`, `provisionSCIMGroup` and
-  `verifySAMLAssertion` return fixture data. Do not wire an IdP's provisioning
-  push at them.
+- **No SCIM provisioning.** ARM does not accept an IdP's provisioning push.
+  `provisionSCIMUser` and `provisionSCIMGroup` now throw `NotImplementedError`
+  rather than returning the phantom success they used to. Group-based access
+  works without SCIM — see "Mapping groups to roles" above.
+- **No SAML.** `verifySAMLAssertion` throws. It previously returned a
+  complete, valid-looking assertion for `user@acme.com` given _any_ input,
+  which would have been an authentication bypass for its first caller. Use
+  OIDC; every provider above speaks it.
 - **The onboarding app's public setup-token path is deliberately not
   SSO-gated.** Redemption is authenticated by the signed token itself
   (`ARM_SETUP_TOKEN_SECRET`), because the employee redeeming it may not have a

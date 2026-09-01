@@ -204,9 +204,9 @@ to hit it:
 - ARM verifies bearer tokens but does not run the browser login flow that
   obtains one — put a reverse proxy that does (oauth2-proxy, an ingress
   auth annotation) in front of it.
-- The `groups` claim is not mapped to ARM roles yet; RBAC resolves from
-  `roleTable`, so roles are assigned in ARM rather than inherited from
-  your IdP.
+- Roles are granted from IdP groups (`resolveRolesFromGroups`), but the
+  group→role rules themselves are tenant configuration in `roleTable`; there
+  is no admin UI for editing them yet.
 - No tenant-provisioning or first-admin flow: tenants and org trees come
   from the industry-profile seeds in
   [`packages/profiles`](packages/profiles), not from an admin UI.

@@ -21,6 +21,9 @@ export const armClaimsSchema = z.object({
   tenant_id: z.string(),
   email: z.string().optional(),
   scope: z.string().optional(),
+  /** IdP group memberships, carried through so `resolveRolesFromGroups` can
+   *  turn them into ARM roles. Absent when the IdP emits no groups claim. */
+  groups: z.array(z.string()).optional(),
   // For agent-issued tokens:
   agent_id: z.string().optional(),
   sub_account_id: z.string().optional(),
@@ -48,6 +51,9 @@ export interface OIDCVerifierConfig {
   fixedTenantId?: string;
   /** Claim carrying the user's email. Entra, Okta and Google all use `email`. */
   emailClaim?: string;
+  /** Claim carrying group memberships. Defaults to `groups`, which Entra,
+   *  Okta and Google all use; Auth0 rules typically namespace it. */
+  groupsClaim?: string;
 }
 
 /**
@@ -84,10 +90,11 @@ export async function verifyOIDCToken(
  */
 export function mapVerifiedPayload(
   payload: JWTPayload & Record<string, unknown>,
-  config: Pick<OIDCVerifierConfig, "tenantClaim" | "fixedTenantId" | "emailClaim">,
+  config: Pick<OIDCVerifierConfig, "tenantClaim" | "fixedTenantId" | "emailClaim" | "groupsClaim">,
 ): ARMClaims {
   const tenantClaim = config.tenantClaim ?? "tenant_id";
   const emailClaim = config.emailClaim ?? "email";
+  const groupsClaim = config.groupsClaim ?? "groups";
 
   const claimed = payload[tenantClaim];
   const tenantId =
@@ -103,12 +110,24 @@ export function mapVerifiedPayload(
 
   const email = payload[emailClaim];
   const scope = payload.scope;
+  // Same shape tolerance as `extractGroups`: array, comma-separated string,
+  // or absent. Carried through so roles can be resolved from it downstream.
+  const rawGroups = payload[groupsClaim];
+  const groups = Array.isArray(rawGroups)
+    ? rawGroups.map(String).filter((g) => g.length > 0)
+    : typeof rawGroups === "string" && rawGroups.length > 0
+      ? rawGroups
+          .split(",")
+          .map((g) => g.trim())
+          .filter((g) => g.length > 0)
+      : undefined;
 
   return armClaimsSchema.parse({
     sub: payload.sub,
     tenant_id: tenantId,
     ...(typeof email === "string" ? { email } : {}),
     ...(typeof scope === "string" ? { scope } : {}),
+    ...(groups && groups.length > 0 ? { groups } : {}),
     ...(typeof payload.agent_id === "string" ? { agent_id: payload.agent_id } : {}),
     ...(typeof payload.sub_account_id === "string"
       ? { sub_account_id: payload.sub_account_id }
@@ -148,6 +167,7 @@ export interface AuthEnv {
   ARM_OIDC_TENANT_CLAIM?: string | undefined;
   ARM_OIDC_TENANT_ID?: string | undefined;
   ARM_OIDC_EMAIL_CLAIM?: string | undefined;
+  ARM_OIDC_GROUPS_CLAIM?: string | undefined;
   ARM_ALLOW_DEV_IDENTITY?: boolean | undefined;
   NODE_ENV?: string | undefined;
 }
@@ -168,6 +188,7 @@ export function resolveAuthMode(env: AuthEnv): AuthMode {
         ...(env.ARM_OIDC_TENANT_CLAIM ? { tenantClaim: env.ARM_OIDC_TENANT_CLAIM } : {}),
         ...(env.ARM_OIDC_TENANT_ID ? { fixedTenantId: env.ARM_OIDC_TENANT_ID } : {}),
         ...(env.ARM_OIDC_EMAIL_CLAIM ? { emailClaim: env.ARM_OIDC_EMAIL_CLAIM } : {}),
+        ...(env.ARM_OIDC_GROUPS_CLAIM ? { groupsClaim: env.ARM_OIDC_GROUPS_CLAIM } : {}),
       },
     };
   }
@@ -457,19 +478,57 @@ export interface SCIMOperationResult {
 }
 
 /**
- * Provision a user via SCIM. Maps SCIM user attributes to ARM User records.
+ * Thrown by the identity surfaces that are declared but not built.
+ *
+ * These used to return plausible success values — `provisionSCIMUser`
+ * answered `{ success: true, resourceId: "user_1756..." }` without writing
+ * anything, and `verifySAMLAssertion` returned a fully-populated assertion
+ * for any input at all, including `"<saml/>"` or an empty string.
+ *
+ * For a provisioning stub that is merely misleading: an IdP pushing users at
+ * ARM would have been told every one was created. For an assertion verifier
+ * it is worse — a function named `verify…` that returns a valid identity for
+ * unvalidated input is an authentication bypass waiting for its first caller.
+ * Nothing called them, which is the only reason this was not exploitable.
+ *
+ * Throwing is the correct stub for a security primitive: a caller wired up
+ * early fails immediately and visibly, instead of silently authenticating
+ * everyone as `user@acme.com`.
  */
-export async function provisionSCIMUser(user: SCIMUser): Promise<SCIMOperationResult> {
-  // TODO(Phase 2): UPSERT INTO arm_user (email, org_id, tenant_id) ...
-  return { success: true, resourceId: `user_${Date.now()}` };
+export class NotImplementedError extends Error {
+  constructor(surface: string, detail: string) {
+    super(`${surface} is not implemented. ${detail}`);
+    this.name = "NotImplementedError";
+  }
+}
+
+/**
+ * Provision a user via SCIM. Maps SCIM user attributes to ARM User records.
+ *
+ * NOT IMPLEMENTED — see {@link NotImplementedError}. Writing this needs the
+ * DB layer, which this package may not import (it is layer-2: proto/config
+ * only, per AGENTS.md), so the real implementation belongs behind a SCIM
+ * route in the control plane that calls into `@arm/db`.
+ */
+export async function provisionSCIMUser(_user: SCIMUser): Promise<SCIMOperationResult> {
+  throw new NotImplementedError(
+    "SCIM user provisioning",
+    "ARM does not yet accept an IdP's provisioning push. Create users through the " +
+      "control plane, and see docs/sso-setup.md for what SSO does and does not cover.",
+  );
 }
 
 /**
  * Provision a group via SCIM. Maps SCIM group to ARM Role/Scope.
+ *
+ * NOT IMPLEMENTED — see {@link NotImplementedError}.
  */
-export async function provisionSCIMGroup(group: SCIMGroup): Promise<SCIMOperationResult> {
-  // TODO(Phase 2): UPSERT INTO arm_role WHERE name = group.displayName
-  return { success: true, resourceId: `group_${Date.now()}` };
+export async function provisionSCIMGroup(_group: SCIMGroup): Promise<SCIMOperationResult> {
+  throw new NotImplementedError(
+    "SCIM group provisioning",
+    "Group-to-role mapping is available synchronously via `resolveRolesFromGroups`, " +
+      "which maps an OIDC `groups` claim onto ARM roles without a provisioning push.",
+  );
 }
 
 /**
@@ -486,20 +545,28 @@ export interface SAMLAssertion {
 }
 
 /**
- * Verify a SAML assertion. In production: validates XML signature against
- * IdP certificate, checks NotOnOrAfter, extracts user attributes.
+ * Verify a SAML assertion against the IdP's certificate.
  *
- * Stub: returns the parsed assertion (no signature verification).
+ * NOT IMPLEMENTED, and this one throws rather than returning a stub for a
+ * specific reason: it used to answer any input — `"<saml/>"`, `""`, a
+ * shopping list — with a complete, valid-looking assertion for
+ * `user@acme.com` in the Engineering department. A `verify…` function whose
+ * failure mode is "returns a valid identity" is an authentication bypass, and
+ * the only thing standing between that and a real one was that nothing had
+ * wired it up yet.
+ *
+ * Doing this properly means XML canonicalisation, signature verification
+ * against the IdP certificate, NotOnOrAfter and Recipient checks, and replay
+ * protection — none of which should be hand-rolled. Use OIDC instead; it is
+ * implemented, tested and documented in docs/sso-setup.md, and every IdP ARM
+ * targets speaks it.
  */
-export function verifySAMLAssertion(assertionXml: string): SAMLAssertion {
-  // TODO(Phase 2): Parse + verify SAML XML signature using IdP cert.
-  return {
-    issuer: "https://acme.okta.com/app/exk123/sso/saml",
-    subjectNameId: "user@acme.com",
-    email: "user@acme.com",
-    attributes: { department: "Engineering", role: "engineer" },
-    notOnOrAfter: new Date(Date.now() + 3600000).toISOString(),
-  };
+export function verifySAMLAssertion(_assertionXml: string): SAMLAssertion {
+  throw new NotImplementedError(
+    "SAML assertion verification",
+    "Use OIDC (ARM_OIDC_ISSUER_URL / _JWKS_URL / _AUDIENCE) — see docs/sso-setup.md. " +
+      "Entra, Okta, Google and Auth0 all support it, and it is verified against a live JWKS.",
+  );
 }
 
 // ── Enterprise IdP Integration (spec §6.3, §8.1) ──────────────────────────
@@ -644,15 +711,105 @@ export function routeIdP(email: string, idps: IdPConfig[]): IdPConfig | null {
 export function mapIdPClaims(
   rawClaims: Record<string, unknown>,
   mapping: IdPClaimMapping,
+  /** Tenant these claims belong to. Previously hardcoded to "tn_demo", which
+   *  silently placed every mapped identity in the demo tenant — the same
+   *  tenant-resolution problem `verifyOIDCToken` solves with
+   *  ARM_OIDC_TENANT_ID / ARM_OIDC_TENANT_CLAIM. It is a required argument
+   *  now, because there is no safe default for "which company is this". */
+  tenantId: string,
 ): ARMClaims {
-  const email = String(rawClaims[mapping.emailClaim!] ?? "");
-  const tenant_id = "tn_demo"; // TODO: resolve from org context
+  const email = String(rawClaims[mapping.emailClaim] ?? "");
   return {
     sub: String(rawClaims.sub ?? rawClaims.oid ?? email),
-    tenant_id,
+    tenant_id: tenantId,
     email,
-    scope: mapping.departmentClaim ? String(rawClaims[mapping.departmentClaim!] ?? "") : undefined,
+    scope: mapping.departmentClaim ? String(rawClaims[mapping.departmentClaim] ?? "") : undefined,
   };
+}
+
+// ── IdP groups → ARM roles (D6/D7) ─────────────────────────────────────────
+
+/**
+ * One tenant-configured rule mapping an IdP group onto an ARM role.
+ *
+ * This is tenant configuration, read from `roleTable` by the caller — not
+ * something this package resolves. `@arm/auth` is layer-2 and may not import
+ * `@arm/db` (AGENTS.md), so the DB layer loads the rules and passes them in,
+ * exactly as it already does for `ResolvedRole[]`.
+ */
+export interface GroupRoleRule {
+  /** Group name or id as the IdP emits it, e.g. "arm-plant-7-admins". */
+  group: string;
+  /** ARM role to grant, with the permissions it carries. */
+  role: ResolvedRole;
+  /** Scope the role is granted at. Omitted = org root. */
+  scopeType?: ScopedRole["scopeType"];
+  scopeId?: string;
+}
+
+/**
+ * Reads the IdP's groups claim off a verified token.
+ *
+ * Providers disagree about the shape: Entra and Okta emit an array of
+ * strings, some Auth0 rules emit a single string, and a SAML-shaped claim can
+ * arrive comma-separated. All three are accepted rather than only the one
+ * that happens to be tested.
+ */
+export function extractGroups(
+  rawClaims: Record<string, unknown>,
+  mapping: IdPClaimMapping,
+): string[] {
+  if (!mapping.groupsClaim) return [];
+  const raw = rawClaims[mapping.groupsClaim];
+  if (Array.isArray(raw)) return raw.map(String).filter((g) => g.length > 0);
+  if (typeof raw === "string" && raw.length > 0) {
+    return raw
+      .split(",")
+      .map((g) => g.trim())
+      .filter((g) => g.length > 0);
+  }
+  return [];
+}
+
+/**
+ * Maps a user's IdP groups onto the ARM roles a tenant has bound to them.
+ *
+ * `PRESET_CLAIM_MAPPINGS` has recorded where each provider puts its groups
+ * claim since the scaffold, and nothing read it — a verified user got a
+ * subject, an email and a tenant, and their group memberships were dropped on
+ * the floor. This is the piece that makes an IdP group mean something in ARM.
+ *
+ * Two properties worth stating, because both are load-bearing:
+ *
+ *   - Group matching is case-insensitive. Entra returns group *names* with
+ *     whatever casing the directory has, and administrators do not reliably
+ *     reproduce it when typing a rule.
+ *   - An unmatched group grants nothing, silently. Membership of a group ARM
+ *     has no rule for is not an error — most directories are full of groups
+ *     that have nothing to do with ARM.
+ *
+ * Roles are deduplicated by name+scope, so a user in two groups bound to the
+ * same role gets it once.
+ */
+export function resolveRolesFromGroups(groups: string[], rules: GroupRoleRule[]): ScopedRole[] {
+  const byGroup = new Map<string, GroupRoleRule[]>();
+  for (const rule of rules) {
+    const key = rule.group.toLowerCase();
+    byGroup.set(key, [...(byGroup.get(key) ?? []), rule]);
+  }
+
+  const resolved = new Map<string, ScopedRole>();
+  for (const group of groups) {
+    for (const rule of byGroup.get(group.toLowerCase()) ?? []) {
+      const scopeType = rule.scopeType ?? "org";
+      const scopeId = rule.scopeId ?? "org";
+      const key = `${rule.role.name}@${scopeType}:${scopeId}`;
+      if (!resolved.has(key)) {
+        resolved.set(key, { ...rule.role, scopeType, scopeId });
+      }
+    }
+  }
+  return [...resolved.values()];
 }
 
 // ── Agent Identity Issuance Flow (spec §6.6, §8.1) ────────────────────────
