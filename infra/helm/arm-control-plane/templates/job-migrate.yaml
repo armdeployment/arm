@@ -1,0 +1,52 @@
+{{- if and .Values.migrate.enabled (not .Values.fixtureMode) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "arm-control-plane.fullname" . }}-migrate
+  labels:
+    {{- include "arm-control-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: arm-migrate
+    app.kubernetes.io/component: migrate
+  annotations:
+    # Runs BEFORE the apps on both install and upgrade, and blocks the release
+    # if it fails. That ordering is the whole point: an app rolled out against
+    # a schema that has not been migrated fails at query time, per request,
+    # rather than once and visibly here.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    # Kept after success so `kubectl logs job/...` still shows what ran. The
+    # next release deletes it before creating its own.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migrate.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "arm-control-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.migrate.image.repository }}:{{ .Values.migrate.image.tag }}"
+          imagePullPolicy: {{ .Values.migrate.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          env:
+            {{- include "arm-control-plane.databaseEnv" . | nindent 12 }}
+            - name: ARM_SEED_ON_MIGRATE
+              # Seeding writes the demo tenant's fixtures. Fine for a sandbox,
+              # wrong for anything holding real data — hence off by default
+              # and separate from the migration itself.
+              value: {{ if .Values.migrate.seed }}"1"{{ else }}"0"{{ end }}
+          resources:
+            {{- toYaml .Values.migrate.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -20,6 +20,7 @@ a reverse proxy that does in front of it.
 | `compose/docker-compose.yml`         | **Works** | Just the two data-plane services, built from source       |
 | `docker/*.Dockerfile`                | **Works** | Images the compose files build                            |
 | `helm/arm-data-plane`                | **Works** | Installs proxy + gateway with Services, HPA, PVC, ingress |
+| `helm/arm-control-plane`             | **Works** | Dashboard + onboarding + the schema migration job         |
 | `terraform/`                         | **Works** | IRSA role + the Helm release; expects an existing cluster |
 
 ## Local development
@@ -98,6 +99,59 @@ Two honest caveats:
   past the first would have failed to attach. The meter-agent is one replica
   with a `Recreate` strategy for exactly that reason.
 
+## Control-plane chart
+
+```bash
+helm install arm-control-plane infra/helm/arm-control-plane \
+  --namespace arm --create-namespace
+```
+
+That is fixture mode: two Deployments (the manager dashboard on 3100 and the
+employee onboarding app on 3300), their Services, and a ServiceAccount. No
+database, nothing migrated — the same zero-configuration first look the repo
+defaults to everywhere else.
+
+For real data, point it at a Secret holding the two connection strings:
+
+```bash
+kubectl -n arm create secret generic arm-db \
+  --from-literal=DATABASE_URL='postgres://…' \
+  --from-literal=CLICKHOUSE_URL='http://…'
+
+helm install arm-control-plane infra/helm/arm-control-plane \
+  --namespace arm --create-namespace \
+  --set fixtureMode=false --set database.secretName=arm-db
+```
+
+The two apps are separate Deployments on purpose. Onboarding also serves
+**public** setup-token redemption — a brand-new machine presents the signed
+token as its own credential — so it sits at a different trust level than the
+dashboard and is often exposed to a different network.
+
+**The migration Job closes the "applied by hand" gap.** With
+`fixtureMode=false` it runs as a `pre-install,pre-upgrade` hook, so the schema
+is applied before the apps roll out and a failure blocks the release rather
+than surfacing as per-request errors afterwards. It runs the same scripts the
+root README documents for local development, because a migration path that
+diverges from the one developers actually run is one nobody has tested. Its
+entrypoint is `set -e` and refuses to start with either URL missing — a hook
+that half-migrates and exits 0 is worse than no hook. `migrate.seed=true` adds
+the demo tenant's fixtures; leave it off for anything holding real data.
+
+Identity is passed through to both apps, and the images set
+`NODE_ENV=production`, so with no `oidc.*` configured they **refuse** every
+authenticated request rather than serving one shared identity.
+`NOTES.txt` says so at install time, along with warnings for the two secrets
+that quietly break things when missing: an unset setup-token secret means
+anyone can mint an agent install, and an unset ingest token means the data
+plane's metering is rejected and spend silently reads zero.
+
+Same caveat as the data-plane chart: verified by rendering, not by running.
+`helm lint` passes and ten values permutations render manifests that pass
+`kubeconform -strict`, but nothing has been applied to a live cluster because
+the images are not published anywhere. The migration entrypoint itself _has_
+been run for real, against local Postgres and ClickHouse.
+
 ## Terraform
 
 A module, not a root module — no provider blocks, so configure `aws` and
@@ -144,13 +198,9 @@ live cluster.
 
 Being explicit, so nobody discovers these halfway through a rollout:
 
-- **No control-plane deployment manifests.** Everything here targets the
-  data plane. The control plane runs from `infra/docker/control-plane.Dockerfile`
-  in the sandbox, but has no chart or production manifest. Note that image
-  sets `NODE_ENV=production`, so without OIDC configured it refuses every
-  authenticated request by design — see [`../docs/sso-setup.md`](../docs/sso-setup.md).
 - **No published images.** Nothing pushes `arm/closed-proxy`,
-  `arm/open-gateway` or `arm/meter-agent` to a registry. Build them from
+  `arm/open-gateway`, `arm/meter-agent`, `arm/control-plane-web`,
+  `arm/onboarding` or `arm/migrate` to a registry. Build them from
   `docker/` yourself and point `image.repository` at wherever you put them.
 - **Proxy quota is per-replica.** Consumption is written through to disk so a
   restart no longer resets it, but the file is process-local. With the default
@@ -161,5 +211,6 @@ Being explicit, so nobody discovers these halfway through a rollout:
   variables. See [`.env.example`](../.env.example).
 - **No tenant provisioning.** Tenants and org trees come from the seeds in
   `packages/profiles`; there is no admin flow that creates one.
-- **No migration runner in the deploy path.** Schema is applied by the
-  scripts the root README documents, by hand.
+- **No automatic rollback.** The migration Job applies schema forward only;
+  `drizzle-kit push` has no down-migration, so recovering from a bad schema
+  change means restoring the database.

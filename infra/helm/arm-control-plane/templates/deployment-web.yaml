@@ -1,0 +1,67 @@
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "arm-control-plane.fullname" . }}-web
+  labels:
+    {{- include "arm-control-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: arm-web
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "web") | nindent 8 }}
+        app.kubernetes.io/component: dashboard
+    spec:
+      serviceAccountName: {{ include "arm-control-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.web.port }}"
+            {{- include "arm-control-plane.appEnv" . | nindent 12 }}
+          livenessProbe:
+            # The dashboard root renders without a database in either mode, so
+            # it is a real liveness signal rather than a database health check
+            # in disguise — a Postgres outage should not restart every pod.
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            # readOnlyRootFilesystem is on and Next.js writes its server-side
+            # cache under .next/cache at runtime.
+            - name: next-cache
+              mountPath: /app/apps/control-plane/web/.next/cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: next-cache
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,67 @@
+{{- if .Values.onboarding.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "arm-control-plane.fullname" . }}-onboarding
+  labels:
+    {{- include "arm-control-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: arm-onboarding
+    app.kubernetes.io/component: onboarding
+spec:
+  replicas: {{ .Values.onboarding.replicas }}
+  selector:
+    matchLabels:
+      {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "onboarding") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "onboarding") | nindent 8 }}
+        app.kubernetes.io/component: onboarding
+    spec:
+      serviceAccountName: {{ include "arm-control-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: onboarding
+          image: "{{ .Values.onboarding.image.repository }}:{{ .Values.onboarding.image.tag }}"
+          imagePullPolicy: {{ .Values.onboarding.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.onboarding.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.onboarding.port }}"
+            {{- include "arm-control-plane.appEnv" . | nindent 12 }}
+            {{- if .Values.web.enabled }}
+            # The onboarding flow links employees back to the dashboard.
+            - name: ARM_CONTROL_PLANE_URL
+              value: "http://{{ include "arm-control-plane.fullname" . }}-web:{{ .Values.service.webPort }}"
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.onboarding.resources | nindent 12 }}
+          volumeMounts:
+            - name: next-cache
+              mountPath: /app/apps/onboarding/.next/cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: next-cache
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

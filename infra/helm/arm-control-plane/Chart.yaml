@@ -1,0 +1,12 @@
+apiVersion: v2
+name: arm-control-plane
+description: ARM Control Plane — manager dashboard, employee onboarding, and the schema migration job
+type: application
+version: 0.0.0
+appVersion: "0.0.0"
+keywords:
+  - llm
+  - ai-agent
+  - governance
+  - dashboard
+  - onboarding

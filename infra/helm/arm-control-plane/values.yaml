@@ -1,0 +1,154 @@
+# ARM Control Plane Helm Chart — Values
+#
+# infra/README listed "no control-plane deployment manifests" as a known gap:
+# everything under infra/ targeted the data plane, and the control plane ran
+# only from a Dockerfile in the sandbox. This is that chart.
+#
+# Two apps, deliberately separate Deployments and Services:
+#
+#   web         the manager dashboard (3100). Internal.
+#   onboarding  the employee questionnaire and setup-token redemption (3300).
+#               Redemption is PUBLIC by design — a brand-new machine presents
+#               the signed token as its own credential — so this app sits at a
+#               different trust level and often on a different network.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Data mode ──
+# true  = in-memory fixtures. No database, nothing to migrate. What a first
+#         look should use, and what the whole repo defaults to.
+# false = real Postgres + ClickHouse. Requires `database` below, and runs the
+#         migration Job before the apps start.
+fixtureMode: true
+
+# ── Manager dashboard ──
+web:
+  enabled: true
+  replicas: 2
+  image:
+    repository: arm/control-plane-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3100
+  resources:
+    requests: { cpu: "250m", memory: "512Mi" }
+    limits: { cpu: "1000m", memory: "1Gi" }
+
+# ── Employee onboarding ──
+onboarding:
+  enabled: true
+  replicas: 2
+  image:
+    repository: arm/onboarding
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3300
+  resources:
+    requests: { cpu: "250m", memory: "512Mi" }
+    limits: { cpu: "1000m", memory: "1Gi" }
+
+# ── Databases ──
+# Connection strings carry credentials, so they come from a Secret you create
+# — this chart never holds them. Required when fixtureMode is false; the
+# templates fail the install with a clear message rather than starting an app
+# that will throw on its first query.
+database:
+  # Secret holding the two URLs.
+  secretName: ""
+  postgresUrlKey: DATABASE_URL
+  clickhouseUrlKey: CLICKHOUSE_URL
+
+# ── Schema migration ──
+# Runs as a Helm pre-install/pre-upgrade hook when fixtureMode is false, using
+# the same scripts the root README documents for local development. A
+# migration path that diverges from the one developers actually run is one
+# nobody has tested.
+migrate:
+  enabled: true
+  image:
+    repository: arm/migrate
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Writes the demo tenant's catalog/library/adoption fixtures. Leave false
+  # for anything with real data in it.
+  seed: false
+  backoffLimit: 2
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits: { cpu: "500m", memory: "512Mi" }
+
+# ── Identity (docs/sso-setup.md) ──
+# With none of issuer/jwks/audience set, both apps REFUSE every authenticated
+# request under NODE_ENV=production rather than silently serving one shared
+# identity. The images set NODE_ENV=production, so leaving this empty means a
+# deliberately locked deployment — NOTES.txt says so at install time.
+oidc:
+  issuerUrl: ""
+  jwksUrl: ""
+  audience: ""
+  # No IdP mints a tenant_id claim. One deployment per company sets this.
+  tenantId: ""
+  tenantClaim: ""
+  emailClaim: ""
+  groupsClaim: ""
+  # Opt in to the shared development identity in production. Kiosk demos only.
+  allowDevIdentity: false
+
+# ── Secrets the apps read (created by you, referenced here) ──
+secrets:
+  # Signs employee setup tokens. The built-in fallback is a well-known dev
+  # string, so an unset value in a reachable deployment means anyone can mint
+  # a setup token.
+  setupToken:
+    secretName: ""
+    key: ARM_SETUP_TOKEN_SECRET
+  # Shared secret the data plane presents to /api/ingest/metering. Must match
+  # the value the arm-data-plane chart gives its meter-agent.
+  ingestToken:
+    secretName: ""
+    key: ARM_INGEST_TOKEN
+
+# ── Public read-only demo mode ──
+# Every mutation is rolled back after it runs, so a shared deployment cannot
+# be vandalised. Covers fixture-mode mutations only — it does NOT roll back
+# writes against a real Postgres, so do not rely on it with fixtureMode=false.
+demoMode: false
+
+# ── Service ──
+service:
+  type: ClusterIP
+  webPort: 3100
+  onboardingPort: 3300
+
+# ── Ingress ──
+# hosts entries take the shape:
+#   - host: arm.example.com
+#     paths:
+#       - path: /
+#         pathType: Prefix
+#         service: web        # "web" | "onboarding"
+#         port: 3100
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]

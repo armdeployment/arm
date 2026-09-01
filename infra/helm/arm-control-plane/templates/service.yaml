@@ -1,0 +1,40 @@
+{{/* Each block opens its own `---`; valid on the first document too, which
+avoids the "emit a separator only if something earlier rendered" logic. */}}
+{{- if .Values.web.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arm-control-plane.fullname" . }}-web
+  labels:
+    {{- include "arm-control-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.webPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "web") | nindent 4 }}
+{{- end }}
+{{- if .Values.onboarding.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arm-control-plane.fullname" . }}-onboarding
+  labels:
+    {{- include "arm-control-plane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: onboarding
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.onboardingPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "arm-control-plane.selectorLabels" (dict "ctx" . "component" "onboarding") | nindent 4 }}
+{{- end }}

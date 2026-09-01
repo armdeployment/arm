@@ -1,0 +1,73 @@
+ARM control plane {{ .Chart.AppVersion }} installed as {{ .Release.Name }} in {{ .Release.Namespace }}.
+
+What is running:
+{{ if .Values.web.enabled }}  dashboard    {{ include "arm-control-plane.fullname" . }}-web        :{{ .Values.service.webPort }}  ({{ .Values.web.replicas }} replicas)
+{{ end }}{{ if .Values.onboarding.enabled }}  onboarding   {{ include "arm-control-plane.fullname" . }}-onboarding :{{ .Values.service.onboardingPort }}  ({{ .Values.onboarding.replicas }} replicas)
+{{ end }}
+Data mode: {{ if .Values.fixtureMode }}FIXTURES (in-memory, no database){{ else }}REAL (Postgres + ClickHouse){{ end }}
+
+Have a look:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "arm-control-plane.fullname" . }}-web {{ .Values.service.webPort }}:{{ .Values.service.webPort }}
+  open http://localhost:{{ .Values.service.webPort }}
+
+{{- if not (and .Values.oidc.issuerUrl .Values.oidc.jwksUrl .Values.oidc.audience) }}
+{{- if .Values.oidc.allowDevIdentity }}
+
+WARNING — oidc.allowDevIdentity is set with no IdP configured. EVERY caller is
+authenticated as the same fixed development user in the same fixed tenant.
+That is a kiosk demo, not a deployment. Configure oidc.* instead:
+docs/sso-setup.md.
+{{- else }}
+
+NOTE — no IdP is configured, and these images set NODE_ENV=production, so both
+apps will REFUSE every authenticated request. That is deliberate: the
+alternative is silently serving one shared identity. The dashboard will load
+and every data panel will return 401 until you set oidc.issuerUrl, oidc.jwksUrl
+and oidc.audience — see docs/sso-setup.md, and `make mock-idp` to test the
+wiring without an IdP tenant.
+{{- end }}
+{{- end }}
+
+{{- if and (not .Values.fixtureMode) .Values.oidc.issuerUrl (not .Values.oidc.tenantId) }}
+
+WARNING — OIDC is configured but oidc.tenantId is not. No Okta, Entra or
+Google token carries a tenant_id claim, and ARM scopes every query by tenant,
+so verified users will be rejected with "could not be resolved to a tenant".
+Set oidc.tenantId, or oidc.tenantClaim if your IdP puts it in a custom claim.
+{{- end }}
+
+{{- if not .Values.secrets.setupToken.secretName }}
+
+WARNING — no secrets.setupToken.secretName. Setup tokens will be signed with
+the built-in well-known development string, so anyone can mint one and redeem
+an agent install. Create the secret and point at it:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic arm-setup-token \
+    --from-literal=ARM_SETUP_TOKEN_SECRET="$(openssl rand -base64 48)"
+{{- end }}
+
+{{- if not .Values.secrets.ingestToken.secretName }}
+
+NOTE — no secrets.ingestToken.secretName, so /api/ingest/metering will refuse
+the data plane's metering batches under NODE_ENV=production. Spend will show
+as zero while events pile up in the meter-agent's buffer. Use the SAME secret
+value here and in the arm-data-plane chart's meterAgent.ingestTokenSecret.
+{{- end }}
+
+{{- if and .Values.demoMode (not .Values.fixtureMode) }}
+
+WARNING — demoMode with fixtureMode=false. ARM_DEMO rolls back fixture-mode
+mutations only; it does NOT roll back writes against a real Postgres, so this
+deployment is not read-only despite looking like it is.
+{{- end }}
+
+{{- if .Values.fixtureMode }}
+
+Fixture mode: no database, nothing migrated, and every panel serves in-memory
+data. Set fixtureMode=false with a database Secret to run for real — the
+migration Job then applies the schema before the apps roll out.
+{{- end }}
+
+The data plane is a separate chart: infra/helm/arm-data-plane. Both must agree
+on the ingest token, or metering never lands.
