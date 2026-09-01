@@ -15,6 +15,7 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import type { ARMClaims } from "@arm/auth";
 import { initTelemetry, getHealth, type ServiceHealth } from "@arm/config";
 import { catalogRouter } from "./catalog-router.js";
@@ -1184,6 +1185,10 @@ const AGENTS: AgentFixture[] = [
   },
 ];
 
+// ARM_DEMO rolls back agents.create, so a public demo cannot be filled with
+// junk agents by the first visitor.
+registerDemoArray(AGENTS);
+
 // ── Routers ────────────────────────────────────────────────────────────────
 
 interface TreeNode {
@@ -1337,6 +1342,108 @@ const FIXTURE_ACCESS_REQUESTS: FixtureAccessRequest[] = [
 // ARM_DEMO rolls every mutation back, so a public demo cannot be emptied of
 // approvals by the first visitor who clicks the button.
 registerDemoArray(FIXTURE_ACCESS_REQUESTS);
+
+/**
+ * Role grants — who holds which role, and where.
+ *
+ * `roles.grant` and `roles.revoke` used to return `status: "granted"` and
+ * change nothing, and there was no store for them to change: `roles.list`
+ * returns the available presets, so nothing anywhere showed who actually
+ * held one. An admin could grant a role, see success, and find no trace of it.
+ */
+interface RoleGrant {
+  userId: string;
+  roleKey: string;
+  scopeType: string;
+  scopeId: string;
+  grantedAt: string;
+  grantedBy: string;
+}
+
+const ROLE_GRANTS: RoleGrant[] = [];
+registerDemoArray(ROLE_GRANTS);
+
+/** Real-mode grant: resolve the role for this tenant+scope, then link it. */
+async function grantRoleInDb(
+  tenantId: string,
+  userId: string,
+  roleKey: string,
+  scopeId: string,
+): Promise<void> {
+  const { getDb, roleTable, userRoleTable } = await import("@arm/db");
+  const { eq, and } = await import("drizzle-orm");
+  const db = getDb();
+  const [role] = await db
+    .select({ id: roleTable.id })
+    .from(roleTable)
+    .where(
+      and(
+        eq(roleTable.tenantId, tenantId),
+        eq(roleTable.presetKey, roleKey),
+        eq(roleTable.scopeId, scopeId),
+      ),
+    )
+    .limit(1);
+
+  if (!role) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `No role '${roleKey}' defined at scope '${scopeId}' for this tenant.`,
+    });
+  }
+  // `user_role_pk` is unique on (user_id, role_id), so a double-click is a
+  // no-op rather than a duplicate row or an error.
+  await db
+    .insert(userRoleTable)
+    .values({ userId, roleId: role.id, tenantId })
+    .onConflictDoNothing();
+}
+
+/** Real-mode revoke. Reports when the grant was not there to remove. */
+async function revokeRoleInDb(
+  tenantId: string,
+  userId: string,
+  roleKey: string,
+  scopeId: string,
+): Promise<void> {
+  const { getDb, roleTable, userRoleTable } = await import("@arm/db");
+  const { eq, and, inArray } = await import("drizzle-orm");
+  const db = getDb();
+  const roles = await db
+    .select({ id: roleTable.id })
+    .from(roleTable)
+    .where(
+      and(
+        eq(roleTable.tenantId, tenantId),
+        eq(roleTable.presetKey, roleKey),
+        eq(roleTable.scopeId, scopeId),
+      ),
+    );
+
+  const removed =
+    roles.length === 0
+      ? []
+      : await db
+          .delete(userRoleTable)
+          .where(
+            and(
+              eq(userRoleTable.tenantId, tenantId),
+              eq(userRoleTable.userId, userId),
+              inArray(
+                userRoleTable.roleId,
+                roles.map((r) => r.id),
+              ),
+            ),
+          )
+          .returning({ roleId: userRoleTable.roleId });
+
+  if (removed.length === 0) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `User '${userId}' does not hold '${roleKey}' at scope '${scopeId}'.`,
+    });
+  }
+}
 
 /**
  * Records a decision on an access request.
@@ -1710,6 +1817,16 @@ const rolesRouter = t.router({
     };
   }),
 
+  /** Who currently holds which role, and where. */
+  grants: tenantProcedure
+    .input(z.object({ userId: z.string().optional() }).default({}))
+    .query(async (opts) => {
+      const grants = opts.input.userId
+        ? ROLE_GRANTS.filter((g) => g.userId === opts.input.userId)
+        : ROLE_GRANTS;
+      return { tenantId: opts.ctx.tenantId!, grants: [...grants] };
+    }),
+
   /** Grant a role to a user at a scope. */
   grant: tenantProcedure
     .input(
@@ -1721,10 +1838,37 @@ const rolesRouter = t.router({
       }),
     )
     .mutation(async (opts) => {
+      const { userId, roleKey, scopeType, scopeId } = opts.input;
+      if (!ROLE_PRESETS.some((r) => r.key === roleKey)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Unknown role '${roleKey}'. See roles.list for the roles this tenant has.`,
+        });
+      }
+      if (!isFixtureMode()) {
+        await grantRoleInDb(opts.ctx.tenantId!, userId, roleKey, scopeId);
+      } else {
+        const existing = ROLE_GRANTS.find(
+          (g) => g.userId === userId && g.roleKey === roleKey && g.scopeId === scopeId,
+        );
+        // Idempotent rather than an error: re-granting is what a UI does when
+        // someone double-clicks, and it should not produce a second row that
+        // then needs revoking twice.
+        if (!existing) {
+          ROLE_GRANTS.push({
+            userId,
+            roleKey,
+            scopeType,
+            scopeId,
+            grantedAt: new Date().toISOString(),
+            grantedBy: opts.ctx.claims!.sub,
+          });
+        }
+      }
       return {
         tenantId: opts.ctx.tenantId!,
         status: "granted" as const,
-        detail: `Role '${opts.input.roleKey}' granted to user '${opts.input.userId}' at ${opts.input.scopeType}:${opts.input.scopeId}`,
+        detail: `Role '${roleKey}' granted to user '${userId}' at ${scopeType}:${scopeId}`,
       };
     }),
 
@@ -1738,10 +1882,27 @@ const rolesRouter = t.router({
       }),
     )
     .mutation(async (opts) => {
+      const { userId, roleKey, scopeId } = opts.input;
+      if (!isFixtureMode()) {
+        await revokeRoleInDb(opts.ctx.tenantId!, userId, roleKey, scopeId);
+      } else {
+        const index = ROLE_GRANTS.findIndex(
+          (g) => g.userId === userId && g.roleKey === roleKey && g.scopeId === scopeId,
+        );
+        // Revoking something never granted is reported, not ignored. An admin
+        // who mistypes a scope should not be told the permission is gone.
+        if (index === -1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `User '${userId}' does not hold '${roleKey}' at scope '${scopeId}'.`,
+          });
+        }
+        ROLE_GRANTS.splice(index, 1);
+      }
       return {
         tenantId: opts.ctx.tenantId!,
         status: "revoked" as const,
-        detail: `Role '${opts.input.roleKey}' revoked from user '${opts.input.userId}' at scope '${opts.input.scopeId}'`,
+        detail: `Role '${roleKey}' revoked from user '${userId}' at scope '${scopeId}'`,
       };
     }),
 
@@ -1995,14 +2156,75 @@ const agentsRouter = t.router({
       z.object({
         name: z.string().min(1),
         scopeType: z.enum(["org", "department", "group", "team", "workstream"]),
-        scopeId: z.string().uuid(),
-        stakeholderUserId: z.string().uuid(),
+        // NOT `.uuid()`. The fixture org tree uses readable ids ("org_acme",
+        // "dept_manufacturing") and every other scope-taking procedure here
+        // accepts them, so requiring a UUID made this endpoint unreachable in
+        // the mode it is actually used in — every call failed input
+        // validation before reaching the resolver. Real mode is a UUID and is
+        // enforced where it can be: by the foreign key on insert.
+        scopeId: z.string().min(1),
+        stakeholderUserId: z.string().min(1),
         type: z.string(),
         priorityTier: z.enum(["critical", "standard", "background"]).default("standard"),
       }),
     )
     .mutation(async (opts) => {
-      return { id: "agt_new", tenantId: opts.ctx.tenantId!, ...opts.input };
+      // Returned a hardcoded `id: "agt_new"` for an agent that was never
+      // created, so the caller got an id it could not look up, and two
+      // creates returned the same one. Real mode inserts; fixture mode
+      // registers it in the in-memory list so the registry actually shows it.
+      if (!isFixtureMode()) {
+        // Deliberately refused rather than half-written. Creating an agent for
+        // real is not one INSERT:
+        //
+        //   - `agent` has no `name` column, so the display name this input
+        //     takes has nowhere to go. Writing the row anyway would silently
+        //     drop it and produce agents the registry shows as unnamed.
+        //   - Invariant 2 pairs every Agent 1:1 with a SubAccount, whose
+        //     `api_key_hash` is NOT NULL — so creating an agent means minting
+        //     a credential, which belongs with `bootstrapAgent` in @arm/auth
+        //     rather than duplicated here.
+        //
+        // An honest 501 beats a row that looks created and is not usable.
+        throw new TRPCError({
+          code: "NOT_IMPLEMENTED",
+          message:
+            "Creating an agent against a real database is not implemented: `agent` has no name " +
+            "column, and Invariant 2 requires a paired SubAccount with a minted credential. " +
+            "Use the onboarding flow (setup token -> redemption), which provisions both.",
+        });
+      }
+
+      const scope = SCOPES.find((n) => n.id === opts.input.scopeId);
+      if (!scope) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Unknown scope '${opts.input.scopeId}'. An agent must attach to an org-tree node.`,
+        });
+      }
+      // `workstream` is accepted as input but the fixture tree only models
+      // org/department/group/team, so it is stored at its nearest modelled
+      // level rather than silently creating an agent nothing can find.
+      const scopeType = (
+        opts.input.scopeType === "workstream" ? "team" : opts.input.scopeType
+      ) as AgentFixture["scopeType"];
+      const agent: AgentFixture = {
+        id: `agt_${randomUUID().slice(0, 8)}`,
+        name: opts.input.name,
+        tier: opts.input.priorityTier,
+        stakeholder: opts.input.stakeholderUserId,
+        scopeType,
+        scopeId: opts.input.scopeId,
+        scopeLabel: scope.name,
+        // A brand-new agent has spent nothing and done nothing; `unknown` is
+        // first-class in D7 and stored as-is rather than guessed.
+        monthlySpend: 0,
+        status: "active",
+        taskType: "unknown",
+        classificationClearance: "internal",
+      };
+      AGENTS.push(agent);
+      return { id: agent.id, tenantId: opts.ctx.tenantId!, ...opts.input };
     }),
 });
 
