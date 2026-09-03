@@ -5,8 +5,13 @@
 # State-dependent (always): secret scan + CI sync
 echo "▶ ARM pre-push gate"
 echo "  [state] running guardrails (secret scan, ci-sync, tenant-isolation, …)"
-pnpm --silent guardrails 2>&1 | tail -8
-if [ $? -ne 0 ]; then
+
+# Capture, don't pipe. `cmd | tail` exits with tail's status, so the old
+# `pnpm guardrails | tail -8` followed by `if [ $? -ne 0 ]` read 0 on every
+# run: the gate printed ✓ unconditionally and never blocked a push. Same
+# masking as the `|| true` removed in a4c3a2d.
+if ! out=$(pnpm --silent guardrails 2>&1); then
+  echo "$out" | tail -30
   echo "✗ pre-push gate FAILED — guardrails did not pass"
   exit 1
 fi
