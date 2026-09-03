@@ -83,7 +83,7 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       PROXY_PORT: "8787"
     ports:
-      - "8787:8787" # ARM Proxy (accessible from host for monitoring)
+      - "127.0.0.1:8787:8787" # ARM Proxy (host-only; the sim API key is in the repo)
 
   # ── Employee Workstations ───────────────────────────────────────────────
   #  Each container = one employee's computer running a coding agent

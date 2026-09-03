@@ -10,12 +10,16 @@
 #   docker compose -f infra/compose/docker-compose.dev-db.yml up -d
 #   DATABASE_URL=postgres://arm:arm_dev_password@localhost:5432/arm
 #   CLICKHOUSE_URL=http://arm:arm_dev_password@localhost:8123
+#
+# Ports are bound to 127.0.0.1, not Docker's default 0.0.0.0: the password
+# below is committed to a public repo, so an unqualified bind would put a
+# known-credentialed database on every network this machine joins.
 
 services:
   postgres-dev:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: arm
       POSTGRES_PASSWORD: arm_dev_password
@@ -30,7 +34,7 @@ services:
   clickhouse-dev:
     image: clickhouse/clickhouse-server:latest
     ports:
-      - "8123:8123"
+      - "127.0.0.1:8123:8123"
     environment:
       CLICKHOUSE_USER: arm
       CLICKHOUSE_PASSWORD: arm_dev_password
