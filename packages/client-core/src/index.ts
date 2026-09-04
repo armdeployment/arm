@@ -59,6 +59,15 @@ export type {
 export { GUIDE_LIBRARY, getConnectionGuide, renderGuideSteps } from "./connections.js";
 export type { ConnectionMethod, ConnectionGuide, ConnectionsManifestEntry } from "./connections.js";
 
+export {
+  readInstalledState,
+  writeInstalledState,
+  installedStatePath,
+  mergeInstalled,
+} from "./installed-state.js";
+export type { InstalledComponentRecord, InstalledState } from "./installed-state.js";
+export { runUpdate, checkIn } from "./update.js";
+export type { UpdateArgs, UpdateResult } from "./update.js";
 export { runSetup, verifyMeteredRoundTrip, collectConnectionsNeeded, budgetHint } from "./setup.js";
 export type { SetupArgs, SetupResult } from "./setup.js";
 

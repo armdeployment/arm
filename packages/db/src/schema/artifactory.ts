@@ -271,3 +271,53 @@ export const discoveryCandidateTable = pgTable(
     ),
   ],
 );
+
+/**
+ * ComponentInstall — what a given agent install actually has on disk, and at
+ * which version. The control plane's answer to "who is still on the old
+ * skill?", and the state an update check diffs against.
+ *
+ * Keyed by `sub_account_id` rather than `agent_id` because that is the
+ * identity the client already holds (it is in the rendered opencode config
+ * headers) and Agent ↔ SubAccount is 1:1 (Invariant 2), so nothing is lost.
+ *
+ * Deliberately NOT derived from the `component_pull_event` stream: a pull is
+ * not an install (the bytes can fail to land), the events carry no agent
+ * identity, and an append-only log answers "what happened" where an operator
+ * needs "what is true now". One row per (sub_account, component); the
+ * client's check-in replaces its whole set, so an uninstall converges too.
+ */
+export const componentInstallTable = pgTable(
+  "component_install",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenantTable.id),
+    subAccountId: uuid("sub_account_id").notNull(),
+    componentId: uuid("component_id")
+      .notNull()
+      .references(() => componentTable.id),
+    /** Exact installed version, e.g. "1.2.0" — never a range. */
+    version: text("version").notNull(),
+    /** "sha256:<hex>", or NULL for callable components that ship no blob. */
+    blobDigest: text("blob_digest"),
+    /** Absolute path on the client; NULL for callable components. Useful for
+     *  support ("where did it land?"), never trusted for anything else. */
+    installedPath: text("installed_path"),
+    /** ARM client version that reported this — lets an operator find machines
+     *  running an installer too old to take a given update. */
+    clientVersion: text("client_version").notNull().default(""),
+    installedAt: timestamp("installed_at", { withTimezone: true }).notNull(),
+    /** Last time the client confirmed this row on check-in. A row whose
+     *  `lastSeenAt` is stale means a machine stopped reporting, which is a
+     *  different problem from a machine being out of date. */
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("component_install_sub_account_id_component_id_uq").on(
+      table.subAccountId,
+      table.componentId,
+    ),
+  ],
+);

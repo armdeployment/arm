@@ -58,6 +58,10 @@ import {
   classifyPainPoints,
   startInstallWizardServer,
   openInBrowser,
+  runUpdate,
+  readInstalledState,
+  installedStatePath,
+  resolveAgentHome,
   ARM_ERROR_CODES,
   ARM_ERROR_FIXES,
   ArmClientError,
@@ -68,6 +72,7 @@ import {
   type DetectedTool,
   type PainPointTag,
   type GuiServerHandle,
+  type UpdateResult,
 } from "@arm/client-core";
 
 /** Default data-plane proxy address when --proxy-url is omitted. */
@@ -525,8 +530,114 @@ export interface DoctorCheck {
  * always prints the full failure-code reference so a user can self-serve
  * from a plain-language fix.
  */
+// ── `arm list` / `arm update` ──────────────────────────────────────────────
+
+export interface UpdateFlags {
+  agentHome: string;
+  controlPlaneUrl: string;
+  dataPlaneUrl?: string;
+  token: string;
+  dryRun: boolean;
+}
+
+export function parseUpdateFlags(argv: string[]): UpdateFlags {
+  const values: Record<string, string> = {};
+  let dryRun = false;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+    if (arg.startsWith("--")) {
+      const next = argv[i + 1];
+      if (next !== undefined && !next.startsWith("--")) {
+        values[arg] = next;
+        i++;
+      }
+    }
+  }
+  return {
+    agentHome: resolveAgentHome(values["--agent-home"] ?? process.env["ARM_AGENT_HOME"]),
+    controlPlaneUrl:
+      values["--tenant-url"] ?? process.env["ARM_CONTROL_PLANE_URL"] ?? "http://localhost:3300",
+    ...((values["--data-plane-url"] ?? process.env["ARM_DATA_PLANE_URL"])
+      ? { dataPlaneUrl: values["--data-plane-url"] ?? process.env["ARM_DATA_PLANE_URL"]! }
+      : {}),
+    token: values["--token"] ?? process.env["ARM_AGENT_TOKEN"] ?? "",
+    dryRun,
+  };
+}
+
+export async function runUpdateCommand(flags: UpdateFlags): Promise<UpdateResult> {
+  return runUpdate({
+    agentHome: flags.agentHome,
+    controlPlaneUrl: flags.controlPlaneUrl,
+    token: flags.token,
+    ...(flags.dataPlaneUrl !== undefined ? { dataPlaneUrl: flags.dataPlaneUrl } : {}),
+    dryRun: flags.dryRun,
+  });
+}
+
+export function printUpdateSummary(result: UpdateResult, dryRun: boolean): void {
+  if (result.checkedAt === null) {
+    console.log("Nothing installed yet — run `arm setup` first.");
+    return;
+  }
+  if (result.available.length === 0) {
+    console.log("Everything is up to date.");
+  } else if (dryRun) {
+    console.log(`${result.available.length} update(s) available:`);
+    for (const u of result.available) {
+      console.log(
+        `  ${u.slug}  ${u.from_version} → ${u.to_version}${u.changelog ? `  (${u.changelog})` : ""}`,
+      );
+    }
+  }
+  for (const u of result.applied) {
+    console.log(`  updated ${u.slug}  ${u.from_version} → ${u.to_version}`);
+  }
+  // Skips are printed, never swallowed: an update that silently did not
+  // happen is the exact failure this feature exists to remove.
+  for (const { update, reason } of result.skipped) {
+    console.log(`  SKIPPED ${update.slug} → ${update.to_version}: ${reason}`);
+  }
+  if (result.unknown.length > 0) {
+    console.log(
+      `  ${result.unknown.length} installed component(s) are no longer published by the registry.`,
+    );
+  }
+  if (!dryRun && result.applied.length > 0) {
+    console.log("\nRestart your agent to pick up the new versions.");
+  }
+}
+
+export async function printInstalledInventory(agentHome: string): Promise<void> {
+  const state = await readInstalledState(agentHome);
+  if (state === null) {
+    console.log(`No components installed (no lockfile at ${installedStatePath(agentHome)}).`);
+    console.log("Run `arm setup` to install your package.");
+    return;
+  }
+  console.log(`Installed components  (${installedStatePath(agentHome)})`);
+  console.log(`  last updated: ${state.updated_at}`);
+  if (state.components.length === 0) {
+    console.log("  (none)");
+    return;
+  }
+  const width = Math.max(...state.components.map((c) => c.slug.length));
+  for (const c of state.components) {
+    console.log(`  ${c.slug.padEnd(width)}  ${c.version.padEnd(8)} ${c.kind}`);
+  }
+}
+
 export async function runDoctorChecks(
-  opts: { proxyUrl?: string; agentToken?: string } = {},
+  opts: {
+    proxyUrl?: string;
+    agentToken?: string;
+    agentHome?: string;
+    controlPlaneUrl?: string;
+  } = {},
 ): Promise<DoctorCheck[]> {
   const checks: DoctorCheck[] = [];
   const proxyUrl = opts.proxyUrl ?? process.env["ARM_PROXY_URL"];
@@ -548,6 +659,56 @@ export async function runDoctorChecks(
           ? "NO_AGENT_TOKEN"
           : "PROXY_UNREACHABLE";
       checks.push({ label: "Metered round-trip", status: "fail", detail: health.message, code });
+    }
+  }
+
+  // Component freshness. A dry-run check-in: `doctor` reports, it never
+  // installs — an employee running a diagnostic should not have their agent
+  // change underneath them. `arm update` is the command that acts.
+  //
+  // Failing to reach the control plane is reported as `skipped`, not `fail`:
+  // being offline is not a broken install, and a red cross here would train
+  // people to ignore the report.
+  const agentHome = resolveAgentHome(opts.agentHome ?? process.env["ARM_AGENT_HOME"]);
+  const controlPlaneUrl = opts.controlPlaneUrl ?? process.env["ARM_CONTROL_PLANE_URL"];
+  if (!controlPlaneUrl) {
+    checks.push({
+      label: "Component versions",
+      status: "skipped",
+      detail: "no control plane URL known (set ARM_CONTROL_PLANE_URL)",
+    });
+  } else {
+    try {
+      const result = await runUpdate({
+        agentHome,
+        controlPlaneUrl,
+        token: opts.agentToken ?? process.env["ARM_AGENT_TOKEN"] ?? "",
+        dryRun: true,
+      });
+      if (result.checkedAt === null) {
+        checks.push({
+          label: "Component versions",
+          status: "skipped",
+          detail: "nothing installed yet — run `arm setup`",
+        });
+      } else if (result.available.length === 0) {
+        checks.push({ label: "Component versions", status: "ok", detail: "all up to date" });
+      } else {
+        checks.push({
+          label: "Component versions",
+          status: "fail",
+          detail:
+            `${result.available.length} update(s) available ` +
+            `(${result.available.map((u) => `${u.slug} ${u.from_version}→${u.to_version}`).join(", ")}) ` +
+            "— run `arm update`",
+        });
+      }
+    } catch (err) {
+      checks.push({
+        label: "Component versions",
+        status: "skipped",
+        detail: `could not reach the control plane: ${err instanceof Error ? err.message : String(err)}`,
+      });
     }
   }
 
@@ -639,6 +800,18 @@ ARM Setup — one-click employee provisioning
       break;
     }
 
+    case "update": {
+      const flags = parseUpdateFlags(args.slice(3));
+      const result = await runUpdateCommand(flags);
+      printUpdateSummary(result, flags.dryRun);
+      break;
+    }
+
+    case "list": {
+      await printInstalledInventory(resolveAgentHome(process.env["ARM_AGENT_HOME"]));
+      break;
+    }
+
     case "refine": {
       const result = await runRefineCommand(args.slice(3));
       printRefineSummary(result);
@@ -680,6 +853,9 @@ ARM CLI — Agent Resource Management
   arm setup                Opens the installation wizard in your browser — no terminal typing
   arm setup --cli          Terminal-prompt fallback (scripted answers, no browser available)
   arm doctor                Re-run verification and print the failure taxonomy
+  arm list                 Show installed components and their versions
+  arm update               Check the registry and install newer component versions
+  arm update --dry-run     Report what would change, install nothing
   arm refine               Optional: pain points + work-folder + installed-tools scan (local-only)
   arm data-plane install   Install data plane in customer VPC
   arm agent init           Onboard an agent to ARM

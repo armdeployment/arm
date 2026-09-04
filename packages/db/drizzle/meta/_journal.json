@@ -43,6 +43,13 @@
       "when": 1788233308561,
       "tag": "0005_wandering_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788487392128,
+      "tag": "0006_graceful_patch",
+      "breakpoints": true
     }
   ]
 }

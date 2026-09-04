@@ -358,6 +358,87 @@ export const packageManifestV2Schema = z.object({
 });
 export type PackageManifestV2 = z.infer<typeof packageManifestV2Schema>;
 
+// ── Installed-state inventory + update check (client ⇄ control plane) ──────
+//
+// Installing a component writes bytes to disk and, until now, forgot: neither
+// side could answer "which version of this skill does that laptop actually
+// have?". These three schemas close that loop.
+//
+// `installedComponentRecordSchema` is one row of the client's on-disk lockfile
+// (`<agentHome>/.arm/installed.json`). It deliberately records *callable*
+// components (mcp/http_api/cli/connector) too, even though they write no
+// blob — an MCP server pinned at 1.2.0 in the rendered config is installed
+// state by any useful definition, and the operator asking "who is still on
+// the old MCP?" does not care that it materialized as a config entry rather
+// than a file.
+
+export const installedComponentRecordSchema = z.object({
+  component_id: z.string().min(1),
+  slug: z.string().min(1),
+  kind: componentKindSchema,
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  /** "sha256:<hex>", or null for callable components that ship no blob. */
+  blob_digest: z.string().nullable().default(null),
+  /** Absolute path written on disk; null for callable components. */
+  installed_path: z.string().nullable().default(null),
+  installed_at: z.string().datetime({ offset: true }),
+});
+export type InstalledComponentRecord = z.infer<typeof installedComponentRecordSchema>;
+
+/** The client's on-disk lockfile. `schema` is bumped only on a breaking
+ *  shape change; a reader that sees a higher number must refuse rather than
+ *  guess, because a misread lockfile silently reinstalls or skips updates. */
+export const installedStateSchema = z.object({
+  schema: z.literal(1).default(1),
+  tenant_id: z.string().min(1),
+  sub_account_id: z.string().min(1),
+  /** ARM client version that wrote this file — an update that requires a
+   *  newer client must be able to say so rather than fail mid-install. */
+  client_version: z.string().default(""),
+  updated_at: z.string().datetime({ offset: true }),
+  components: z.array(installedComponentRecordSchema).default([]),
+});
+export type InstalledState = z.infer<typeof installedStateSchema>;
+
+/** What the client POSTs on check-in: its whole inventory, not a diff. Sending
+ *  the full list makes the server's inventory converge even after a missed
+ *  check-in, an uninstall, or a hand-edited agent home. */
+export const checkInRequestSchema = z.object({
+  tenant_id: z.string().min(1),
+  sub_account_id: z.string().min(1),
+  client_version: z.string().default(""),
+  components: z.array(installedComponentRecordSchema).default([]),
+});
+export type CheckInRequest = z.infer<typeof checkInRequestSchema>;
+
+/** One component the client should upgrade. `blob_digest` is what the client
+ *  pulls and verifies; it is never a URL (guardrails/artifact-integrity). */
+export const componentUpdateSchema = z.object({
+  component_id: z.string().min(1),
+  slug: z.string().min(1),
+  kind: componentKindSchema,
+  from_version: z.string(),
+  to_version: z.string(),
+  blob_digest: z.string().nullable().default(null),
+  changelog: z.string().default(""),
+  /** True when the newer version needs a client this old one cannot satisfy —
+   *  the client reports it instead of installing something it cannot run. */
+  requires_client_upgrade: z.boolean().default(false),
+});
+export type ComponentUpdate = z.infer<typeof componentUpdateSchema>;
+
+export const checkInResponseSchema = z.object({
+  tenant_id: z.string().min(1),
+  sub_account_id: z.string().min(1),
+  checked_at: z.string().datetime({ offset: true }),
+  updates: z.array(componentUpdateSchema).default([]),
+  /** Installed components the registry no longer publishes (yanked, or
+   *  deleted). Reported, never auto-removed: deleting a component someone is
+   *  mid-task with is worse than telling an operator it is stale. */
+  unknown: z.array(z.string()).default([]),
+});
+export type CheckInResponse = z.infer<typeof checkInResponseSchema>;
+
 export const catalogSchemas = {
   component: componentSchema,
   component_version: componentVersionSchema,

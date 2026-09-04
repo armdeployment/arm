@@ -21,6 +21,7 @@ import {
 } from "./manifest.js";
 import { renderOpencodeConfig, assertNoSecretsInConfig, resolveAgentHome } from "./opencode.js";
 import { installComponents } from "./components.js";
+import { writeInstalledState, type InstalledComponentRecord } from "./installed-state.js";
 import { provisionRuntime } from "./runtime-provision.js";
 import { ArmClientError } from "./errors.js";
 import type { ConnectionsManifestEntry, ConnectionMethod } from "./connections.js";
@@ -57,6 +58,9 @@ export interface SetupArgs {
    * this unset and `runSetup` fetches by `roleKey` as before.
    */
   manifest?: ClientPackageManifest;
+  /** ARM client version, stamped into the lockfile so a check-in can tell an
+   *  operator which machines are running an old installer. */
+  clientVersion?: string;
   /**
    * A6: true when the recommended package requires manager approval and
    * hasn't been approved yet. Passed straight through to `SetupResult` so
@@ -80,6 +84,9 @@ export interface SetupResult {
   configPath: string;
   /** Path of the companion env file; present only when an agentToken was provided. */
   envFilePath?: string;
+  /** Path of the installed-state lockfile; present only when components were
+   *  installed (i.e. a `dataPlaneUrl` was supplied). */
+  lockfilePath?: string;
   budgetHint: string;
   /** Runtime kinds ("python"/"node") auto-downloaded because no usable copy
    *  was already on this machine — empty when every `cli` component's
@@ -316,6 +323,7 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
   }
 
   let installedPaths: string[] = [];
+  let lockfilePath: string | undefined;
   if (args.dataPlaneUrl !== undefined) {
     const installed = await installComponents(manifest.components, {
       dataPlaneUrl: args.dataPlaneUrl,
@@ -324,6 +332,33 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     installedPaths = installed
       .map((entry) => entry.installedPath)
       .filter((path): path is string => path !== null);
+
+    // Record what this run installed, so the machine (and, on check-in, the
+    // control plane) can answer "which version is on here?". `runSetup`
+    // resolves the whole manifest, so this is a full replace, not a merge.
+    //
+    // Callable components are recorded too: they install as MCP entries in
+    // the rendered config rather than files, but an MCP pinned at 1.2.0 is
+    // installed state, and leaving it out would make every check-in report
+    // it as missing.
+    const now = new Date().toISOString();
+    const components: InstalledComponentRecord[] = installed.map(({ resolved, installedPath }) => ({
+      component_id: resolved.component.id,
+      slug: resolved.component.slug,
+      kind: resolved.component.kind,
+      version: resolved.version.version,
+      blob_digest: resolved.version.blob_digest,
+      installed_path: installedPath,
+      installed_at: now,
+    }));
+    lockfilePath = await writeInstalledState(agentHome, {
+      schema: 1,
+      tenant_id: args.tenantId,
+      sub_account_id: args.subAccountId,
+      client_version: args.clientVersion ?? "",
+      updated_at: now,
+      components,
+    });
   }
 
   const health = await verifyMeteredRoundTrip(args.armProxyUrl, args.agentToken);
@@ -338,6 +373,7 @@ export async function runSetup(args: SetupArgs): Promise<SetupResult> {
     connectionsNeeded: collectConnectionsNeeded(manifest),
     configPath: rendered.configPath,
     ...(envFilePath !== undefined ? { envFilePath } : {}),
+    ...(lockfilePath !== undefined ? { lockfilePath } : {}),
     budgetHint: budgetHint(manifest.version.budget_template),
     pendingApproval: args.pendingApproval ?? false,
     runtimesProvisioned,

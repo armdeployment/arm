@@ -37,11 +37,14 @@ import {
 import {
   componentKindSchema,
   discoveryCandidateStatusSchema,
+  installedComponentRecordSchema,
   type Component,
   type ComponentVersion,
   type DiscoveryCandidate,
   type DiscoverySource,
+  type InstalledComponentRecord,
 } from "@arm/proto";
+import { computeUpdatePlan, type RegistryComponent } from "./update-check.js";
 import {
   componentFixtures,
   componentVersionFixtures,
@@ -63,6 +66,7 @@ import {
   componentTable,
   componentVersionTable,
   componentBlobTable,
+  componentInstallTable,
   discoverySourceTable,
   discoveryCandidateTable,
   workPackageTable,
@@ -182,6 +186,22 @@ export interface AuditEntry {
 }
 const auditLog: AuditEntry[] = [];
 
+/** Fixture-mode inventory: one row per (sub_account, component), mirroring the
+ *  `component_install` unique index so both modes converge the same way. */
+interface InstallRow {
+  tenant_id: string;
+  sub_account_id: string;
+  component_id: string;
+  version: string;
+  blob_digest: string | null;
+  installed_path: string | null;
+  client_version: string;
+  installed_at: string;
+  last_seen_at: string;
+}
+const componentInstallStore: InstallRow[] = [];
+
+registerDemoArray(componentInstallStore);
 registerDemoArray(componentStore);
 registerDemoArray(componentVersionStore);
 registerDemoArray(componentBlobStore);
@@ -397,6 +417,129 @@ function pgComponentToWire(row: typeof componentTable.$inferSelect): Component {
     data_classification: row.dataClassification as Component["data_classification"],
     homepage_url: row.homepageUrl,
   };
+}
+
+/**
+ * Load registry entries for exactly the components a client reported. Scoped
+ * to those ids rather than the whole registry: a check-in should cost the same
+ * whether the tenant publishes ten components or ten thousand.
+ */
+async function loadRegistryFor(
+  tenantId: string,
+  componentIds: string[],
+): Promise<RegistryComponent[]> {
+  if (componentIds.length === 0) return [];
+  const wanted = new Set(componentIds);
+
+  if (!isFixtureMode()) {
+    const db = getDb();
+    const [componentRows, versionRows] = await Promise.all([
+      db.select().from(componentTable).where(eq(componentTable.tenantId, tenantId)),
+      db.select().from(componentVersionTable).where(eq(componentVersionTable.tenantId, tenantId)),
+    ]);
+    return componentRows
+      .filter((c) => wanted.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        slug: c.slug,
+        kind: c.kind,
+        versions: versionRows
+          .filter((v) => v.componentId === c.id)
+          .map(pgVersionToComponentVersion),
+      }));
+  }
+
+  return componentStore
+    .filter((c) => c.tenant_id === tenantId && wanted.has(c.id))
+    .map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      kind: c.kind,
+      versions: componentVersionStore.filter((v) => v.component_id === c.id),
+    }));
+}
+
+/**
+ * Replace this agent's inventory with what it just reported.
+ *
+ * Replace, not merge: the report is the whole truth about that machine, so a
+ * component the client no longer lists has been uninstalled and its row must
+ * go. Merging would leave phantom rows that make an operator chase a component
+ * nobody has any more.
+ */
+async function recordInventory(
+  tenantId: string,
+  subAccountId: string,
+  clientVersion: string,
+  components: InstalledComponentRecord[],
+  checkedAt: string,
+): Promise<void> {
+  if (!isFixtureMode()) {
+    const db = getDb();
+    const reported = new Set(components.map((c) => c.component_id));
+    const existing = await db
+      .select()
+      .from(componentInstallTable)
+      .where(
+        and(
+          eq(componentInstallTable.tenantId, tenantId),
+          eq(componentInstallTable.subAccountId, subAccountId),
+        ),
+      );
+    for (const row of existing) {
+      if (!reported.has(row.componentId)) {
+        await db.delete(componentInstallTable).where(eq(componentInstallTable.id, row.id));
+      }
+    }
+    for (const c of components) {
+      const values = {
+        tenantId,
+        subAccountId,
+        componentId: c.component_id,
+        version: c.version,
+        blobDigest: c.blob_digest,
+        installedPath: c.installed_path,
+        clientVersion,
+        installedAt: new Date(c.installed_at),
+        lastSeenAt: new Date(checkedAt),
+      };
+      await db
+        .insert(componentInstallTable)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [componentInstallTable.subAccountId, componentInstallTable.componentId],
+          set: {
+            version: values.version,
+            blobDigest: values.blobDigest,
+            installedPath: values.installedPath,
+            clientVersion: values.clientVersion,
+            installedAt: values.installedAt,
+            lastSeenAt: values.lastSeenAt,
+          },
+        });
+    }
+    return;
+  }
+
+  for (let i = componentInstallStore.length - 1; i >= 0; i--) {
+    const row = componentInstallStore[i]!;
+    if (row.tenant_id === tenantId && row.sub_account_id === subAccountId) {
+      componentInstallStore.splice(i, 1);
+    }
+  }
+  for (const c of components) {
+    componentInstallStore.push({
+      tenant_id: tenantId,
+      sub_account_id: subAccountId,
+      component_id: c.component_id,
+      version: c.version,
+      blob_digest: c.blob_digest,
+      installed_path: c.installed_path,
+      client_version: clientVersion,
+      installed_at: c.installed_at,
+      last_seen_at: checkedAt,
+    });
+  }
 }
 
 function pgVersionToComponentVersion(
@@ -728,6 +871,95 @@ export const libraryRouter = t.router({
         .sort((a, b) => compareSemVer(b.version, a.version))
         .map((v) => ({ ...v, yanked: v.yanked }));
       return { tenantId: opts.ctx.tenantId!, versions };
+    }),
+
+  /**
+   * The client reports its whole inventory; the server records it and answers
+   * with what should be upgraded. One round trip closes both loops — the
+   * operator learns which machine has which version, and the machine learns
+   * what is stale — because two endpoints would let the two drift apart.
+   *
+   * The tenant comes from the authenticated context, never from the payload
+   * (Invariant 6): a client that could name its own tenant could write
+   * inventory rows into, and read update plans out of, someone else's.
+   */
+  checkIn: tenantProcedure
+    .input(
+      z.object({
+        subAccountId: z.string().min(1),
+        clientVersion: z.string().default(""),
+        components: z.array(installedComponentRecordSchema).default([]),
+      }),
+    )
+    .mutation(async (opts) => {
+      const tenantId = opts.ctx.tenantId!;
+      const { subAccountId, clientVersion, components } = opts.input;
+      const checkedAt = new Date().toISOString();
+
+      const registry = await loadRegistryFor(
+        tenantId,
+        components.map((c) => c.component_id),
+      );
+      const plan = computeUpdatePlan(components, registry, clientVersion);
+
+      await recordInventory(tenantId, subAccountId, clientVersion, components, checkedAt);
+
+      return {
+        tenant_id: tenantId,
+        sub_account_id: subAccountId,
+        checked_at: checkedAt,
+        updates: plan.updates,
+        unknown: plan.unknown,
+      };
+    }),
+
+  /** What a given agent install has on disk — the operator-facing side of
+   *  `checkIn`. Empty until that machine has checked in at least once. */
+  listInstalls: tenantProcedure
+    .input(z.object({ subAccountId: z.string().min(1) }))
+    .query(async (opts) => {
+      const tenantId = opts.ctx.tenantId!;
+      const { subAccountId } = opts.input;
+      if (!isFixtureMode()) {
+        const db = getDb();
+        const rows = await db
+          .select()
+          .from(componentInstallTable)
+          .where(
+            and(
+              eq(componentInstallTable.tenantId, tenantId),
+              eq(componentInstallTable.subAccountId, subAccountId),
+            ),
+          );
+        return {
+          tenantId,
+          subAccountId,
+          installs: rows.map((r) => ({
+            componentId: r.componentId,
+            version: r.version,
+            blobDigest: r.blobDigest,
+            installedPath: r.installedPath,
+            clientVersion: r.clientVersion,
+            installedAt: r.installedAt.toISOString(),
+            lastSeenAt: r.lastSeenAt.toISOString(),
+          })),
+        };
+      }
+      return {
+        tenantId,
+        subAccountId,
+        installs: componentInstallStore
+          .filter((r) => r.tenant_id === tenantId && r.sub_account_id === subAccountId)
+          .map((r) => ({
+            componentId: r.component_id,
+            version: r.version,
+            blobDigest: r.blob_digest,
+            installedPath: r.installed_path,
+            clientVersion: r.client_version,
+            installedAt: r.installed_at,
+            lastSeenAt: r.last_seen_at,
+          })),
+      };
     }),
 
   publishVersion: tenantProcedure
