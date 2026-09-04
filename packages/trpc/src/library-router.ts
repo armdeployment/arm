@@ -44,7 +44,7 @@ import {
   type DiscoverySource,
   type InstalledComponentRecord,
 } from "@arm/proto";
-import { computeUpdatePlan, type RegistryComponent } from "./update-check.js";
+import { computeUpdatePlan, summarizeInstalls, type RegistryComponent } from "./update-check.js";
 import {
   componentFixtures,
   componentVersionFixtures,
@@ -457,6 +457,45 @@ async function loadRegistryFor(
       kind: c.kind,
       versions: componentVersionStore.filter((v) => v.component_id === c.id),
     }));
+}
+
+/**
+ * Install rows for a tenant, optionally narrowed to one agent.
+ *
+ * Both modes hand back the fixture row shape so callers stay mode-agnostic;
+ * the Postgres branch converts its timestamps here instead of at every call
+ * site.
+ */
+async function loadInstalls(tenantId: string, subAccountId?: string): Promise<InstallRow[]> {
+  if (!isFixtureMode()) {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(componentInstallTable)
+      .where(
+        subAccountId === undefined
+          ? eq(componentInstallTable.tenantId, tenantId)
+          : and(
+              eq(componentInstallTable.tenantId, tenantId),
+              eq(componentInstallTable.subAccountId, subAccountId),
+            ),
+      );
+    return rows.map((r) => ({
+      tenant_id: r.tenantId,
+      sub_account_id: r.subAccountId,
+      component_id: r.componentId,
+      version: r.version,
+      blob_digest: r.blobDigest,
+      installed_path: r.installedPath,
+      client_version: r.clientVersion,
+      installed_at: r.installedAt.toISOString(),
+      last_seen_at: r.lastSeenAt.toISOString(),
+    }));
+  }
+  return componentInstallStore.filter(
+    (r) =>
+      r.tenant_id === tenantId && (subAccountId === undefined || r.sub_account_id === subAccountId),
+  );
 }
 
 /**
@@ -920,47 +959,44 @@ export const libraryRouter = t.router({
     .query(async (opts) => {
       const tenantId = opts.ctx.tenantId!;
       const { subAccountId } = opts.input;
-      if (!isFixtureMode()) {
-        const db = getDb();
-        const rows = await db
-          .select()
-          .from(componentInstallTable)
-          .where(
-            and(
-              eq(componentInstallTable.tenantId, tenantId),
-              eq(componentInstallTable.subAccountId, subAccountId),
-            ),
-          );
-        return {
-          tenantId,
-          subAccountId,
-          installs: rows.map((r) => ({
-            componentId: r.componentId,
-            version: r.version,
-            blobDigest: r.blobDigest,
-            installedPath: r.installedPath,
-            clientVersion: r.clientVersion,
-            installedAt: r.installedAt.toISOString(),
-            lastSeenAt: r.lastSeenAt.toISOString(),
-          })),
-        };
-      }
       return {
         tenantId,
         subAccountId,
-        installs: componentInstallStore
-          .filter((r) => r.tenant_id === tenantId && r.sub_account_id === subAccountId)
-          .map((r) => ({
-            componentId: r.component_id,
-            version: r.version,
-            blobDigest: r.blob_digest,
-            installedPath: r.installed_path,
-            clientVersion: r.client_version,
-            installedAt: r.installed_at,
-            lastSeenAt: r.last_seen_at,
-          })),
+        installs: (await loadInstalls(tenantId, subAccountId)).map((r) => ({
+          componentId: r.component_id,
+          version: r.version,
+          blobDigest: r.blob_digest,
+          installedPath: r.installed_path,
+          clientVersion: r.client_version,
+          installedAt: r.installed_at,
+          lastSeenAt: r.last_seen_at,
+        })),
       };
     }),
+
+  /**
+   * Fleet roll-up: every component anyone in the tenant has installed, at
+   * which versions, and how far behind the registry each machine is.
+   *
+   * `listInstalls` answers "what does this one agent have"; this answers "what
+   * does the org have", which is the question an operator actually opens the
+   * dashboard with. Both read the same rows through `loadInstalls`, and the
+   * staleness rule is the same `summarizeInstalls` the client's update path
+   * uses, so the dashboard cannot disagree with what `arm update` does.
+   */
+  installSummary: tenantProcedure.query(async (opts) => {
+    const tenantId = opts.ctx.tenantId!;
+    const rows = await loadInstalls(tenantId);
+    const registry = await loadRegistryFor(
+      tenantId,
+      rows.map((r) => r.component_id),
+    );
+    return {
+      tenantId,
+      generatedAt: new Date().toISOString(),
+      ...summarizeInstalls(rows, registry),
+    };
+  }),
 
   publishVersion: tenantProcedure
     .input(

@@ -17,10 +17,11 @@
  */
 
 import { Suspense, useMemo, useState } from "react";
+import { InstalledPanel } from "../../components/library/installed-panel";
 import { PackageCard } from "../../components/library/package-card";
 import { trpc } from "../../lib/trpc/client";
 
-type Tab = "packages" | "components" | "discovery";
+type Tab = "packages" | "components" | "discovery" | "installed";
 
 export default function LibraryPage() {
   return (
@@ -53,8 +54,9 @@ function LibraryPageContent() {
         </p>
       </div>
 
-      {/* Search box */}
-      <div className="flex items-center gap-3">
+      {/* Search box — hidden on Installed, which has nothing to search and
+          would otherwise offer a box that silently does nothing. */}
+      <div className="flex items-center gap-3" hidden={tab === "installed"}>
         <input
           type="search"
           value={query}
@@ -77,6 +79,7 @@ function LibraryPageContent() {
             ["packages", "Packages"],
             ["components", "Components"],
             ["discovery", "Discovery"],
+            ["installed", "Installed"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -95,14 +98,20 @@ function LibraryPageContent() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
-        <FacetRail tab={tab} />
-        <div>
-          {tab === "packages" && <PackagesTab query={query} />}
-          {tab === "components" && <ComponentsTab query={query} />}
-          {tab === "discovery" && <DiscoveryTab />}
+      {/* Installed is a fleet roll-up, not a browse surface — the facet rail
+          filters things you might install, which does not apply to it. */}
+      {tab === "installed" ? (
+        <InstalledPanel />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
+          <FacetRail tab={tab} />
+          <div>
+            {tab === "packages" && <PackagesTab query={query} />}
+            {tab === "components" && <ComponentsTab query={query} />}
+            {tab === "discovery" && <DiscoveryTab />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

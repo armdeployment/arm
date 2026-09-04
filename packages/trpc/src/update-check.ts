@@ -99,3 +99,102 @@ function clientAtLeast(clientVersion: string, minimum: string): boolean {
   if (!/^\d+\.\d+\.\d+$/.test(clientVersion)) return false;
   return compareSemVer(clientVersion, minimum) >= 0;
 }
+
+/** One `component_install` row, reduced to the fields a roll-up needs. */
+export interface InstallFact {
+  sub_account_id: string;
+  component_id: string;
+  version: string;
+  last_seen_at: string;
+}
+
+export interface InstallSummaryRow {
+  component_id: string;
+  /** null when the registry no longer publishes this component at all. */
+  slug: string | null;
+  kind: RegistryComponent["kind"] | null;
+  /** null when the component is unknown OR every version of it was yanked. */
+  latest_version: string | null;
+  in_registry: boolean;
+  installs: number;
+  stale: number;
+  versions: { version: string; count: number; stale: boolean }[];
+  last_seen_at: string;
+}
+
+export interface InstallSummary {
+  /** Distinct agents reporting, not rows — one agent installs many components. */
+  agents: number;
+  installs: number;
+  stale: number;
+  components: InstallSummaryRow[];
+}
+
+/**
+ * Roll a tenant's raw install rows up into one row per component: who has it,
+ * at which versions, and how many machines are behind the registry.
+ *
+ * Pure for the same reason `computeUpdatePlan` is: the interesting part is the
+ * grouping and the staleness rule, not the query that fetched the rows. It
+ * applies the same yanked-version rule as the update path, so the dashboard
+ * and the client can never disagree about what "latest" means.
+ */
+export function summarizeInstalls(
+  installs: InstallFact[],
+  registry: RegistryComponent[],
+): InstallSummary {
+  const byId = new Map(registry.map((c) => [c.id, c]));
+  const groups = new Map<string, InstallFact[]>();
+  for (const row of installs) {
+    const list = groups.get(row.component_id);
+    if (list === undefined) groups.set(row.component_id, [row]);
+    else list.push(row);
+  }
+
+  const components: InstallSummaryRow[] = [];
+  for (const [componentId, rows] of groups) {
+    const component = byId.get(componentId);
+    const latest = component ? latestPublishedVersion(component.versions) : null;
+
+    const counts = new Map<string, number>();
+    for (const r of rows) counts.set(r.version, (counts.get(r.version) ?? 0) + 1);
+
+    const versions = [...counts.entries()]
+      .map(([version, count]) => ({
+        version,
+        count,
+        stale: latest !== null && compareSemVer(latest.version, version) > 0,
+      }))
+      .sort((a, b) => compareSemVer(b.version, a.version));
+
+    components.push({
+      component_id: componentId,
+      slug: component?.slug ?? null,
+      kind: component?.kind ?? null,
+      latest_version: latest?.version ?? null,
+      in_registry: component !== undefined,
+      versions,
+      installs: rows.length,
+      stale: versions.reduce((n, v) => (v.stale ? n + v.count : n), 0),
+      last_seen_at: rows.reduce((a, r) => (r.last_seen_at > a ? r.last_seen_at : a), ""),
+    });
+  }
+
+  // Most stale first — this list is read to find what needs acting on. Next
+  // come components with no installable version (unknown to the registry, or
+  // entirely yanked): zero stale machines, but they need a human rather than
+  // an update, and sorting them by staleness alone would bury them.
+  components.sort(
+    (a, b) =>
+      b.stale - a.stale ||
+      Number(a.latest_version !== null) - Number(b.latest_version !== null) ||
+      (a.slug ?? a.component_id).localeCompare(b.slug ?? b.component_id),
+  );
+
+  return {
+    agents: new Set(installs.map((r) => r.sub_account_id)).size,
+    installs: installs.length,
+    stale: components.reduce((n, c) => n + c.stale, 0),
+    components,
+  };
+}

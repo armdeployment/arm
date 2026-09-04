@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "control-plane-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@arm-app/web", "dev"],
+      "port": 3100
+    }
+  ]
+}
